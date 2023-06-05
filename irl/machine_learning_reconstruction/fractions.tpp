@@ -40,7 +40,7 @@ namespace IRL
         return IRL::Paraboloid(datum, frame, alpha, beta);
     }
 
-    IRL::Paraboloid fractions::new_random_parabaloid()
+    IRL::Paraboloid fractions::new_random_parabaloid(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
     {
         std::random_device rd;  
         std::mt19937_64 a_eng(rd());
@@ -51,19 +51,23 @@ namespace IRL
         double alpha;
         double beta;
         int attempt = 0;
-        std::uniform_real_distribution<double> random_rotation(0, 0.5 * M_PI);
-        std::uniform_real_distribution<double> random_coeffs(0.5, 4);
-        std::uniform_real_distribution<double> random_translation(-0.5, 0.5);
+        std::uniform_real_distribution<double> random_rotationa(rota_l, rota_h);
+        std::uniform_real_distribution<double> random_rotationb(rotb_l, rotb_h);
+        std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
+        std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
+        std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
+        std::uniform_real_distribution<double> random_translationx(ox_l, ox_h);
+        std::uniform_real_distribution<double> random_translationy(oy_l, oy_h);
+        std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
         IRL::Paraboloid p;
 
         do
         {
-            z_offset = random_translation(a_eng);
-            alpha = random_coeffs(a_eng);
-            beta = random_coeffs(a_eng);
+            alpha = random_coeffsa(a_eng);
+            beta = random_coeffsb(a_eng);
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
-            datum = IRL::Pt(random_translation(a_eng), random_translation(a_eng), random_translation(a_eng));
-            angles = {random_rotation(a_eng), random_rotation(a_eng), random_rotation(a_eng)};
+            datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
+            angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
 
             IRL::UnitQuaternion x_rotation(angles[0], frame[0]);
             IRL::UnitQuaternion y_rotation(angles[1], frame[1]);
@@ -78,12 +82,7 @@ namespace IRL
     torch::Tensor fractions::get_fractions(IRL::Paraboloid p, bool centroids)
     {
         Data<double> liquid_volume_fraction(mesh);
-        this->setPhaseQuantities(p, &liquid_volume_fraction);
         vector<double> f;
-        for (int i = 0; i < 8; ++i)
-        {
-            gradients[i].clear();
-        }
 
         for (int i = 0; i < a_number_of_cells; ++i)
         {
@@ -111,7 +110,6 @@ namespace IRL
     torch::Tensor fractions::get_fractions_with_gradients(IRL::Paraboloid p, bool centroids)
     {
         Data<double> liquid_volume_fraction(mesh);
-        this->setPhaseQuantities(p, &liquid_volume_fraction);
         vector<double> f;
         for (int i = 0; i < 8; ++i)
         {
@@ -276,24 +274,6 @@ namespace IRL
         IRL::Pt upper_domain(0.5 * nx, 0.5 * ny, 0.5 * nz);
         mesh.setCellBoundaries(lower_domain, upper_domain);
         return mesh;
-    }
-
-    void fractions::setPhaseQuantities(const IRL::Paraboloid& a_interface, Data<double>* a_liquid_volume_fraction) 
-    {
-        const BasicMesh& mesh = a_liquid_volume_fraction->getMesh();
-        for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
-        {
-            for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
-            {
-                for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
-                {
-                    auto cell = IRL::RectangularCuboid::fromBoundingPts(
-                        IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
-                        IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-                    (*a_liquid_volume_fraction)(i, j, k) =IRL::getVolumeMoments<IRL::Volume, IRL::HalfEdgeCutting>(cell, a_interface);
-                }
-            }
-        }
     }
 
     bool fractions::isParaboloidInCenterCell(const IRL::Paraboloid& a_interface, const Data<double>& a_liquid_volume_fraction) 

@@ -45,7 +45,8 @@ namespace IRL
         int numranks = 1;
         int batch_size = data_size / numranks;
 
-        ofstream results;
+        ofstream results_ex;
+        ofstream results_pr;
         torch::Tensor train_in;
         torch::Tensor train_out;
         torch::Tensor test_in;

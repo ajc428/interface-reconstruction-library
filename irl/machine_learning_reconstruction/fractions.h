@@ -44,13 +44,12 @@ namespace IRL
         std::array<vector<double>, 8> gradients;
 
         BasicMesh initializeMesh(const int); 
-        void setPhaseQuantities(const IRL::Paraboloid&, Data<double>*); 
         bool isParaboloidInCenterCell(const IRL::Paraboloid&, const Data<double>&);
     public:
         fractions(const int);
 
         IRL::Paraboloid new_parabaloid(double, double, double, double, double, double, double, double);
-        IRL::Paraboloid new_random_parabaloid();
+        IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
         torch::Tensor get_fractions_with_gradients(IRL::Paraboloid, bool);
         torch::Tensor get_gradients(int);

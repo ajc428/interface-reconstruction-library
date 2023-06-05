@@ -131,7 +131,8 @@ namespace IRL
             auto data_test = MyDataset(test_in_file, test_out_file, data_size);
             nn->eval();
     
-            results.open("result.txt");
+            results_ex.open("result_ex.txt");
+            results_pr.open("result_pr.txt");
             if (m == 0)
             {
                 for(int i = 0; i < data_test.size().value(); ++i)
@@ -139,17 +140,16 @@ namespace IRL
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
-                    results << "Prediction\n";
                     for (int j = 0; j < 8; ++j)
                     {
-                        results << prediction[j].item<double>() << " ";
+                        results_pr << prediction[j].item<double>() << " ";
                     }
-                    results << "\nExpected\n";
                     for (int j = 0; j < 8; ++j)
                     {
-                        results << test_out[j].item<double>() << " ";
+                        results_ex << test_out[j].item<double>() << " ";
                     }
-                    results << "\n";
+                    results_ex << "\n";
+                    results_pr << "\n";
                 }
             }
             else if (m == 1)
@@ -160,17 +160,16 @@ namespace IRL
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
                     auto pred = functions->VolumeFracsForward(prediction);
-                    results << "Prediction\n";
                     for (int j = 0; j < 108; ++j)
                     {
-                        results << pred[j].item<double>() << " ";
+                        results_pr << pred[j].item<double>() << " ";
                     }
-                    results << "\nExpected\n";
                     for (int j = 0; j < 108; ++j)
                     {
-                        results << test_in[j].item<double>() << " ";
+                        results_ex << test_in[j].item<double>() << " ";
                     }
-                    results << "\n";
+                    results_ex << "\n";
+                    results_pr << "\n";
                 }
             }
             else if (m == 2)
@@ -181,21 +180,20 @@ namespace IRL
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
                     auto pred = functions->VolumeFracsForwardFD(prediction);
-                    results << "Prediction\n";
                     for (int j = 0; j < 108; ++j)
                     {
-                        results << pred[j].item<double>() << " ";
+                        results_pr << pred[j].item<double>() << " ";
                     }
-                    results << "\nExpected\n";
                     for (int j = 0; j < 108; ++j)
                     {
-                        results << test_in[j].item<double>() << " ";
+                        results_ex << test_in[j].item<double>() << " ";
                     }
-                    results << "\n";
+                    results_ex << "\n";
+                    results_pr << "\n";
                 }
             }
-
-            results.close();
+            results_ex.close();
+            results_pr.close();
         }
     }
 }

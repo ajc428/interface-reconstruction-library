@@ -36,12 +36,12 @@ namespace IRL
             delete gen;
         };
 
-        void generate()
+        void generate(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
         {
             for (int n = 0; n < Ntests; ++n) 
             {
                 std::cout << n << endl;
-                IRL::Paraboloid paraboloid = gen->new_random_parabaloid();
+                IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
                 angles = gen->getAngles();
 
                 std::ofstream coefficients;
@@ -57,12 +57,12 @@ namespace IRL
                 data_name = "fractions.txt";
                 output.open(data_name, std::ios_base::app);
 
-                for (int i = 0; i < 108; ++i)
+                for (int i = 0; i < result.sizes()[0]; ++i)
                 {
                     output << result[i].item<double>() << ",";
                 }
                 output << "\n";
-                output.close();                   
+                output.close();                    
             }
         };
     };
