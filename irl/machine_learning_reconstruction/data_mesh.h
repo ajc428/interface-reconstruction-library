@@ -7,41 +7,41 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef EXAMPLES_SIMPLE_ADVECTOR_DATA_H_
-#define EXAMPLES_SIMPLE_ADVECTOR_DATA_H_
+#ifndef IRL_MACHINE_LEARNING_RECONSTRUCTION_DATAMESH_H_
+#define IRL_MACHINE_LEARNING_RECONSTRUCTION_DATAMESH_H_
 
 #include <algorithm>
 #include <cstring>
 
 #include "irl/geometry/general/pt.h"
 
-#include "basic_mesh.h"
+#include "mesh.h"
 
 /// \brief A basic multi-dimensional data container.
 template <class ContainedType>
-class Data {
+class DataMesh {
  public:
   using value_t = ContainedType;
 
   /// \brief Default constructor
-  Data(void) = default;
+  DataMesh(void) = default;
 
   /// \brief Construct and set initial size.
-  explicit Data(const BasicMesh& a_mesh) : mesh_m(&a_mesh) {
+  explicit DataMesh(const Mesh& a_mesh) : mesh_m(&a_mesh) {
     data_m = new ContainedType[this->getMesh().size()];
   }
 
   // Copy constructor
-  Data(const Data& other) {
+  DataMesh(const DataMesh& other) {
     delete[] this->data_m;
-    const BasicMesh& mesh = other.getMesh();
+    const Mesh& mesh = other.getMesh();
     mesh_m = other.mesh_m;
     data_m = new ContainedType[mesh.size()];
     std::memcpy(data_m, other.data_m, sizeof(ContainedType) * mesh.size());
   }
 
   // Move constructor
-  Data(Data&& other) {
+  DataMesh(DataMesh&& other) {
     delete[] data_m;
     mesh_m = other.mesh_m;
     data_m = other.data_m;
@@ -50,10 +50,10 @@ class Data {
   }
 
   // Copy assignment
-  Data& operator=(const Data& other) {
+  DataMesh& operator=(const DataMesh& other) {
     if (this != &other) {
       delete[] data_m;
-      const BasicMesh& mesh = other.getMesh();
+      const Mesh& mesh = other.getMesh();
       mesh_m = other.mesh_m;
       data_m = new ContainedType[mesh.size()];
       std::memcpy(data_m, other.data_m, sizeof(ContainedType) * mesh.size());
@@ -62,7 +62,7 @@ class Data {
   }
 
   // Move assignment
-  Data& operator=(Data&& other) {
+  DataMesh& operator=(DataMesh&& other) {
     if (this != &other) {
       delete[] data_m;
       mesh_m = other.mesh_m;
@@ -74,8 +74,8 @@ class Data {
   }
 
   /// \brief Return the pointer to the mesh.
-  const BasicMesh& getMesh(void) { return *mesh_m; }
-  const BasicMesh& getMesh(void) const { return *mesh_m; }
+  const Mesh& getMesh(void) { return *mesh_m; }
+  const Mesh& getMesh(void) const { return *mesh_m; }
 
   /// \brief Provide access to data.
   ContainedType& operator()(const int i, const int j, const int k) {
@@ -103,7 +103,7 @@ class Data {
   ContainedType interpolate(const IRL::Pt& a_location) const;
 
   /// \brief Destructor to delete memory allocated during construction.
-  ~Data(void) { delete[] data_m; }
+  ~DataMesh(void) { delete[] data_m; }
 
  private:
   /// \brief Calculate the index, where the first real (non-ghost) cell is at 0
@@ -142,11 +142,11 @@ class Data {
   }
 
   ContainedType* data_m = nullptr;
-  const BasicMesh* mesh_m = nullptr;
+  const Mesh* mesh_m = nullptr;
 };
 
 template <class ContainedType>
-void Data<ContainedType>::updateBorder(void) {
+void DataMesh<ContainedType>::updateBorder(void) {
   this->updateLowerX();
   this->updateUpperX();
   this->updateLowerY();
@@ -156,8 +156,8 @@ void Data<ContainedType>::updateBorder(void) {
 }
 
 template <class ContainedType>
-void Data<ContainedType>::updateLowerX(void) {
-  const BasicMesh& mesh = this->getMesh();
+void DataMesh<ContainedType>::updateLowerX(void) {
+  const Mesh& mesh = this->getMesh();
   for (int i = mesh.imino(); i < mesh.imin(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
@@ -167,8 +167,8 @@ void Data<ContainedType>::updateLowerX(void) {
   }
 }
 template <class ContainedType>
-void Data<ContainedType>::updateUpperX(void) {
-  const BasicMesh& mesh = this->getMesh();
+void DataMesh<ContainedType>::updateUpperX(void) {
+  const Mesh& mesh = this->getMesh();
   for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
@@ -179,8 +179,8 @@ void Data<ContainedType>::updateUpperX(void) {
 }
 
 template <class ContainedType>
-void Data<ContainedType>::updateLowerY(void) {
-  const BasicMesh& mesh = this->getMesh();
+void DataMesh<ContainedType>::updateLowerY(void) {
+  const Mesh& mesh = this->getMesh();
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
@@ -190,8 +190,8 @@ void Data<ContainedType>::updateLowerY(void) {
   }
 }
 template <class ContainedType>
-void Data<ContainedType>::updateUpperY(void) {
-  const BasicMesh& mesh = this->getMesh();
+void DataMesh<ContainedType>::updateUpperY(void) {
+  const Mesh& mesh = this->getMesh();
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
@@ -201,8 +201,8 @@ void Data<ContainedType>::updateUpperY(void) {
   }
 }
 template <class ContainedType>
-void Data<ContainedType>::updateLowerZ(void) {
-  const BasicMesh& mesh = this->getMesh();
+void DataMesh<ContainedType>::updateLowerZ(void) {
+  const Mesh& mesh = this->getMesh();
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
@@ -212,8 +212,8 @@ void Data<ContainedType>::updateLowerZ(void) {
   }
 }
 template <class ContainedType>
-void Data<ContainedType>::updateUpperZ(void) {
-  const BasicMesh& mesh = this->getMesh();
+void DataMesh<ContainedType>::updateUpperZ(void) {
+  const Mesh& mesh = this->getMesh();
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
@@ -224,8 +224,8 @@ void Data<ContainedType>::updateUpperZ(void) {
 }
 
 template <class ContainedType>
-ContainedType Data<ContainedType>::interpolate(const IRL::Pt& a_location) {
-  const BasicMesh& mesh = this->getMesh();
+ContainedType DataMesh<ContainedType>::interpolate(const IRL::Pt& a_location) {
+  const Mesh& mesh = this->getMesh();
   static int indices[3];
   mesh.getIndices(a_location, indices);
   int i = std::max(this->getMesh().imino(),
@@ -250,9 +250,9 @@ ContainedType Data<ContainedType>::interpolate(const IRL::Pt& a_location) {
 }
 
 template <class ContainedType>
-ContainedType Data<ContainedType>::interpolate(
+ContainedType DataMesh<ContainedType>::interpolate(
     const IRL::Pt& a_location) const {
-  const BasicMesh& mesh = this->getMesh();
+  const Mesh& mesh = this->getMesh();
   static int indices[3];
   mesh.getIndices(a_location, indices);
   const int i = std::max(this->getMesh().imino(),
@@ -279,4 +279,4 @@ ContainedType Data<ContainedType>::interpolate(
                 wy2 * (wx1 * (*this)(i + 1, j, k) + wx2 * (*this)(i, j, k)));
 }
 
-#endif  // EXAMPLES_SIMPLE_ADVECTOR_DATA_H_
+#endif

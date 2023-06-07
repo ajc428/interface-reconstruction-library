@@ -196,6 +196,33 @@ namespace IRL
             results_pr.close();
         }
     }
+
+    IRL::Paraboloid trainer::use_model(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    {
+        vector<double> fractions;
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    fractions.push_back(liquid_volume_fraction(i, j, k));
+                    fractions.push_back(liquid_centroid(i,j,k)[0]);
+                    fractions.push_back(liquid_centroid(i,j,k)[1]);
+                    fractions.push_back(liquid_centroid(i,j,k)[2]);
+                }
+            }
+        }
+
+        IRL::fractions *gen = new IRL::fractions(3);;
+        torch::load(nn, in);
+        auto y_pred = nn->forward(torch::tensor(fractions));
+        IRL::Paraboloid paraboloid = gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>());
+        delete gen;
+        return paraboloid;
+    }
 }
 
 #endif

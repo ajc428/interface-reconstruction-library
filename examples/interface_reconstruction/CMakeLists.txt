@@ -1,0 +1,14 @@
+IRLAddExample_cpp(
+  TARGET_NAME
+  interface_reconstruction
+  HDRS
+  "reconstruct.h"
+  SRCS
+  "main.cpp"
+  "reconstruct.cpp"
+  OUTPUT_DIR
+  #"${IRL_EXAMPLES_OUTPUT_DIR}/interface_reconstruction"
+   /home/andrew/Repositories/interface-reconstruction-library/examples/interface_reconstruction
+  COLLECTION
+  "examples_interface_reconstruction"
+)

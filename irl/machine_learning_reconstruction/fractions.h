@@ -28,8 +28,8 @@
 #include "irl/moments/volume_with_gradient.h"
 #include "irl/paraboloid_reconstruction/gradient_paraboloid.h"
 
-#include "basic_mesh.h"
-#include "data.h"
+#include "mesh.h"
+#include "data_mesh.h"
 
 using namespace std;
 
@@ -38,13 +38,13 @@ namespace IRL
     class fractions
     {
     private:
-        BasicMesh mesh;
+        Mesh mesh;
         int a_number_of_cells;
         std::array<double, 3> angles;
         std::array<vector<double>, 8> gradients;
 
-        BasicMesh initializeMesh(const int); 
-        bool isParaboloidInCenterCell(const IRL::Paraboloid&, const Data<double>&);
+        Mesh initializeMesh(const int); 
+        bool isParaboloidInCenterCell(const IRL::Paraboloid&, const DataMesh<double>&);
     public:
         fractions(const int);
 
@@ -55,16 +55,16 @@ namespace IRL
         torch::Tensor get_gradients(int);
 
         template <class MomentType, class SurfaceType>
-        IRL::AddSurfaceOutput<MomentType, SurfaceType> getCellMomentsAndSurface(const IRL::Paraboloid&, const Data<double>&, int, int, int); 
+        IRL::AddSurfaceOutput<MomentType, SurfaceType> getCellMomentsAndSurface(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int); 
         
         template <class MomentType>
-        MomentType getCellMoments(const IRL::Paraboloid&,const Data<double>&, int, int, int); 
+        MomentType getCellMoments(const IRL::Paraboloid&,const DataMesh<double>&, int, int, int); 
 
         template <class MomentType, class SurfaceType>
-        IRL::AddSurfaceOutput<MomentType, SurfaceType> getCellMomentsAndSurfaceWithGradients(const IRL::Paraboloid&, const Data<double>&, int, int, int); 
+        IRL::AddSurfaceOutput<MomentType, SurfaceType> getCellMomentsAndSurfaceWithGradients(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int); 
         
         template <class MomentType>
-        MomentType getCellMomentsWithGradients(const IRL::Paraboloid&,const Data<double>&, int, int, int); 
+        MomentType getCellMomentsWithGradients(const IRL::Paraboloid&,const DataMesh<double>&, int, int, int); 
 
         std::array<double, 3> getAngles()
         {

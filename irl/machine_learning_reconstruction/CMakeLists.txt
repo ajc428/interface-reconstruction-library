@@ -6,9 +6,9 @@ target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/fra
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/fractions.tpp)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/grad_functions.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/grad_functions.tpp)
-target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/basic_mesh.h)
-target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/basic_mesh.cpp)
-target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/mesh.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/mesh.cpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_mesh.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_set.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_set.tpp)
 

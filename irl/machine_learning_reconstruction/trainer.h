@@ -70,6 +70,7 @@ namespace IRL
         void set_test_data(vector<vector<double>>, vector<vector<double>>);
         void train_model(int, bool, string, string);
         void test_model(int);
+        IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
     };
 }
 

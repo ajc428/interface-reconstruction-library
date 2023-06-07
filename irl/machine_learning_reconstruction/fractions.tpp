@@ -44,7 +44,7 @@ namespace IRL
     {
         std::random_device rd;  
         std::mt19937_64 a_eng(rd());
-        Data<double> liquid_volume_fraction(mesh);
+        DataMesh<double> liquid_volume_fraction(mesh);
         IRL::Pt datum;
         IRL::ReferenceFrame frame;
         double z_offset;
@@ -81,7 +81,7 @@ namespace IRL
 
     torch::Tensor fractions::get_fractions(IRL::Paraboloid p, bool centroids)
     {
-        Data<double> liquid_volume_fraction(mesh);
+        DataMesh<double> liquid_volume_fraction(mesh);
         vector<double> f;
 
         for (int i = 0; i < a_number_of_cells; ++i)
@@ -109,7 +109,7 @@ namespace IRL
 
     torch::Tensor fractions::get_fractions_with_gradients(IRL::Paraboloid p, bool centroids)
     {
-        Data<double> liquid_volume_fraction(mesh);
+        DataMesh<double> liquid_volume_fraction(mesh);
         vector<double> f;
         for (int i = 0; i < 8; ++i)
         {
@@ -210,9 +210,9 @@ namespace IRL
 
     template <class MomentType, class SurfaceType>
     IRL::AddSurfaceOutput<MomentType, SurfaceType> fractions::getCellMomentsAndSurface(const IRL::Paraboloid& a_interface,
-    const Data<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc) 
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc) 
     {
-        const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
@@ -222,9 +222,9 @@ namespace IRL
 
     template <class MomentType>
     MomentType fractions::getCellMoments(const IRL::Paraboloid& a_interface,
-    const Data<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
     {
-        const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
@@ -235,9 +235,9 @@ namespace IRL
 
     template <class MomentType, class SurfaceType>
     IRL::AddSurfaceOutput<MomentType, SurfaceType> fractions::getCellMomentsAndSurfaceWithGradients(const IRL::Paraboloid& a_interface,
-    const Data<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc) 
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc) 
     {
-        const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
@@ -249,9 +249,9 @@ namespace IRL
 
     template <class MomentType>
     MomentType fractions::getCellMomentsWithGradients(const IRL::Paraboloid& a_interface,
-    const Data<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
     {
-        const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
@@ -263,10 +263,10 @@ namespace IRL
         return moments;
     }
 
-    BasicMesh fractions::initializeMesh(const int a_number_of_cells) 
+    Mesh fractions::initializeMesh(const int a_number_of_cells) 
     {
         constexpr const int a_number_of_ghost_cells = 1;
-        BasicMesh mesh(a_number_of_cells, a_number_of_cells, a_number_of_cells, a_number_of_ghost_cells);
+        Mesh mesh(a_number_of_cells, a_number_of_cells, a_number_of_cells, a_number_of_ghost_cells);
         auto nx = mesh.getNx();
         auto ny = mesh.getNy();
         auto nz = mesh.getNz();
@@ -276,9 +276,9 @@ namespace IRL
         return mesh;
     }
 
-    bool fractions::isParaboloidInCenterCell(const IRL::Paraboloid& a_interface, const Data<double>& a_liquid_volume_fraction) 
+    bool fractions::isParaboloidInCenterCell(const IRL::Paraboloid& a_interface, const DataMesh<double>& a_liquid_volume_fraction) 
     {
-        const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(mesh.ic()), j(mesh.jc()), k(mesh.kc());
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),

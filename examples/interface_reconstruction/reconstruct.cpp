@@ -1,13 +1,4 @@
-// This file is part of the Interface Reconstruction Library (IRL),
-// a library for interface reconstruction and computational geometry operations.
-//
-// Copyright (C) 2022 Robert Chiodi <robert.chiodi@gmail.com>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
-#include "examples/paraboloid_advector/reconstruction_types.h"
+#include "reconstruct.h"
 
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/polygons/polygon.h"
@@ -25,44 +16,31 @@
 #include "irl/planar_reconstruction/planar_separator.h"
 
 #include <Eigen/Dense>
-#include "examples/paraboloid_advector/basic_mesh.h"
-#include "examples/paraboloid_advector/data.h"
-#include "examples/paraboloid_advector/vof_advection.h"
-#include "irl/machine_learning_reconstruction/trainer.h"
 
-void getReconstruction(const std::string& a_reconstruction_method,
-                       const Data<double>& a_liquid_volume_fraction,
-                       const Data<IRL::Pt>& a_liquid_centroid,
-                       const Data<IRL::Pt>& a_gas_centroid,
-                       const Data<IRL::LocalizedParaboloidLink<double>>&
-                           a_localized_paraboloid_link,
-                       const double a_dt, const Data<double>& a_U,
-                       const Data<double>& a_V, const Data<double>& a_W,
-                       Data<IRL::Paraboloid>* a_interface) {
-  if (a_reconstruction_method == "Jibben") {
-    Jibben::getReconstruction(a_liquid_volume_fraction, a_dt, a_U, a_V, a_W,
-                              a_interface);
-  } else if (a_reconstruction_method == "CentroidFit") {
-    Centroid::getReconstruction(a_liquid_volume_fraction, a_dt, a_U, a_V, a_W,
-                                a_interface);
-  } else if (a_reconstruction_method == "PLIC") {
-    PLIC::getReconstruction(a_liquid_volume_fraction, a_dt, a_U, a_V, a_W,
-                            a_interface);
-  } else if (a_reconstruction_method == "ML") {
-    ML::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_interface);
-  } else {
-    std::cout << "Unknown reconstruction method of : "
-              << a_reconstruction_method << '\n';
+void getReconstruction(const std::string& a_reconstruction_method, const Data<double>& a_liquid_volume_fraction, Data<IRL::Paraboloid>* a_interface) 
+{
+  if (a_reconstruction_method == "Jibben") 
+  {
+    Jibben::getReconstruction(a_liquid_volume_fraction, a_interface);
+  } 
+  else if (a_reconstruction_method == "CentroidFit") 
+  {
+    Centroid::getReconstruction(a_liquid_volume_fraction, a_interface);
+  } 
+  else if (a_reconstruction_method == "PLIC") 
+  {
+    PLIC::getReconstruction(a_liquid_volume_fraction, a_interface);
+  } 
+  else 
+  {
+    std::cout << "Unknown reconstruction method of : " << a_reconstruction_method << '\n';
     std::cout << "Valid entries are: PLIC, CentroidFit, Jibben. \n";
     std::exit(-1);
   }
 }
 
-// Wendland radial basis function
-// Wendland, H. (1995). Piecewise polynomial, positive definite and
-// compactly supported radial functions of minimal degree. Advances in
-// Computational Mathematics, 4(1), 389â€“396.
-double wgauss(const double d, const double h) {
+double wgauss(const double d, const double h) 
+{
   if (d >= h) {
     return 0.0;
   } else {
@@ -70,9 +48,8 @@ double wgauss(const double d, const double h) {
   }
 }
 
-void updateReconstructionELVIRA(
-    const Data<double>& a_liquid_volume_fraction,
-    Data<IRL::PlanarSeparator>* a_liquid_gas_interface) {
+void updateReconstructionELVIRA(const Data<double>& a_liquid_volume_fraction,Data<IRL::PlanarSeparator>* a_liquid_gas_interface) 
+{
   IRL::ELVIRANeighborhood neighborhood;
   const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
   neighborhood.resize(27);
@@ -120,9 +97,8 @@ void updateReconstructionELVIRA(
 }
 
 // Reconstruction with LVIRA - use input PlanarSeparator as initial guess
-void updateReconstructionLVIRA(
-    const Data<double>& a_liquid_volume_fraction, const int a_nneigh,
-    Data<IRL::PlanarSeparator>* a_liquid_gas_interface) {
+void updateReconstructionLVIRA(const Data<double>& a_liquid_volume_fraction, const int a_nneigh,Data<IRL::PlanarSeparator>* a_liquid_gas_interface) 
+{
   const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
 
   IRL::LVIRANeighborhood<IRL::RectangularCuboid> neighborhood;
@@ -177,9 +153,8 @@ void updateReconstructionLVIRA(
   }
 }
 
-void updatePolygon(const Data<double>& a_liquid_volume_fraction,
-                   const Data<IRL::PlanarSeparator>& a_liquid_gas_interface,
-                   Data<IRL::Polygon>* a_interface_polygon) {
+void updatePolygon(const Data<double>& a_liquid_volume_fraction, const Data<IRL::PlanarSeparator>& a_liquid_gas_interface, Data<IRL::Polygon>* a_interface_polygon) 
+{
   const BasicMesh& mesh = a_liquid_gas_interface.getMesh();
   // Loop over cells in domain. Skip if cell is not mixed phase.
   for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
@@ -393,19 +368,17 @@ std::array<double, 6> fitParaboloidToCentroids(
       {sol(0), 0.0, 0.0, sol(3), sol(4), sol(5)}};
 }
 
-void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
-                               const double a_dt, const Data<double>& a_U,
-                               const Data<double>& a_V, const Data<double>& a_W,
-                               Data<IRL::Paraboloid>* a_interface) {
-  const BasicMesh& mesh = a_U.getMesh();
-
-  Data<IRL::PlanarSeparator> interface(&mesh);
+void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction, Data<IRL::Paraboloid>* a_interface) 
+{
+  
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  Data<IRL::PlanarSeparator> interface(mesh);
   updateReconstructionELVIRA(a_liquid_volume_fraction, &interface);
   updateReconstructionLVIRA(a_liquid_volume_fraction, 1, &interface);
-  Data<IRL::Polygon> polygon(&mesh);
+  Data<IRL::Polygon> polygon(mesh);
   updatePolygon(a_liquid_volume_fraction, interface, &polygon);
   polygon.updateBorder();
-
+  
   // x- boundary
   for (int i = mesh.imino(); i < mesh.imin(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
@@ -416,7 +389,7 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
       }
     }
   }
-
+  
   // x+ boundary
   for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
@@ -427,7 +400,6 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
       }
     }
   }
-
   // y- boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
@@ -438,7 +410,6 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
       }
     }
   }
-
   // y+ boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
@@ -449,7 +420,6 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
       }
     }
   }
-
   // z- boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
@@ -460,7 +430,6 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
       }
     }
   }
-
   // z+ boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
@@ -471,7 +440,7 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
       }
     }
   }
-
+  
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
@@ -584,7 +553,6 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
             paraboloid.setDatum(new_datum);
             (*a_interface)(i, j, k) = paraboloid;
           }
-          //std::cout << paraboloid.getAlignedParaboloid().a() << std::endl;
         }
       }
     }
@@ -596,17 +564,14 @@ void Jibben::getReconstruction(const Data<double>& a_liquid_volume_fraction,
   correctInterfacePlaneBorders(a_interface);
 }
 
-void Centroid::getReconstruction(const Data<double>& a_liquid_volume_fraction,
-                                 const double a_dt, const Data<double>& a_U,
-                                 const Data<double>& a_V,
-                                 const Data<double>& a_W,
-                                 Data<IRL::Paraboloid>* a_interface) {
-  const BasicMesh& mesh = a_U.getMesh();
+void Centroid::getReconstruction(const Data<double>& a_liquid_volume_fraction, Data<IRL::Paraboloid>* a_interface) 
+{
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
 
-  Data<IRL::PlanarSeparator> interface(&mesh);
+  Data<IRL::PlanarSeparator> interface(mesh);
   updateReconstructionELVIRA(a_liquid_volume_fraction, &interface);
   updateReconstructionLVIRA(a_liquid_volume_fraction, 1, &interface);
-  Data<IRL::Polygon> polygon(&mesh);
+  Data<IRL::Polygon> polygon(mesh);
   updatePolygon(a_liquid_volume_fraction, interface, &polygon);
   polygon.updateBorder();
 
@@ -786,16 +751,14 @@ void Centroid::getReconstruction(const Data<double>& a_liquid_volume_fraction,
   correctInterfacePlaneBorders(a_interface);
 }
 
-void PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction,
-                             const double a_dt, const Data<double>& a_U,
-                             const Data<double>& a_V, const Data<double>& a_W,
-                             Data<IRL::Paraboloid>* a_interface) {
-  const BasicMesh& mesh = a_U.getMesh();
+void PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, Data<IRL::Paraboloid>* a_interface) 
+{
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
 
-  Data<IRL::PlanarSeparator> interface(&mesh);
+  Data<IRL::PlanarSeparator> interface(mesh);
   updateReconstructionELVIRA(a_liquid_volume_fraction, &interface);
   updateReconstructionLVIRA(a_liquid_volume_fraction, 1, &interface);
-  Data<IRL::Polygon> polygon(&mesh);
+  Data<IRL::Polygon> polygon(mesh);
   updatePolygon(a_liquid_volume_fraction, interface, &polygon);
   polygon.updateBorder();
 
@@ -923,65 +886,6 @@ void PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction,
 
   // Update border with simple ghost-cell fill and correct datum for
   // assumed periodic boundary
-  a_interface->updateBorder();
-  correctInterfacePlaneBorders(a_interface);
-}
-
-void ML::getReconstruction(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid, Data<IRL::Paraboloid>* a_interface) 
-{
-  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
-  auto t = IRL::trainer(1, 1, 0.001);
-
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
-  {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
-    {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) 
-      {
-        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
-        {
-          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
-        } 
-        else if (a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) 
-        {
-          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
-        } 
-        else {
-          IRL::Paraboloid paraboloid;
-
-          Mesh mesh2(3, 3, 3, 1);
-          auto nx = mesh2.getNx();
-          auto ny = mesh2.getNy();
-          auto nz = mesh2.getNz();
-          IRL::Pt lower_domain(0, 0, 0);
-          IRL::Pt upper_domain(3, 3, 3);
-          mesh2.setCellBoundaries(lower_domain, upper_domain);
-
-          DataMesh<double> neighborhood(mesh2);
-          DataMesh<IRL::Pt> neighborhood_centroid(mesh2);
-          for (int kk = k - 1; kk < k + 2; ++kk) 
-          {
-            for (int jj = j - 1; jj < j + 2; ++jj) 
-            {
-              for (int ii = i - 1; ii < i + 2; ++ii) 
-              {
-                neighborhood(ii - i+1, jj - j+1, kk - k+1) = a_liquid_volume_fraction(ii, jj, kk);
-                //cout << neighborhood(ii - i+1, jj - j+1, kk - k+1) << " ";
-                neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1) = a_liquid_centroid(ii, jj, kk);
-                //cout << neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[0] << " ";
-                //cout << neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[1] << " ";
-                //cout << neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[2] << " ";
-              }
-            }
-          }
-          paraboloid = t.use_model("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model.pt", neighborhood, neighborhood_centroid);
-          std::cout << /*paraboloid.getAlignedParaboloid().a() <<*/ std::endl;
-          (*a_interface)(i, j, k) = paraboloid;
-        }
-      }
-    }
-  }
-
   a_interface->updateBorder();
   correctInterfacePlaneBorders(a_interface);
 }

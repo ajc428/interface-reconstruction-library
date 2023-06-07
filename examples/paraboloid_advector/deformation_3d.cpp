@@ -35,7 +35,7 @@ constexpr int NY = 64;
 constexpr int NZ = 64;
 constexpr int GC = 4;
 constexpr IRL::Pt lower_domain(0.0, 0.0, 0.0);
-constexpr IRL::Pt upper_domain(1.0, 1.0, 1.0);
+constexpr IRL::Pt upper_domain(64, 64, 64);
 
 BasicMesh Deformation3D::setMesh(void) {
   BasicMesh mesh(NX, NY, NZ, GC);
@@ -50,8 +50,8 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
                                Data<IRL::Paraboloid>* a_interface) {
   Deformation3D::setVelocity(0.0, a_U, a_V, a_W);
   const BasicMesh& mesh = a_U->getMesh();
-  const IRL::Pt sphere_center(0.35, 0.35, 0.35);
-  const double sphere_radius = 0.15;
+  const IRL::Pt sphere_center(0.35*64, 0.35*64, 0.35*64);
+  const double sphere_radius = 0.15*64;
 
   // Loop over cells in domain. Skip if cell is not mixed phase.
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {

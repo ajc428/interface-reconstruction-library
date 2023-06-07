@@ -9,9 +9,9 @@
 
 #include <iostream>
 
-#include "basic_mesh.h"
+#include "mesh.h"
 
-void BasicMesh::setCellBoundaries(const IRL::Pt& a_bottom_bounding_box,
+void Mesh::setCellBoundaries(const IRL::Pt& a_bottom_bounding_box,
                                   const IRL::Pt& a_top_bounding_box) {
   // X direction
   dx_m = (a_top_bounding_box.x() - a_bottom_bounding_box.x()) /
@@ -35,7 +35,7 @@ void BasicMesh::setCellBoundaries(const IRL::Pt& a_bottom_bounding_box,
   }
 }
 
-void BasicMesh::getIndices(const IRL::Pt& a_location, int* a_indices) const {
+void Mesh::getIndices(const IRL::Pt& a_location, int* a_indices) const {
   // Localize x index
   int i =
       static_cast<int>((a_location[0] - this->x(this->imin())) / this->dx()) +

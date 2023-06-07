@@ -51,6 +51,10 @@ struct Centroid {
                                 Data<IRL::Paraboloid>* a_interface);
 };
 
+struct ML {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid, Data<IRL::Paraboloid>* a_interface);
+};
+
 void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface);
 
 namespace details {

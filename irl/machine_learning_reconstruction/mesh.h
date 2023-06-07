@@ -7,8 +7,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#ifndef EXAMPLES_SIMPLE_ADVECTOR_BASIC_MESH_H_
-#define EXAMPLES_SIMPLE_ADVECTOR_BASIC_MESH_H_
+#ifndef IRL_MACHINE_LEARNING_RECONSTRUCTION_MESH_H_
+#define IRL_MACHINE_LEARNING_RECONSTRUCTION_MESH_H_
 
 #include <cstring>
 #include <iostream>
@@ -20,10 +20,10 @@
 /// ghost cells, and provides access to the underlying
 /// cell face locations. These cell face locations are
 /// known for -ngc_m to n+1+ngc_m.
-class BasicMesh {
+class Mesh {
  public:
   /// \brief Default constructor
-  BasicMesh(void)
+  Mesh(void)
       : x_m(),
         y_m(),
         z_m(),
@@ -54,7 +54,7 @@ class BasicMesh {
         kc_m(0) {}
 
   /// \brief Constructor with allocation for mesh
-  BasicMesh(const int a_nx, const int a_ny, const int a_nz, const int a_ngc)
+  Mesh(const int a_nx, const int a_ny, const int a_nz, const int a_ngc)
       : dx_m(0.0),
         dy_m(0.0),
         dz_m(0.0),
@@ -87,7 +87,7 @@ class BasicMesh {
 
   /// \brief Constructor with allocation for mesh and specified center cell
   /// index
-  BasicMesh(const int a_nx, const int a_ny, const int a_nz, const int a_ngc,
+  Mesh(const int a_nx, const int a_ny, const int a_nz, const int a_ngc,
             const int a_ic, const int a_jc, const int a_kc)
       : dx_m(0.0),
         dy_m(0.0),
@@ -120,7 +120,7 @@ class BasicMesh {
   }
 
   /// \brief Copy construction
-  BasicMesh(const BasicMesh& other) {
+  Mesh(const Mesh& other) {
     dx_m = other.dx_m;
     dy_m = other.dy_m;
     dz_m = other.dz_m;
@@ -152,7 +152,7 @@ class BasicMesh {
   }
 
   /// \brief Move construction
-  BasicMesh(BasicMesh&& other) {
+  Mesh(Mesh&& other) {
     dx_m = other.dx_m;
     dy_m = other.dy_m;
     dz_m = other.dz_m;
@@ -184,7 +184,7 @@ class BasicMesh {
   }
 
   /// \brief Copy assignment
-  BasicMesh& operator=(const BasicMesh& other) {
+  Mesh& operator=(const Mesh& other) {
     if (this != &other) {
       dx_m = other.dx_m;
       dy_m = other.dy_m;
@@ -219,7 +219,7 @@ class BasicMesh {
   }
 
   /// \brief Move assignment
-  BasicMesh& operator=(BasicMesh&& other) {
+  Mesh& operator=(Mesh&& other) {
     if (this != &other) {
       dx_m = other.dx_m;
       dy_m = other.dy_m;
@@ -391,7 +391,7 @@ class BasicMesh {
   }
 
   /// \brief Default destructor
-  ~BasicMesh(void) = default;
+  ~Mesh(void) = default;
 
  private:
   std::vector<double> x_m;
@@ -408,4 +408,4 @@ class BasicMesh {
   int ic_m, jc_m, kc_m;
 };
 
-#endif  // EXAMPLES_SIMPLE_ADVECTOR_BASIC_MESH_H_
+#endif
