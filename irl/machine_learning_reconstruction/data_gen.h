@@ -41,76 +41,32 @@ namespace IRL
 
         void generate(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, int type)
         {
-            if (type == 0)
+            for (int n = 0; n < Ntests; ++n) 
             {
-                for (int n = 0; n < Ntests; ++n) 
+                std::cout << n << endl;
+                IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string data_name = "coefficients.txt";
+                coefficients.open(data_name, std::ios_base::app);
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                auto result = gen->get_fractions(paraboloid, true);
+                std::ofstream output;
+                data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+
+                for (int i = 0; i < result.sizes()[0]; ++i)
                 {
-                    std::cout << n << endl;
-                    IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-                    angles = gen->getAngles();
-
-                    std::ofstream coefficients;
-                    std::string data_name = "coefficients.txt";
-                    coefficients.open(data_name, std::ios_base::app);
-                    coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
-                    << "," << angles[0] << "," << angles[1] << "," << angles[2]
-                    << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                    coefficients.close();
-
-                    auto result = gen->get_fractions(paraboloid, true);
-                    std::ofstream output;
-                    data_name = "fractions.txt";
-                    output.open(data_name, std::ios_base::app);
-
-                    for (int i = 0; i < result.sizes()[0]; ++i)
-                    {
-                        output << result[i].item<double>() << ",";
-                    }
-                    output << "\n";
-                    output.close();                    
-                }       
-            }
-            else
-            {
-                for (int n = 0; n < Ntests; ++n) 
-                {
-                    std::cout << n << endl;
-                    IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-                    angles = gen->getAngles();
-
-                    std::ofstream coefficients;
-                    std::string data_name = "coefficients.txt";
-                    coefficients.open(data_name, std::ios_base::app);
-                    coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
-                    << "," << angles[0] << "," << angles[1] << "," << angles[2]
-                    << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                    coefficients.close();
-
-                    auto fracs = gen->get_fractions(paraboloid, false);
-                    DataMesh<double> liquid_volume_fraction(gen->getMesh());
-                    for (int i = 0; i < 3; ++i)
-                    {
-                        for (int j = 0; j < 3; ++j)
-                        {
-                            for (int k = 0; k < 3; ++k)
-                            {
-                                liquid_volume_fraction(i, j, k) = fracs[i*9+j*3+k].item<double>();
-                            }
-                        }
-                    }
-                    auto result = sm->calculate_moments(liquid_volume_fraction, gen->getMesh());
-                    std::ofstream output;
-                    data_name = "moments.txt";
-                    output.open(data_name, std::ios_base::app);
-
-                    for (int i = 0; i < result.sizes()[0]; ++i)
-                    {
-                        output << result[i] << ",";
-                    }
-                    output << "\n";
-                    output.close();                    
-                }   
-            }
+                    output << result[i].item<double>() << ",";
+                }
+                output << "\n";
+                output.close();                    
+            }       
         };
     };
 }

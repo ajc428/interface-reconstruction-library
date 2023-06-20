@@ -33,6 +33,9 @@ namespace IRL
         mu011 = 0;
         mu110 = 0;
         mu111 = 0;
+        mu200 = 0;
+        mu020 = 0;
+        mu002 = 0;
     }
 
     torch::Tensor spatial_moments::calculate_moments(const DataMesh<double>& a_liquid_volume_fraction, Mesh mesh)
@@ -55,6 +58,9 @@ namespace IRL
         mu011 = 0;
         mu110 = 0;
         mu111 = 0;
+        mu200 = 0;
+        mu020 = 0;
+        mu002 = 0;
         for(int i = 0; i < 3; ++i)
         {
             for(int j = 0; j < 3; ++j)
@@ -88,16 +94,30 @@ namespace IRL
                     mu011 = mu011 + (mesh.y(j)-yc)*(mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
                     mu110 = mu110 + (mesh.x(i)-xc)*(mesh.y(j)-yc)*a_liquid_volume_fraction(i,j,k);
                     mu111 = mu111 + (mesh.x(i)-xc)*(mesh.y(j)-yc)*(mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
+                    mu200 = mu200 + pow((mesh.x(i)-xc),2.0)*a_liquid_volume_fraction(i,j,k);
+                    mu020 = mu020 + pow((mesh.y(j)-yc),2.0)*a_liquid_volume_fraction(i,j,k);
+                    mu002 = mu002 + pow((mesh.z(k)-zc),2.0)*a_liquid_volume_fraction(i,j,k);
                 }
             }
         }
-        temp.push_back(m000);
-        temp.push_back(m100);
-        temp.push_back(m010);
-        temp.push_back(m001);
-        temp.push_back(m200);
-        temp.push_back(m020);
-        temp.push_back(m002);
+        mu100 = mu100/pow(m000,(1+0+0+3)/3.0);
+        mu010 = mu010/pow(m000,(0+1+0+3)/3.0);
+        mu001 = mu001/pow(m000,(0+0+1+3)/3.0);
+        mu101 = mu101/pow(m000,(1+0+1+3)/3.0);
+        mu011 = mu011/pow(m000,(0+1+1+3)/3.0);
+        mu110 = mu110/pow(m000,(1+1+0+3)/3.0);
+        mu111 = mu111/pow(m000,(1+1+1+3)/3.0);
+        mu200 = mu200/pow(m000,(2+0+0+3)/3.0);
+        mu020 = mu020/pow(m000,(0+2+0+3)/3.0);
+        mu002 = mu002/pow(m000,(0+0+2+3)/3.0);
+
+        double J1 = mu200 + mu020 + mu002;
+        double J2 = mu200*mu020 + mu200*mu002 + mu020*mu002 - mu110*mu110 - mu101*mu101 - mu011*mu011;
+        double J3 = mu200*mu020*mu002 + 2*mu110*mu101*mu011 - mu002*mu110*mu110 - mu020*mu101*mu101 - mu200*mu011*mu011;
+
+        temp.push_back(J1);
+        temp.push_back(J2);
+        temp.push_back(J3);
 
         return torch::tensor(temp);
     }

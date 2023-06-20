@@ -12,7 +12,7 @@
 
 using namespace std;
 
-vector<torch::Tensor> MyDataset::read_data(string file, int data_size)
+vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
 {
     ifstream indata;
     vector<torch::Tensor> output;
@@ -28,7 +28,32 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size)
         {
             num.push_back(stod(value));
         }
-        output.push_back(torch::tensor(num));
+
+        if (m == 3)
+        {
+            IRL::fractions *gen;
+            IRL::spatial_moments *sm;
+            gen = new IRL::fractions(3);
+            sm = new IRL::spatial_moments();
+            DataMesh<double> liquid_volume_fraction(gen->getMesh());
+            for (int i = 0; i < 3; ++i)
+            {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        liquid_volume_fraction(i, j, k) = num[4*(i*9+j*3+k)];
+                    }
+                }
+            }
+            output.push_back(sm->calculate_moments(liquid_volume_fraction, gen->getMesh()));
+            delete gen;
+            delete sm;
+        }
+        else
+        {
+            output.push_back(torch::tensor(num));
+        }
         ++i;
     }
     indata.close();

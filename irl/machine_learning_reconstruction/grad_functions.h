@@ -38,8 +38,9 @@ namespace IRL
     private:
         IRL::fractions *gen;
         IRL::spatial_moments *sm;
+        int size;
     public:
-        grad_functions(int);
+        grad_functions(int, int);
         ~grad_functions();
         torch::Tensor VolumeFracsForward(const torch::Tensor);
         torch::Tensor VolumeFracsForwardFD(const torch::Tensor);
@@ -92,17 +93,17 @@ namespace IRL
 
             variable_list apply(variable_list&& inputs) override 
             {
-                Eigen::MatrixXd in_grads(7,1);
-                Eigen::MatrixXd out_grads(8,7);
+                Eigen::MatrixXd in_grads(3,1);
+                Eigen::MatrixXd out_grads(8,3);
                 Eigen::MatrixXd grad_result(8,1);
                 for (int i = 0; i < 8; ++i)
                 {
-                    for (int j = 0; j < 7; ++j)
+                    for (int j = 0; j < 3; ++j)
                     {
                         out_grads(i,j) = moment_grads[i][j].item<double>();
                     }
                 }
-                for (int i = 0; i < 7; ++i)
+                for (int i = 0; i < 3; ++i)
                 {
                     in_grads(i,0) = inputs[0][i].item<double>();
                 }

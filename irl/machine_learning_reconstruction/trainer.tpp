@@ -23,7 +23,7 @@ namespace IRL
         m = s;
         if (m == 3)
         {
-            nn = make_shared<model>(7);
+            nn = make_shared<model>(3);
         }
         else
         {
@@ -31,7 +31,7 @@ namespace IRL
         }
         critereon = torch::nn::MSELoss();
         optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
-        functions = new IRL::grad_functions(3);
+        functions = new IRL::grad_functions(3, m);
     }
 
     trainer::~trainer()
@@ -55,7 +55,7 @@ namespace IRL
     void trainer::train_model(bool load, std::string in, std::string out)
     {
         cout << "Hello from rank " << rank << endl;
-        auto data_train = MyDataset(train_in_file, train_out_file, data_size).map(torch::data::transforms::Stack<>());
+        auto data_train = MyDataset(train_in_file, train_out_file, data_size, m).map(torch::data::transforms::Stack<>());
         batch_size = data_train.size().value() / numranks;
         if (rank == 0)
         {
@@ -88,8 +88,8 @@ namespace IRL
                 }
                 else if (m == 1)
                 {
-                    check = torch::zeros({batch_size, 108});
-                    comp = torch::zeros({batch_size, 108});
+                    check = torch::zeros({batch_size, nn->getSize()});
+                    comp = torch::zeros({batch_size, nn->getSize()});
                     for (int i = 0; i < batch_size; ++i)
                     {
                         check[i] = functions->VolumeFracsForward(y_pred[i]);
@@ -98,8 +98,8 @@ namespace IRL
                 }
                 else if (m == 2)
                 {
-                    check = torch::zeros({batch_size, 108});
-                    comp = torch::zeros({batch_size, 108});
+                    check = torch::zeros({batch_size, nn->getSize()});
+                    comp = torch::zeros({batch_size, nn->getSize()});
                     for (int i = 0; i < batch_size; ++i)
                     {
                         check[i] = functions->VolumeFracsForwardFD(y_pred[i]);
@@ -108,8 +108,8 @@ namespace IRL
                 }
                 else if (m == 3)
                 {
-                    check = torch::zeros({batch_size, 7});
-                    comp = torch::zeros({batch_size, 7});
+                    check = torch::zeros({batch_size, nn->getSize()});
+                    comp = torch::zeros({batch_size, nn->getSize()});
                     for (int i = 0; i < batch_size; ++i)
                     {
                         IRL::fractions gen(3);
@@ -151,7 +151,7 @@ namespace IRL
     {
         if (rank == 0)
         {
-            auto data_test = MyDataset(test_in_file, test_out_file, data_size);
+            auto data_test = MyDataset(test_in_file, test_out_file, data_size, m);
             nn->eval();
     
             results_ex.open("result_ex.txt");
@@ -185,11 +185,11 @@ namespace IRL
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
                     auto pred = functions->VolumeFracsForward(prediction);
-                    for (int j = 0; j < 108; ++j)
+                    for (int j = 0; j < nn->getSize(); ++j)
                     {
                         results_pr << pred[j].item<double>() << " ";
                     }
-                    for (int j = 0; j < 108; ++j)
+                    for (int j = 0; j < nn->getSize(); ++j)
                     {
                         results_ex << test_in[j].item<double>() << " ";
                     }
@@ -205,11 +205,11 @@ namespace IRL
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
                     auto pred = functions->VolumeFracsForwardFD(prediction);
-                    for (int j = 0; j < 108; ++j)
+                    for (int j = 0; j < nn->getSize(); ++j)
                     {
                         results_pr << pred[j].item<double>() << " ";
                     }
-                    for (int j = 0; j < 108; ++j)
+                    for (int j = 0; j < nn->getSize(); ++j)
                     {
                         results_ex << test_in[j].item<double>() << " ";
                     }
@@ -227,11 +227,11 @@ namespace IRL
                     IRL::fractions gen(3);
                     DataMesh<double> liquid_volume_fraction(gen.getMesh());
                     auto pred = functions->MomentsForward(prediction, liquid_volume_fraction);
-                    for (int j = 0; j < 7; ++j)
+                    for (int j = 0; j < nn->getSize(); ++j)
                     {
                         results_pr << pred[j].item<double>() << " ";
                     }
-                    for (int j = 0; j < 7; ++j)
+                    for (int j = 0; j < nn->getSize(); ++j)
                     {
                         results_ex << test_in[j].item<double>() << " ";
                     }

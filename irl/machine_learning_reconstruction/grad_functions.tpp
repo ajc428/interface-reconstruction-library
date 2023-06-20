@@ -23,10 +23,18 @@ using torch::autograd::flatten_tensor_args;
 
 namespace IRL
 {
-    grad_functions::grad_functions(int num_cells)
+    grad_functions::grad_functions(int num_cells, int s)
     {
         gen = new IRL::fractions(num_cells);
         sm = new IRL::spatial_moments();
+        if (s == 3)
+        {
+            size = 3;
+        }
+        else
+        {
+            size = 108;
+        }
     }
 
     grad_functions::~grad_functions()
@@ -112,8 +120,8 @@ namespace IRL
         for (int i = 0; i < 8; ++i)
         {
             ep.push_back(gen->get_fractions(p[i], true));
-            torch::Tensor temp = torch::zeros(108);
-            for (int j = 0; j < 108; ++j)
+            torch::Tensor temp = torch::zeros(size);
+            for (int j = 0; j < size; ++j)
             {
                 temp[j] = (ep[i][j].item<double>() - result[j].item<double>()) / e;
             }
@@ -204,8 +212,8 @@ namespace IRL
                 }
             }
             ep.push_back(sm->calculate_moments(liquid_volume_fraction, gen->getMesh()));
-            torch::Tensor temp = torch::zeros(108);
-            for (int j = 0; j < 7; ++j)
+            torch::Tensor temp = torch::zeros(size);
+            for (int j = 0; j < size; ++j)
             {
                 temp[j] = (ep[n][j] - result[j]) / e;
             }

@@ -25,13 +25,13 @@ class MyDataset : public torch::data::Dataset<MyDataset>
         vector<torch::Tensor> data_out;
 
     public:
-        explicit MyDataset(string in_file, string out_file, int data_size)
+        explicit MyDataset(string in_file, string out_file, int data_size, int m)
         {
-            data_in = read_data(in_file, data_size);
-            data_out = read_data(out_file, data_size);
+            data_in = read_data(in_file, data_size, m);
+            data_out = read_data(out_file, data_size, 0);
         };
 
-        vector<torch::Tensor> read_data(string, int);
+        vector<torch::Tensor> read_data(string, int, int);
         torch::data::Example<> get(size_t index) override;
         torch::optional<size_t> size() const override 
         {

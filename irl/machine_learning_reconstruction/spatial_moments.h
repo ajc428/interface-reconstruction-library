@@ -39,6 +39,9 @@ namespace IRL
         double mu011;
         double mu110;
         double mu111;
+        double mu200;
+        double mu020;
+        double mu002;
         torch::Tensor moments;
 
     public:

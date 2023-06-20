@@ -30,11 +30,11 @@ int main(int argc, char* argv[])
 
     //create_surface("test_surface3",-0.2,0,0.7,0,0,0,10,0.000001);
     
-    //data_generate(1000,0,2*3.1415,0,2*3.1415,0,2*3.1415,-4,4,-4,4,-0.5,0.5,-0.5,0.5,-0.5,0.5, 1);
+    //data_generate(1000,0,2*3.1415,0,2*3.1415,0,2*3.1415,-4,4,-4,4,-0.5,0.5,-0.5,0.5,-0.5,0.5);
 
-    auto t = IRL::trainer(1000, 100, 0.0001, 2);
+    auto t = IRL::trainer(1000, 10, 0.0001, 3);
     t.load_train_data("fractions.txt", "coefficients.txt");
     t.load_test_data("fractions.txt", "coefficients.txt");
-    t.train_model(false, "model.pt", "model.pt");
-    t.test_model(0);
+    t.train_model(true, "model.pt", "model.pt");
+    t.test_model(3);
 }

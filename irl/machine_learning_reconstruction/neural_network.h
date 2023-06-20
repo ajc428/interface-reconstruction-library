@@ -13,8 +13,10 @@ namespace IRL
 {
     struct model : torch::nn::Module 
     {
-        model(int size) 
+        int size;
+        model(int s) 
         {
+            size = s;
             l1 = register_module("l1", torch::nn::Linear(size, 100));
             l2 = register_module("l2", torch::nn::Linear(100, 100));
             l3 = register_module("l3", torch::nn::Linear(100, 100));
@@ -29,5 +31,10 @@ namespace IRL
             return x;
         }
         torch::nn::Linear l1{nullptr}, l2{nullptr}, l3{nullptr}, l4{nullptr};
+
+        int getSize()
+        {
+            return size;
+        }
     };
 }
