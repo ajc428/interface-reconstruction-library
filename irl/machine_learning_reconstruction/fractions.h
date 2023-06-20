@@ -70,6 +70,11 @@ namespace IRL
         {
             return angles;
         }
+
+        Mesh getMesh()
+        {
+            return mesh;
+        }
     };
 }
 

@@ -26,11 +26,13 @@ namespace IRL
     grad_functions::grad_functions(int num_cells)
     {
         gen = new IRL::fractions(num_cells);
+        sm = new IRL::spatial_moments();
     }
 
     grad_functions::~grad_functions()
     {
         delete gen;
+        delete sm;
     }
 
     torch::Tensor grad_functions::VolumeFracsForward(const torch::Tensor y_pred) 
@@ -123,6 +125,98 @@ namespace IRL
 
             grad_fn->set_next_edges(collect_next_edges(y_pred));
             grad_fn->frac_grads = grads;
+            grad_fn->y_pred = y_pred;
+
+            set_history(flatten_tensor_args(result), grad_fn);
+        }
+        return result;
+    }
+
+    torch::Tensor grad_functions::MomentsForward(const torch::Tensor y_pred, DataMesh<double>& liquid_volume_fraction) 
+    {
+        IRL::Paraboloid paraboloid = gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>());
+
+        vector<IRL::Paraboloid> p;
+        vector<IRL::Paraboloid> p1;
+        double e = std::sqrt(DBL_EPSILON);
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>()+e, y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>()+e, y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()+e,
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>()+e, y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>()+e, y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()+e,
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>()+e, y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()+e));
+
+        auto fracs = gen->get_fractions(paraboloid, false);
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    liquid_volume_fraction(i, j, k) = fracs[i*9+j*3+k].item<double>();
+                }
+            }
+        }
+        auto result = sm->calculate_moments(liquid_volume_fraction, gen->getMesh());
+
+        vector<torch::Tensor> ep;
+        vector<torch::Tensor> grads;
+        
+        for (int n = 0; n < 8; ++n)
+        {
+            fracs = gen->get_fractions(p[n], false);
+            for (int i = 0; i < 3; ++i)
+            {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        liquid_volume_fraction(i, j, k) = fracs[i*9+j*3+k].item<double>();
+                    }
+                }
+            }
+            ep.push_back(sm->calculate_moments(liquid_volume_fraction, gen->getMesh()));
+            torch::Tensor temp = torch::zeros(108);
+            for (int j = 0; j < 7; ++j)
+            {
+                temp[j] = (ep[n][j] - result[j]) / e;
+            }
+            grads.push_back(temp);
+        }
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<MomentsBackward>(new grad_functions::MomentsBackward(), deleteNode);
+
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->moment_grads = grads;
             grad_fn->y_pred = y_pred;
 
             set_history(flatten_tensor_args(result), grad_fn);

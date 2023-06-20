@@ -18,6 +18,7 @@
 #include <Eigen/Dense>
 
 #include "irl/machine_learning_reconstruction/fractions.h"
+#include "irl/machine_learning_reconstruction/spatial_moments.h"
 
 using torch::autograd::Node;
 using torch::autograd::deleteNode;
@@ -36,11 +37,13 @@ namespace IRL
     {
     private:
         IRL::fractions *gen;
+        IRL::spatial_moments *sm;
     public:
         grad_functions(int);
         ~grad_functions();
         torch::Tensor VolumeFracsForward(const torch::Tensor);
         torch::Tensor VolumeFracsForwardFD(const torch::Tensor);
+        torch::Tensor MomentsForward(const torch::Tensor, DataMesh<double>&);
         
         struct VolumeFracsBackward : public Node 
         {
@@ -60,6 +63,46 @@ namespace IRL
                     }
                 }
                 for (int i = 0; i < 108; ++i)
+                {
+                    in_grads(i,0) = inputs[0][i].item<double>();
+                }
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros(8); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = out_grads * in_grads;
+                }
+
+                for (int i = 0; i < 8; ++i)
+                {
+                    torch::Tensor temp2 = torch::zeros(1); 
+                    temp2 = torch::tensor(grad_result(i,0));
+                    temp[i] = temp2;
+                }
+                grad_inputs[0] = temp;
+                return grad_inputs;
+            }
+        };
+
+        struct MomentsBackward : public Node 
+        {
+            vector<torch::Tensor> moment_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                Eigen::MatrixXd in_grads(7,1);
+                Eigen::MatrixXd out_grads(8,7);
+                Eigen::MatrixXd grad_result(8,1);
+                for (int i = 0; i < 8; ++i)
+                {
+                    for (int j = 0; j < 7; ++j)
+                    {
+                        out_grads(i,j) = moment_grads[i][j].item<double>();
+                    }
+                }
+                for (int i = 0; i < 7; ++i)
                 {
                     in_grads(i,0) = inputs[0][i].item<double>();
                 }

@@ -12,7 +12,7 @@
 
 namespace IRL
 {
-    trainer::trainer(int e, int d, double l)
+    trainer::trainer(int e, int d, double l, int s)
     {
         rank = MPI::COMM_WORLD.Get_rank();
         numranks = MPI::COMM_WORLD.Get_size();                      
@@ -20,7 +20,15 @@ namespace IRL
         data_size = d;
         batch_size = data_size / numranks;
         learning_rate = l;
-        nn = make_shared<model>();
+        m = s;
+        if (m == 3)
+        {
+            nn = make_shared<model>(7);
+        }
+        else
+        {
+            nn = make_shared<model>(108);
+        }
         critereon = torch::nn::MSELoss();
         optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
         functions = new IRL::grad_functions(3);
@@ -44,7 +52,7 @@ namespace IRL
         test_out_file = out_file;
     }
 
-    void trainer::train_model(int m, bool load, std::string in, std::string out)
+    void trainer::train_model(bool load, std::string in, std::string out)
     {
         cout << "Hello from rank " << rank << endl;
         auto data_train = MyDataset(train_in_file, train_out_file, data_size).map(torch::data::transforms::Stack<>());
@@ -68,7 +76,9 @@ namespace IRL
                 train_in = batch.data;
                 train_out = batch.target;
 
-                auto y_pred = nn->forward(train_in);
+                torch::Tensor y_pred = torch::zeros({batch_size, 8});;
+                y_pred = nn->forward(train_in);
+
                 torch::Tensor check = torch::zeros({batch_size, 8});
                 torch::Tensor comp = torch::zeros({batch_size, 8});
                 if (m == 0)
@@ -96,12 +106,24 @@ namespace IRL
                     }
                     comp = train_in;
                 }
+                else if (m == 3)
+                {
+                    check = torch::zeros({batch_size, 7});
+                    comp = torch::zeros({batch_size, 7});
+                    for (int i = 0; i < batch_size; ++i)
+                    {
+                        IRL::fractions gen(3);
+                        DataMesh<double> liquid_volume_fraction(gen.getMesh());
+                        check[i] = functions->MomentsForward(y_pred[i], liquid_volume_fraction);
+                    }
+                    comp = train_in;
+                }
                 auto loss = critereon(check, comp);
                 epoch_loss = epoch_loss + loss.item().toDouble();
 
                 optimizer->zero_grad();
                 loss.backward();
-
+                
                 if (numranks > 1)
                 {
                     for (auto &param : nn->named_parameters())
@@ -121,10 +143,11 @@ namespace IRL
             }
         }
         torch::save(nn, out);
+
         MPI::Finalize(); 
     }
 
-    void trainer::test_model(int m)
+    void trainer::test_model(int n)
     {
         if (rank == 0)
         {
@@ -133,13 +156,15 @@ namespace IRL
     
             results_ex.open("result_ex.txt");
             results_pr.open("result_pr.txt");
-            if (m == 0)
+            if (n == 0)
             {
                 for(int i = 0; i < data_test.size().value(); ++i)
                 {
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
-                    auto prediction = nn->forward(test_in);
+                    torch::Tensor prediction = torch::zeros({8, 1});
+                    prediction = nn->forward(test_in);
+                    
                     for (int j = 0; j < 8; ++j)
                     {
                         results_pr << prediction[j].item<double>() << " ";
@@ -152,7 +177,7 @@ namespace IRL
                     results_pr << "\n";
                 }
             }
-            else if (m == 1)
+            else if (n == 1)
             {
                 for(int i = 0; i < data_test.size().value(); ++i)
                 {
@@ -172,7 +197,7 @@ namespace IRL
                     results_pr << "\n";
                 }
             }
-            else if (m == 2)
+            else if (n == 2)
             {
                 for(int i = 0; i < data_test.size().value(); ++i)
                 {
@@ -185,6 +210,28 @@ namespace IRL
                         results_pr << pred[j].item<double>() << " ";
                     }
                     for (int j = 0; j < 108; ++j)
+                    {
+                        results_ex << test_in[j].item<double>() << " ";
+                    }
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+            }
+            else if (n == 3)
+            {
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    auto prediction = nn->forward(test_in);
+                    IRL::fractions gen(3);
+                    DataMesh<double> liquid_volume_fraction(gen.getMesh());
+                    auto pred = functions->MomentsForward(prediction, liquid_volume_fraction);
+                    for (int j = 0; j < 7; ++j)
+                    {
+                        results_pr << pred[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < 7; ++j)
                     {
                         results_ex << test_in[j].item<double>() << " ";
                     }

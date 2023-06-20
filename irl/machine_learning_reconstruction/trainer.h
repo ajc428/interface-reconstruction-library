@@ -44,6 +44,7 @@ namespace IRL
         int rank = 0;
         int numranks = 1;
         int batch_size = data_size / numranks;
+        int m = 0;
 
         ofstream results_ex;
         ofstream results_pr;
@@ -62,13 +63,13 @@ namespace IRL
         IRL::grad_functions *functions;
         
     public:
-        trainer(int, int, double);
+        trainer(int, int, double, int);
         ~trainer();
         void load_train_data(string, string);
         void load_test_data(string, string);
         void set_train_data(vector<vector<double>>, vector<vector<double>>);
         void set_test_data(vector<vector<double>>, vector<vector<double>>);
-        void train_model(int, bool, string, string);
+        void train_model(bool, string, string);
         void test_model(int);
         IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
     };

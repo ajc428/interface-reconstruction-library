@@ -11,6 +11,8 @@ target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/mes
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_mesh.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_set.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_set.tpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/spatial_moments.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/spatial_moments.tpp)
 
 find_package(Torch REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
