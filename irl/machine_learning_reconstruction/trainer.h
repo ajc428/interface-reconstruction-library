@@ -19,6 +19,7 @@
 #include <string>
 #include "irl/machine_learning_reconstruction/neural_network.h"
 #include "irl/machine_learning_reconstruction/grad_functions.h"
+#include "irl/machine_learning_reconstruction/binary_neural_network.h"
 #include "data_set.h"
 
 using namespace std;
@@ -58,7 +59,9 @@ namespace IRL
         string test_out_file;
 
         shared_ptr<IRL::model> nn;
+        shared_ptr<IRL::binary_model> nn_binary;
         torch::nn::MSELoss critereon;
+        torch::nn::BCELoss critereon2;
         torch::optim::Optimizer *optimizer;
         IRL::grad_functions *functions;
         

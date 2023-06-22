@@ -29,7 +29,7 @@ namespace IRL
         sm = new IRL::spatial_moments();
         if (s == 3)
         {
-            size = 3;
+            size = 5;
         }
         else
         {

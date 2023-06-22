@@ -28,8 +28,7 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
         {
             num.push_back(stod(value));
         }
-
-        if (m == 3)
+        if (m == 3 || m == 4)
         {
             IRL::fractions *gen;
             IRL::spatial_moments *sm;

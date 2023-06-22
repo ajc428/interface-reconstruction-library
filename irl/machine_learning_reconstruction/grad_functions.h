@@ -93,17 +93,17 @@ namespace IRL
 
             variable_list apply(variable_list&& inputs) override 
             {
-                Eigen::MatrixXd in_grads(3,1);
-                Eigen::MatrixXd out_grads(8,3);
+                Eigen::MatrixXd in_grads(5,1);
+                Eigen::MatrixXd out_grads(8,5);
                 Eigen::MatrixXd grad_result(8,1);
                 for (int i = 0; i < 8; ++i)
                 {
-                    for (int j = 0; j < 3; ++j)
+                    for (int j = 0; j < 5; ++j)
                     {
                         out_grads(i,j) = moment_grads[i][j].item<double>();
                     }
                 }
-                for (int i = 0; i < 3; ++i)
+                for (int i = 0; i < 5; ++i)
                 {
                     in_grads(i,0) = inputs[0][i].item<double>();
                 }

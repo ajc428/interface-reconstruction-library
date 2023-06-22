@@ -18,23 +18,23 @@ void create_surface(string name, double x, double y, double z, double alpha, dou
     triangulated_surface.write(name);
 }
 
-void data_generate(int num, double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, int type)
+void data_generate(int num, int type, double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
 {
-    IRL::data_gen gen(3,num);
-    gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, 1);
+    IRL::data_gen gen(3,num, type);
+    gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
 }
 
 int main(int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
 
-    //create_surface("test_surface3",-0.2,0,0.7,0,0,0,10,0.000001);
+    //create_surface("test_surface",0.399235,0.0907319,0.275013,1.07142,3.87079,5.85515,2.37561,0.01);
     
-    //data_generate(1000,0,2*3.1415,0,2*3.1415,0,2*3.1415,-4,4,-4,4,-0.5,0.5,-0.5,0.5,-0.5,0.5);
+    //data_generate(2000,1,0,2*3.1415,0,2*3.1415,0,2*3.1415,2,10,0.01,0.1,-10,10,-10,10,-10,10);
 
-    auto t = IRL::trainer(1000, 10, 0.0001, 3);
-    t.load_train_data("fractions.txt", "coefficients.txt");
-    t.load_test_data("fractions.txt", "coefficients.txt");
+    auto t = IRL::trainer(10000, 8000, 0.0001, 4);
+    t.load_train_data("fractions.txt", "type.txt");
+    t.load_test_data("fractions_test.txt", "type_test.txt");
     t.train_model(true, "model.pt", "model.pt");
-    t.test_model(3);
+    t.test_model(4);
 }

@@ -42,6 +42,15 @@ namespace IRL
         double mu200;
         double mu020;
         double mu002;
+        double mu210;
+        double mu201;
+        double mu120;
+        double mu102;
+        double mu021;
+        double mu012;
+        double mu300;
+        double mu030;
+        double mu003;
         torch::Tensor moments;
 
     public:
