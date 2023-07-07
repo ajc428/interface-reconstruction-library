@@ -29,7 +29,7 @@ namespace IRL
         sm = new IRL::spatial_moments();
         if (s == 3)
         {
-            size = 5;
+            size = 12;
         }
         else
         {
@@ -140,7 +140,7 @@ namespace IRL
         return result;
     }
 
-    torch::Tensor grad_functions::MomentsForward(const torch::Tensor y_pred, DataMesh<double>& liquid_volume_fraction) 
+    torch::Tensor grad_functions::MomentsForward(const torch::Tensor y_pred, DataMesh<double>& liquid_volume_fraction, DataMesh<IRL::Pt>& liquid_centroid) 
     {
         IRL::Paraboloid paraboloid = gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
         y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
@@ -182,36 +182,38 @@ namespace IRL
         y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
         y_pred[6].item<double>(), y_pred[7].item<double>()+e));
 
-        auto fracs = gen->get_fractions(paraboloid, false);
+        auto fracs = gen->get_fractions(paraboloid, true);
         for (int i = 0; i < 3; ++i)
         {
             for (int j = 0; j < 3; ++j)
             {
                 for (int k = 0; k < 3; ++k)
                 {
-                    liquid_volume_fraction(i, j, k) = fracs[i*9+j*3+k].item<double>();
+                    liquid_volume_fraction(i, j, k) = fracs[4*(i*9+j*3+k)].item<double>();
+                    liquid_centroid(i, j, k) = IRL::Pt(fracs[4*(i*9+j*3+k)+1].item<double>(), fracs[4*(i*9+j*3+k)+2].item<double>(), fracs[4*(i*9+j*3+k)+3].item<double>());
                 }
             }
         }
-        auto result = sm->calculate_moments(liquid_volume_fraction, gen->getMesh());
+        auto result = sm->calculate_moments(liquid_volume_fraction, liquid_centroid, gen->getMesh());
 
         vector<torch::Tensor> ep;
         vector<torch::Tensor> grads;
         
         for (int n = 0; n < 8; ++n)
         {
-            fracs = gen->get_fractions(p[n], false);
+            fracs = gen->get_fractions(p[n], true);
             for (int i = 0; i < 3; ++i)
             {
                 for (int j = 0; j < 3; ++j)
                 {
                     for (int k = 0; k < 3; ++k)
                     {
-                        liquid_volume_fraction(i, j, k) = fracs[i*9+j*3+k].item<double>();
+                        liquid_volume_fraction(i, j, k) = fracs[4*(i*9+j*3+k)].item<double>();
+                        liquid_centroid(i, j, k) = IRL::Pt(fracs[4*(i*9+j*3+k)+1].item<double>(), fracs[4*(i*9+j*3+k)+2].item<double>(), fracs[4*(i*9+j*3+k)+3].item<double>());
                     }
                 }
             }
-            ep.push_back(sm->calculate_moments(liquid_volume_fraction, gen->getMesh()));
+            ep.push_back(sm->calculate_moments(liquid_volume_fraction, liquid_centroid, gen->getMesh()));
             torch::Tensor temp = torch::zeros(size);
             for (int j = 0; j < size; ++j)
             {
@@ -225,6 +227,40 @@ namespace IRL
 
             grad_fn->set_next_edges(collect_next_edges(y_pred));
             grad_fn->moment_grads = grads;
+            grad_fn->y_pred = y_pred;
+
+            set_history(flatten_tensor_args(result), grad_fn);
+        }
+        return result;
+    }
+
+    torch::Tensor grad_functions::CurvatureForward(const torch::Tensor y_pred) 
+    {
+        vector<double> curv;
+        curv.push_back(4*y_pred[0].item<double>()*y_pred[0].item<double>()*y_pred[1].item<double>()*y_pred[1].item<double>());
+
+        vector<double> c;
+        double e = std::sqrt(DBL_EPSILON);
+
+        c.push_back(4*(y_pred[0].item<double>()+e)*(y_pred[0].item<double>()+e)*y_pred[1].item<double>()*y_pred[1].item<double>());
+        c.push_back(4*y_pred[0].item<double>()*y_pred[0].item<double>()*(y_pred[1].item<double>()+e)*(y_pred[1].item<double>()+e));
+
+        vector<torch::Tensor> grads;
+
+        for (int i = 0; i < 2; ++i)
+        {
+            torch::Tensor temp = torch::zeros(size);
+            temp[0] = (c[i] - curv[0]) / e;
+            grads.push_back(temp);
+        }
+        torch::Tensor result = torch::zeros({1,1});
+        result = torch::tensor(curv);
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<CurvatureBackward>(new grad_functions::CurvatureBackward(), deleteNode);
+
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->curvature_grads = grads;
             grad_fn->y_pred = y_pred;
 
             set_history(flatten_tensor_args(result), grad_fn);

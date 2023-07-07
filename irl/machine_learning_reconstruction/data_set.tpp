@@ -28,13 +28,15 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
         {
             num.push_back(stod(value));
         }
-        if (m == 3 || m == 4)
+
+        if (m == 3)
         {
             IRL::fractions *gen;
             IRL::spatial_moments *sm;
             gen = new IRL::fractions(3);
             sm = new IRL::spatial_moments();
             DataMesh<double> liquid_volume_fraction(gen->getMesh());
+            DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
             for (int i = 0; i < 3; ++i)
             {
                 for (int j = 0; j < 3; ++j)
@@ -42,10 +44,11 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
                     for (int k = 0; k < 3; ++k)
                     {
                         liquid_volume_fraction(i, j, k) = num[4*(i*9+j*3+k)];
+                        liquid_centroid(i, j, k) = IRL::Pt(num[4*(i*9+j*3+k)+1], num[4*(i*9+j*3+k)+2], num[4*(i*9+j*3+k)+3]);
                     }
                 }
             }
-            output.push_back(sm->calculate_moments(liquid_volume_fraction, gen->getMesh()));
+            output.push_back(sm->calculate_moments(liquid_volume_fraction, liquid_centroid, gen->getMesh()));
             delete gen;
             delete sm;
         }

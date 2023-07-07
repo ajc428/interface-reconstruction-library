@@ -20,65 +20,89 @@ namespace IRL
         m100 = 0;
         m010 = 0;
         m001 = 0;
-        m200 = 0;
-        m020 = 0;
-        m002 = 0;
         xc = 0;
         yc = 0;
         zc = 0;
-        mu100 = 0;
-        mu010 = 0;
-        mu001 = 0;
         mu101 = 0;
         mu011 = 0;
         mu110 = 0;
-        mu111 = 0;
         mu200 = 0;
         mu020 = 0;
         mu002 = 0;
-        mu210 = 0;
-        mu201 = 0;
-        mu120 = 0;
-        mu102 = 0;
-        mu021 = 0;
-        mu012 = 0;
-        mu300 = 0;
-        mu030 = 0;
-        mu003 = 0;
+
+        mx000 = 0;
+        my000 = 0;
+        mz000 = 0;
+        mx100 = 0;
+        my100 = 0;
+        mz100 = 0;
+        mx010 = 0;
+        my010 = 0;
+        mz010 = 0;
+        mx001 = 0;
+        my001 = 0;
+        mz001 = 0;
+        x_xc = 0;
+        x_yc = 0;
+        x_zc = 0;
+        y_xc = 0;
+        y_yc = 0;
+        y_zc = 0;
+        z_xc = 0;
+        z_yc = 0;
+        z_zc = 0;
     }
 
-    torch::Tensor spatial_moments::calculate_moments(const DataMesh<double>& a_liquid_volume_fraction, Mesh mesh)
+    torch::Tensor spatial_moments::calculate_moments(const DataMesh<double>& a_liquid_volume_fraction, DataMesh<IRL::Pt>& a_liquid_centroid, Mesh mesh)
     {
         vector<double> temp;
         m000 = 0;
         m100 = 0;
         m010 = 0;
         m001 = 0;
-        m200 = 0;
-        m020 = 0;
-        m002 = 0;
         xc = 0;
         yc = 0;
         zc = 0;
-        mu100 = 0;
-        mu010 = 0;
-        mu001 = 0;
         mu101 = 0;
         mu011 = 0;
         mu110 = 0;
-        mu111 = 0;
         mu200 = 0;
         mu020 = 0;
         mu002 = 0;
-        mu210 = 0;
-        mu201 = 0;
-        mu120 = 0;
-        mu102 = 0;
-        mu021 = 0;
-        mu012 = 0;
-        mu300 = 0;
-        mu030 = 0;
-        mu003 = 0;
+
+        mx000 = 0;
+        my000 = 0;
+        mz000 = 0;
+        mx100 = 0;
+        my100 = 0;
+        mz100 = 0;
+        mx010 = 0;
+        my010 = 0;
+        mz010 = 0;
+        mx001 = 0;
+        my001 = 0;
+        mz001 = 0;
+        x_xc = 0;
+        x_yc = 0;
+        x_zc = 0;
+        y_xc = 0;
+        y_yc = 0;
+        y_zc = 0;
+        z_xc = 0;
+        z_yc = 0;
+        z_zc = 0;
+
+        centroid_x.clear();
+        centroid_y.clear();
+        centroid_z.clear();
+
+        for (int i = 0; i < 6; ++i)
+        {
+            centroid_x.push_back(0);
+            centroid_y.push_back(0);
+            centroid_z.push_back(0);
+        }
+
         for(int i = 0; i < 3; ++i)
         {
             for(int j = 0; j < 3; ++j)
@@ -86,18 +110,42 @@ namespace IRL
                 for(int k = 0; k < 3; ++k)
                 {
                     m000 = m000 + a_liquid_volume_fraction(i,j,k);
-                    m100 = m100 + mesh.x(i)*a_liquid_volume_fraction(i,j,k);
-                    m010 = m010 + mesh.y(j)*a_liquid_volume_fraction(i,j,k);
-                    m001 = m001 + mesh.z(k)*a_liquid_volume_fraction(i,j,k);
-                    m200 = m200 + mesh.x(i)*mesh.x(i)*a_liquid_volume_fraction(i,j,k);
-                    m020 = m020 + mesh.y(j)*mesh.y(j)*a_liquid_volume_fraction(i,j,k);
-                    m002 = m002 + mesh.z(k)*mesh.z(k)*a_liquid_volume_fraction(i,j,k);
+                    m100 = m100 + ((mesh.x(i)+mesh.x(i+1))/2)*a_liquid_volume_fraction(i,j,k);
+                    m010 = m010 + ((mesh.y(j)+mesh.y(j+1))/2)*a_liquid_volume_fraction(i,j,k);
+                    m001 = m001 + ((mesh.z(k)+mesh.z(k+1))/2)*a_liquid_volume_fraction(i,j,k);
+
+                    mx000 = mx000 + a_liquid_centroid(i,j,k)[0];
+                    mx100 = mx100 + ((mesh.x(i)+mesh.x(i+1))/2)*a_liquid_centroid(i,j,k)[0];
+                    mx010 = mx010 + ((mesh.y(j)+mesh.y(j+1))/2)*a_liquid_centroid(i,j,k)[0];
+                    mx001 = mx001 + ((mesh.z(k)+mesh.z(k+1))/2)*a_liquid_centroid(i,j,k)[0];
+
+                    my000 = my000 + a_liquid_centroid(i,j,k)[1];
+                    my100 = my100 + ((mesh.x(i)+mesh.x(i+1))/2)*a_liquid_centroid(i,j,k)[1];
+                    my010 = my010 + ((mesh.y(j)+mesh.y(j+1))/2)*a_liquid_centroid(i,j,k)[1];
+                    my001 = my001 + ((mesh.z(k)+mesh.z(k+1))/2)*a_liquid_centroid(i,j,k)[1];
+
+                    mz000 = mz000 + a_liquid_centroid(i,j,k)[2];
+                    mz100 = mz100 + ((mesh.x(i)+mesh.x(i+1))/2)*a_liquid_centroid(i,j,k)[2];
+                    mz010 = mz010 + ((mesh.y(j)+mesh.y(j+1))/2)*a_liquid_centroid(i,j,k)[2];
+                    mz001 = mz001 + ((mesh.z(k)+mesh.z(k+1))/2)*a_liquid_centroid(i,j,k)[2];
                 }
             }
         }
         xc = m100 / m000;
         yc = m010 / m000;
         zc = m001 / m000;
+
+        x_xc = mx100 / mx000;
+        x_yc = mx010 / mx000;
+        x_zc = mx001 / mx000;
+
+        y_xc = my100 / my000;
+        y_yc = my010 / my000;
+        y_zc = my001 / my000;
+
+        z_xc = mz100 / mz000;
+        z_yc = mz010 / mz000;
+        z_zc = mz001 / mz000;
         
         for(int i = 0; i < 3; ++i)
         {
@@ -105,66 +153,67 @@ namespace IRL
             {
                 for(int k = 0; k < 3; ++k)
                 {
-                    mu100 = mu100 + (mesh.x(i)-xc)*a_liquid_volume_fraction(i,j,k);
-                    mu010 = mu010 + (mesh.y(j)-yc)*a_liquid_volume_fraction(i,j,k);
-                    mu001 = mu001 + (mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu101 = mu101 + (mesh.x(i)-xc)*(mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu011 = mu011 + (mesh.y(j)-yc)*(mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu110 = mu110 + (mesh.x(i)-xc)*(mesh.y(j)-yc)*a_liquid_volume_fraction(i,j,k);
-                    mu111 = mu111 + (mesh.x(i)-xc)*(mesh.y(j)-yc)*(mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu200 = mu200 + pow((mesh.x(i)-xc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu020 = mu020 + pow((mesh.y(j)-yc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu002 = mu002 + pow((mesh.z(k)-zc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu210 = mu210 + pow((mesh.x(i)-xc),2.0)*(mesh.y(j)-yc)*a_liquid_volume_fraction(i,j,k);
-                    mu201 = mu201 + pow((mesh.x(i)-xc),2.0)*(mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu120 = mu120 + (mesh.x(i)-xc)*pow((mesh.y(j)-yc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu102 = mu102 + (mesh.x(i)-xc)*pow((mesh.z(k)-zc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu021 = mu021 + pow((mesh.y(j)-yc),2.0)*(mesh.z(k)-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu012 = mu012 + (mesh.y(j)-yc)*pow((mesh.z(k)-zc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu300 = mu300 + pow((mesh.x(i)-xc),3.0)*a_liquid_volume_fraction(i,j,k);
-                    mu030 = mu030 + pow((mesh.y(j)-yc),3.0)*a_liquid_volume_fraction(i,j,k);
-                    mu003 = mu003 + pow((mesh.z(k)-zc),3.0)*a_liquid_volume_fraction(i,j,k);
+                    mu101 = mu101 + ((mesh.x(i)+mesh.x(i+1))/2-xc)*((mesh.z(k)+mesh.z(k+1))/2-zc)*a_liquid_volume_fraction(i,j,k);
+                    mu011 = mu011 + ((mesh.y(j)+mesh.y(j+1))/2-yc)*((mesh.z(k)+mesh.z(k+1))/2-zc)*a_liquid_volume_fraction(i,j,k);
+                    mu110 = mu110 + ((mesh.x(i)+mesh.x(i+1))/2-xc)*((mesh.y(j)+mesh.y(j+1))/2-yc)*a_liquid_volume_fraction(i,j,k);
+                    mu200 = mu200 + pow(((mesh.x(i)+mesh.x(i+1))/2-xc),2.0)*a_liquid_volume_fraction(i,j,k);
+                    mu020 = mu020 + pow(((mesh.y(j)+mesh.y(j+1))/2-yc),2.0)*a_liquid_volume_fraction(i,j,k);
+                    mu002 = mu002 + pow(((mesh.z(k)+mesh.z(k+1))/2-zc),2.0)*a_liquid_volume_fraction(i,j,k);
+
+                    centroid_x[0] = centroid_x[0] + ((mesh.x(i)+mesh.x(i+1))/2-x_xc)*((mesh.z(k)+mesh.z(k+1))/2-x_zc)*a_liquid_centroid(i,j,k)[0];
+                    centroid_x[1] = centroid_x[1] + ((mesh.y(j)+mesh.y(j+1))/2-x_yc)*((mesh.z(k)+mesh.z(k+1))/2-x_zc)*a_liquid_centroid(i,j,k)[0];
+                    centroid_x[2] = centroid_x[2] + ((mesh.x(i)+mesh.x(i+1))/2-x_xc)*((mesh.y(j)+mesh.y(j+1))/2-x_yc)*a_liquid_centroid(i,j,k)[0];
+                    centroid_x[3] = centroid_x[3] + pow(((mesh.x(i)+mesh.x(i+1))/2-x_xc),2.0)*a_liquid_centroid(i,j,k)[0];
+                    centroid_x[4] = centroid_x[4] + pow(((mesh.y(j)+mesh.y(j+1))/2-x_yc),2.0)*a_liquid_centroid(i,j,k)[0];
+                    centroid_x[5] = centroid_x[5] + pow(((mesh.z(k)+mesh.z(k+1))/2-x_zc),2.0)*a_liquid_centroid(i,j,k)[0];
+        
+                    centroid_y[0] = centroid_y[0] + ((mesh.x(i)+mesh.x(i+1))/2-y_xc)*((mesh.z(k)+mesh.z(k+1))/2-y_zc)*a_liquid_centroid(i,j,k)[1];
+                    centroid_y[1] = centroid_y[1] + ((mesh.y(j)+mesh.y(j+1))/2-y_yc)*((mesh.z(k)+mesh.z(k+1))/2-y_zc)*a_liquid_centroid(i,j,k)[1];
+                    centroid_y[2] = centroid_y[2] + ((mesh.x(i)+mesh.x(i+1))/2-y_xc)*((mesh.y(j)+mesh.y(j+1))/2-y_yc)*a_liquid_centroid(i,j,k)[1];
+                    centroid_y[3] = centroid_y[3] + pow(((mesh.x(i)+mesh.x(i+1))/2-y_xc),2.0)*a_liquid_centroid(i,j,k)[1];
+                    centroid_y[4] = centroid_y[4] + pow(((mesh.y(j)+mesh.y(j+1))/2-y_yc),2.0)*a_liquid_centroid(i,j,k)[1];
+                    centroid_y[5] = centroid_y[5] + pow(((mesh.z(k)+mesh.z(k+1))/2-y_zc),2.0)*a_liquid_centroid(i,j,k)[1];
+
+                    centroid_z[0] = centroid_z[0] + ((mesh.x(i)+mesh.x(i+1))/2-z_xc)*((mesh.z(k)+mesh.z(k+1))/2-z_zc)*a_liquid_centroid(i,j,k)[2];
+                    centroid_z[1] = centroid_z[1] + ((mesh.y(j)+mesh.y(j+1))/2-z_yc)*((mesh.z(k)+mesh.z(k+1))/2-z_zc)*a_liquid_centroid(i,j,k)[2];
+                    centroid_z[2] = centroid_z[2] + ((mesh.x(i)+mesh.x(i+1))/2-z_xc)*((mesh.y(j)+mesh.y(j+1))/2-z_yc)*a_liquid_centroid(i,j,k)[2];
+                    centroid_z[3] = centroid_z[3] + pow(((mesh.x(i)+mesh.x(i+1))/2-z_xc),2.0)*a_liquid_centroid(i,j,k)[2];
+                    centroid_z[4] = centroid_z[4] + pow(((mesh.y(j)+mesh.y(j+1))/2-z_yc),2.0)*a_liquid_centroid(i,j,k)[2];
+                    centroid_z[5] = centroid_z[5] + pow(((mesh.z(k)+mesh.z(k+1))/2-z_zc),2.0)*a_liquid_centroid(i,j,k)[2];
                 }
             }
         }
-        mu100 = mu100/pow(m000,(1+0+0+3)/3.0);
-        mu010 = mu010/pow(m000,(0+1+0+3)/3.0);
-        mu001 = mu001/pow(m000,(0+0+1+3)/3.0);
-        mu101 = mu101/pow(m000,(1+0+1+3)/3.0);
-        mu011 = mu011/pow(m000,(0+1+1+3)/3.0);
-        mu110 = mu110/pow(m000,(1+1+0+3)/3.0);
-        mu111 = mu111/pow(m000,(1+1+1+3)/3.0);
-        mu200 = mu200/pow(m000,(2+0+0+3)/3.0);
-        mu020 = mu020/pow(m000,(0+2+0+3)/3.0);
-        mu002 = mu002/pow(m000,(0+0+2+3)/3.0);
-        mu210 = mu210/pow(m000,(2+1+0+3)/3.0);
-        mu201 = mu201/pow(m000,(2+0+1+3)/3.0);
-        mu120 = mu120/pow(m000,(1+2+0+3)/3.0);
-        mu102 = mu102/pow(m000,(1+0+2+3)/3.0);
-        mu021 = mu021/pow(m000,(0+2+1+3)/3.0);
-        mu012 = mu012/pow(m000,(0+1+2+3)/3.0);
-        mu300 = mu300/pow(m000,(3+0+0+3)/3.0);
-        mu030 = mu030/pow(m000,(0+3+0+3)/3.0);
-        mu003 = mu003/pow(m000,(0+0+3+3)/3.0);
 
-        double J1 = mu200 + mu020 + mu002;
-        double J2 = mu200*mu020 + mu200*mu002 + mu020*mu002 - mu110*mu110 - mu101*mu101 - mu011*mu011;
-        double J3 = mu200*mu020*mu002 + 2*mu110*mu101*mu011 - mu002*mu110*mu110 - mu020*mu101*mu101 - mu200*mu011*mu011;
-        double J4 = mu300*mu300 + 3*mu210*mu210 + 3*mu120*mu120 + 6*mu111*mu111 + 3*mu102*mu102 + mu030*mu030 + 3*mu021*mu021 + 3*mu012*mu012 + mu003*mu003;
-        double J5 = mu300*mu300 + 2*mu300*mu120 + 2*mu300*mu102 + mu210*mu210 + 2*mu210*mu030 + 2*mu210*mu012 + mu201*mu201 + 2*mu201*mu021 + 2*mu201*mu003 + mu120*mu120 + 2*mu120*mu102 + mu102*mu102 + mu030*mu030 + 2*mu030*mu012 + mu021*mu021 + 2*mu021*mu003 + mu012*mu012 + mu003*mu003;
+        double J1 = (mu200 + mu020 + mu002);
+        double J2 = (mu200*mu020 + mu200*mu002 + mu020*mu002 - mu110*mu110 - mu101*mu101 - mu011*mu011);
+        double J3 = (mu200*mu020*mu002 + 2*mu110*mu101*mu011 - mu200*mu011*mu011 - mu020*mu101*mu101 - mu002*mu110*mu110);
+
+        double J1_x = (centroid_x[3] + centroid_x[4] + centroid_x[5]);
+        double J2_x = (centroid_x[3]*centroid_x[4] + centroid_x[3]*centroid_x[5] + centroid_x[4]*centroid_x[5] - centroid_x[2]*centroid_x[2] - centroid_x[0]*centroid_x[0] - centroid_x[1]*centroid_x[1]);
+        double J3_x = (centroid_x[3]*centroid_x[3]*centroid_x[5] + 2*centroid_x[2]*centroid_x[0]*centroid_x[1] - centroid_x[3]*centroid_x[1]*centroid_x[1] - centroid_x[4]*centroid_x[0]*centroid_x[0] - centroid_x[5]*centroid_x[2]*centroid_x[2]);
+
+        double J1_y = (centroid_y[3] + centroid_y[4] + centroid_y[5]);
+        double J2_y = (centroid_y[3]*centroid_y[4] + centroid_y[3]*centroid_y[5] + centroid_y[4]*centroid_y[5] - centroid_y[2]*centroid_y[2] - centroid_y[0]*centroid_y[0] - centroid_y[1]*centroid_y[1]);
+        double J3_y = (centroid_y[3]*centroid_y[3]*centroid_y[5] + 2*centroid_y[2]*centroid_y[0]*centroid_y[1] - centroid_y[3]*centroid_y[1]*centroid_y[1] - centroid_y[4]*centroid_y[0]*centroid_y[0] - centroid_y[5]*centroid_y[2]*centroid_y[2]);
+
+        double J1_z = (centroid_z[3] + centroid_z[4] + centroid_z[5]);
+        double J2_z = (centroid_z[3]*centroid_z[4] + centroid_z[3]*centroid_z[5] + centroid_z[4]*centroid_z[5] - centroid_z[2]*centroid_z[2] - centroid_z[0]*centroid_z[0] - centroid_z[1]*centroid_z[1]);
+        double J3_z = (centroid_z[3]*centroid_z[3]*centroid_z[5] + 2*centroid_z[2]*centroid_z[0]*centroid_z[1] - centroid_z[3]*centroid_z[1]*centroid_z[1] - centroid_z[4]*centroid_z[0]*centroid_z[0] - centroid_z[5]*centroid_z[2]*centroid_z[2]);
 
         temp.push_back(J1);
         temp.push_back(J2);
         temp.push_back(J3);
-        temp.push_back(J4);
-        temp.push_back(J5);
+        temp.push_back(J1_x);
+        temp.push_back(J2_x);
+        temp.push_back(J3_x);
+        temp.push_back(J1_y);
+        temp.push_back(J2_y);
+        temp.push_back(J3_y);
+        temp.push_back(J1_z);
+        temp.push_back(J2_z);
+        temp.push_back(J3_z);
 
         return torch::tensor(temp);
-    }
-
-    torch::Tensor spatial_moments::getMoments()
-    {
-        return moments;
     }
 }
 

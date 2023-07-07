@@ -14,13 +14,15 @@ namespace IRL
     struct model : torch::nn::Module 
     {
         int size;
-        model(int s) 
+        int out;
+        model(int s, int o) 
         {
             size = s;
+            out = o;
             l1 = register_module("l1", torch::nn::Linear(size, 100));
             l2 = register_module("l2", torch::nn::Linear(100, 100));
             l3 = register_module("l3", torch::nn::Linear(100, 100));
-            l4 = register_module("l4", torch::nn::Linear(100, 8));
+            l4 = register_module("l4", torch::nn::Linear(100, out));
         }
         torch::Tensor forward(torch::Tensor x) 
         {
@@ -35,6 +37,11 @@ namespace IRL
         int getSize()
         {
             return size;
+        }
+
+        int getOutput()
+        {
+            return out;
         }
     };
 }

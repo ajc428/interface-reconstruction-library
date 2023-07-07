@@ -49,9 +49,12 @@ namespace IRL
 
         ofstream results_ex;
         ofstream results_pr;
+        ofstream invariants;
         torch::Tensor train_in;
+        torch::Tensor train_in_rot;
         torch::Tensor train_out;
         torch::Tensor test_in;
+        torch::Tensor test_in_rot;
         torch::Tensor test_out;
         string train_in_file;
         string train_out_file;
@@ -60,8 +63,8 @@ namespace IRL
 
         shared_ptr<IRL::model> nn;
         shared_ptr<IRL::binary_model> nn_binary;
-        torch::nn::MSELoss critereon;
-        torch::nn::BCELoss critereon2;
+        torch::nn::MSELoss critereon_MSE;
+        torch::nn::BCELoss critereon_BCE;
         torch::optim::Optimizer *optimizer;
         IRL::grad_functions *functions;
         
@@ -75,6 +78,8 @@ namespace IRL
         void train_model(bool, string, string);
         void test_model(int);
         IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
+
+        IRL::ReferenceFrame getFrame(int);
     };
 }
 

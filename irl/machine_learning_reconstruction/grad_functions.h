@@ -16,6 +16,8 @@
 #include <torch/csrc/autograd/VariableTypeUtils.h>
 #include <torch/csrc/autograd/functions/utils.h>
 #include <Eigen/Dense>
+#include <Eigen/Eigenvalues> 
+#include <math.h>
 
 #include "irl/machine_learning_reconstruction/fractions.h"
 #include "irl/machine_learning_reconstruction/spatial_moments.h"
@@ -44,7 +46,8 @@ namespace IRL
         ~grad_functions();
         torch::Tensor VolumeFracsForward(const torch::Tensor);
         torch::Tensor VolumeFracsForwardFD(const torch::Tensor);
-        torch::Tensor MomentsForward(const torch::Tensor, DataMesh<double>&);
+        torch::Tensor MomentsForward(const torch::Tensor, DataMesh<double>&, DataMesh<IRL::Pt>&);
+        torch::Tensor CurvatureForward(const torch::Tensor);
         
         struct VolumeFracsBackward : public Node 
         {
@@ -93,17 +96,17 @@ namespace IRL
 
             variable_list apply(variable_list&& inputs) override 
             {
-                Eigen::MatrixXd in_grads(5,1);
-                Eigen::MatrixXd out_grads(8,5);
+                Eigen::MatrixXd in_grads(12,1);
+                Eigen::MatrixXd out_grads(8,12);
                 Eigen::MatrixXd grad_result(8,1);
                 for (int i = 0; i < 8; ++i)
                 {
-                    for (int j = 0; j < 5; ++j)
+                    for (int j = 0; j < 12; ++j)
                     {
                         out_grads(i,j) = moment_grads[i][j].item<double>();
                     }
                 }
-                for (int i = 0; i < 5; ++i)
+                for (int i = 0; i < 12; ++i)
                 {
                     in_grads(i,0) = inputs[0][i].item<double>();
                 }
@@ -116,6 +119,46 @@ namespace IRL
                 }
 
                 for (int i = 0; i < 8; ++i)
+                {
+                    torch::Tensor temp2 = torch::zeros(1); 
+                    temp2 = torch::tensor(grad_result(i,0));
+                    temp[i] = temp2;
+                }
+                grad_inputs[0] = temp;
+                return grad_inputs;
+            }
+        };
+
+        struct CurvatureBackward : public Node 
+        {
+            vector<torch::Tensor> curvature_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                Eigen::MatrixXd in_grads(1,1);
+                Eigen::MatrixXd out_grads(2,1);
+                Eigen::MatrixXd grad_result(2,1);
+                for (int i = 0; i < 2; ++i)
+                {
+                    for (int j = 0; j < 1; ++j)
+                    {
+                        out_grads(i,j) = curvature_grads[i][j].item<double>();
+                    }
+                }
+                for (int i = 0; i < 1; ++i)
+                {
+                    in_grads(i,0) = inputs[0][i].item<double>();
+                }
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros(2); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = out_grads * in_grads;
+                }
+
+                for (int i = 0; i < 2; ++i)
                 {
                     torch::Tensor temp2 = torch::zeros(1); 
                     temp2 = torch::tensor(grad_result(i,0));

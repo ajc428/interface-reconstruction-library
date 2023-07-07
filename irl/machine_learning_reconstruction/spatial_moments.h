@@ -26,37 +26,58 @@ namespace IRL
         double m100;
         double m010;
         double m001;
-        double m200;
-        double m020;
-        double m002;
         double xc;
         double yc;
         double zc;
-        double mu100;
-        double mu010;
-        double mu001;
         double mu101;
         double mu011;
         double mu110;
-        double mu111;
         double mu200;
         double mu020;
         double mu002;
-        double mu210;
-        double mu201;
-        double mu120;
-        double mu102;
-        double mu021;
-        double mu012;
-        double mu300;
-        double mu030;
-        double mu003;
-        torch::Tensor moments;
+
+        double mx000;
+        double my000;
+        double mz000;
+        double mx100;
+        double my100;
+        double mz100;
+        double mx010;
+        double my010;
+        double mz010;
+        double mx001;
+        double my001;
+        double mz001;
+        double x_xc;
+        double x_yc;
+        double x_zc;
+        double y_xc;
+        double y_yc;
+        double y_zc;
+        double z_xc;
+        double z_yc;
+        double z_zc;
+
+        vector<double> centroid_x;
+        vector<double> centroid_y;
+        vector<double> centroid_z;
 
     public:
         spatial_moments();
-        torch::Tensor calculate_moments(const DataMesh<double>&, Mesh);
-        torch::Tensor getMoments();
+        torch::Tensor calculate_moments(const DataMesh<double>&, DataMesh<IRL::Pt>&, Mesh);
+
+        vector<double> getMoments()
+        {
+            vector<double> temp;
+            temp.push_back(mu200);
+            temp.push_back(mu020);
+            temp.push_back(mu002);
+            temp.push_back(mu110);
+            temp.push_back(mu101);
+            temp.push_back(mu011);
+
+            return temp;
+        }
     };
 }
 
