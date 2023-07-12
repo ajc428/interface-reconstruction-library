@@ -61,6 +61,16 @@ namespace IRL
                 curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
 
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNotNormalizedNonAligned();
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();
+
                 std::ofstream classification;
                 std::string data_name = "type.txt";
                 classification.open(data_name, std::ios_base::app);

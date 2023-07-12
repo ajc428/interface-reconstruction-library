@@ -12,6 +12,52 @@
 
 namespace IRL
 {
+    trainer::trainer(int s)
+    {
+        rank = 0;
+        numranks = 1;                      
+        epochs = 0;
+        data_size = 0;
+        batch_size = 0;
+        learning_rate = 0.001;
+        m = s;
+        if (m == 3)
+        {
+            nn_binary = make_shared<binary_model>(12);
+            optimizer = new torch::optim::Adam(nn_binary->parameters(), learning_rate);
+            critereon_BCE = torch::nn::BCELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+        else if (m == 4)
+        {
+            nn = make_shared<model>(108,2,2);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+        else if (m == 5)
+        {
+            nn = make_shared<model>(108,3,2);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(108,4,2);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+        else
+        {
+            nn = make_shared<model>(108,8,2);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+    }
+
     trainer::trainer(int e, int d, double l, int s)
     {
         rank = MPI::COMM_WORLD.Get_rank();
@@ -30,14 +76,28 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,2);
+            nn = make_shared<model>(108,2,2);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+        else if (m == 5)
+        {
+            nn = make_shared<model>(108,3,6);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(108,4,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
         }
         else
         {
-            nn = make_shared<model>(108,8);
+            nn = make_shared<model>(108,8,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
@@ -107,12 +167,7 @@ namespace IRL
 
                 torch::Tensor check = torch::zeros({batch_size, 8});
                 torch::Tensor comp = torch::zeros({batch_size, 8});
-                if (m == 0)
-                {
-                    check = y_pred;
-                    comp = train_out;
-                }
-                else if (m == 1)
+                if (m == 1)
                 {
                     check = torch::zeros({batch_size, nn->getSize()});
                     comp = torch::zeros({batch_size, nn->getSize()});
@@ -139,7 +194,17 @@ namespace IRL
                     check = y_pred;
                     comp = train_out;
                 }
-                else if (m == 4)
+                else if (m == 6)
+                {
+                    check = torch::zeros({batch_size, nn->getSize()});
+                    comp = torch::zeros({batch_size, nn->getSize()});
+                    for (int i = 0; i < batch_size; ++i)
+                    {
+                        check[i] = functions->PLICForward(y_pred[i]);
+                    }
+                    comp = train_in;
+                }
+                else
                 {
                     check = torch::zeros({batch_size, nn->getOutput()});
                     comp = torch::zeros({batch_size, nn->getOutput()});
@@ -363,6 +428,46 @@ namespace IRL
                     results_pr << "\n";
                 }
             }
+            else if (n == 5)
+            {
+                nn->eval();
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    auto prediction = nn->forward(test_in);
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_ex << test_out[j].item<double>() << " ";
+                    }
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+            }
+            else if (n == 6)
+            {
+                nn->eval();
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    auto prediction = nn->forward(test_in);
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_ex << test_out[j].item<double>() << " ";
+                    }
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+            }
 
             results_ex.close();
             results_pr.close();
@@ -386,7 +491,7 @@ namespace IRL
             }
         }
 
-        IRL::fractions *gen = new IRL::fractions(3);;
+        IRL::fractions *gen = new IRL::fractions(3);
         torch::load(nn, in);
         auto y_pred = nn->forward(torch::tensor(fractions));
         IRL::Paraboloid paraboloid = gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
@@ -394,6 +499,32 @@ namespace IRL
         y_pred[6].item<double>(), y_pred[7].item<double>());
         delete gen;
         return paraboloid;
+    }
+
+    IRL::Normal trainer::get_normal(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    {
+        vector<double> fractions;
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    fractions.push_back(liquid_volume_fraction(i, j, k));
+                    fractions.push_back(liquid_centroid(i,j,k)[0]);
+                    fractions.push_back(liquid_centroid(i,j,k)[1]);
+                    fractions.push_back(liquid_centroid(i,j,k)[2]);
+                }
+            }
+        }
+
+        torch::load(nn, in);
+        auto y_pred = nn->forward(torch::tensor(fractions));
+        auto n = IRL::Normal();
+        n[0] = y_pred[0].item<double>();
+        n[1] = y_pred[1].item<double>();
+        n[2] = y_pred[2].item<double>();
+        return n;
     }
 
     IRL::ReferenceFrame trainer::getFrame(int num)

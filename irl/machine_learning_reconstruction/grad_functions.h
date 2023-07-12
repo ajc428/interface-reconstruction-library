@@ -48,6 +48,7 @@ namespace IRL
         torch::Tensor VolumeFracsForwardFD(const torch::Tensor);
         torch::Tensor MomentsForward(const torch::Tensor, DataMesh<double>&, DataMesh<IRL::Pt>&);
         torch::Tensor CurvatureForward(const torch::Tensor);
+        torch::Tensor PLICForward(const torch::Tensor);
         
         struct VolumeFracsBackward : public Node 
         {
@@ -159,6 +160,46 @@ namespace IRL
                 }
 
                 for (int i = 0; i < 2; ++i)
+                {
+                    torch::Tensor temp2 = torch::zeros(1); 
+                    temp2 = torch::tensor(grad_result(i,0));
+                    temp[i] = temp2;
+                }
+                grad_inputs[0] = temp;
+                return grad_inputs;
+            }
+        };
+
+        struct PLICBackward : public Node 
+        {
+            vector<torch::Tensor> PLIC_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                Eigen::MatrixXd in_grads(108,1);
+                Eigen::MatrixXd out_grads(4,108);
+                Eigen::MatrixXd grad_result(4,1);
+                for (int i = 0; i < 4; ++i)
+                {
+                    for (int j = 0; j < 108; ++j)
+                    {
+                        out_grads(i,j) = PLIC_grads[i][j].item<double>();
+                    }
+                }
+                for (int i = 0; i < 108; ++i)
+                {
+                    in_grads(i,0) = inputs[0][i].item<double>();
+                }
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros(4); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = out_grads * in_grads;
+                }
+
+                for (int i = 0; i < 4; ++i)
                 {
                     torch::Tensor temp2 = torch::zeros(1); 
                     temp2 = torch::tensor(grad_result(i,0));

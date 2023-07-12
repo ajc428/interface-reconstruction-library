@@ -51,6 +51,7 @@ namespace IRL
         IRL::Paraboloid new_parabaloid(double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
+        torch::Tensor get_fractions(IRL::Plane, bool);
         torch::Tensor get_fractions_with_gradients(IRL::Paraboloid, bool);
         torch::Tensor get_gradients(int);
 
@@ -59,6 +60,9 @@ namespace IRL
         
         template <class MomentType>
         MomentType getCellMoments(const IRL::Paraboloid&,const DataMesh<double>&, int, int, int); 
+
+        template <class MomentType>
+        MomentType getCellMoments(const IRL::Plane&,const DataMesh<double>&, int, int, int); 
 
         template <class MomentType, class SurfaceType>
         IRL::AddSurfaceOutput<MomentType, SurfaceType> getCellMomentsAndSurfaceWithGradients(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int); 

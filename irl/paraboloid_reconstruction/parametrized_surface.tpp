@@ -1860,6 +1860,56 @@ inline Normal ParametrizedSurfaceOutput::getAverageNormalNonAligned(void) {
   return normal;
 }
 
+inline Normal ParametrizedSurfaceOutput::getAverageNormalNotNormalized(void) {
+  if (!knows_avg_normal_m) {
+    const UnsignedIndex_t nArcs = this->size();
+    avg_normal_m = Normal();
+    size_t limit = 128;
+
+    const double epsabs = 10.0 * DBL_EPSILON;
+    const double epsrel = 0.0;
+    auto& aligned_paraboloid = paraboloid_m.getAlignedParaboloid();
+    for (std::size_t t = 0; t < nArcs; ++t) {
+      // Define the functor
+      ArcContributionToNormalX_Functor functorx(arc_list_m[t],
+                                                aligned_paraboloid);
+      ArcContributionToNormalY_Functor functory(arc_list_m[t],
+                                                aligned_paraboloid);
+      ArcContributionToNormalZ_Functor functorz(arc_list_m[t],
+                                                aligned_paraboloid);
+
+      // Define the integrator.
+      Eigen::Integrator<double> integrator(limit);
+
+      // Define a quadrature rule.
+      Eigen::Integrator<double>::QuadratureRule quadrature_rule =
+          Eigen::Integrator<double>::GaussKronrod61;
+
+      // Integrate.
+      avg_normal_m[0] += integrator.quadratureAdaptive(
+          functorx, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+      avg_normal_m[1] += integrator.quadratureAdaptive(
+          functory, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+      avg_normal_m[2] += integrator.quadratureAdaptive(
+          functorz, 0.0, 1.0, epsabs, epsrel, quadrature_rule);
+    }
+    knows_avg_normal_m = true;
+  }
+  return avg_normal_m;
+}
+
+inline Normal ParametrizedSurfaceOutput::getAverageNormalNotNormalizedNonAligned(void) {
+  auto aligned_normal = this->getAverageNormalNotNormalized();
+  const auto& ref_frame = this->getParaboloid().getReferenceFrame();
+  auto normal = Normal();
+  for (std::size_t d = 0; d < 3; ++d) {
+    for (std::size_t n = 0; n < 3; ++n) {
+      normal[n] += ref_frame[d][n] * aligned_normal[d];
+    }
+  }
+  return normal;
+}
+
 inline double ParametrizedSurfaceOutput::getMeanCurvatureIntegral(void) {
   if (!knows_int_mean_curv_m) {
     const UnsignedIndex_t nArcs = this->size();

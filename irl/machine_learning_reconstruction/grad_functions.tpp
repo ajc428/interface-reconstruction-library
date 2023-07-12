@@ -267,6 +267,72 @@ namespace IRL
         }
         return result;
     }
+
+    torch::Tensor grad_functions::PLICForward(const torch::Tensor y_pred) 
+    {
+        vector<double> fractions;
+        auto n = IRL::Normal();
+        n[0] = y_pred[0].item<double>();
+        n[1] = y_pred[1].item<double>();
+        n[2] = y_pred[2].item<double>();
+        n.normalize();
+        auto plane = IRL::Plane(n, y_pred[3].item<double>());
+
+        vector<IRL::Plane> p;
+        double e = std::sqrt(DBL_EPSILON);
+
+        n[0] = y_pred[0].item<double>() + e;
+        n[1] = y_pred[1].item<double>();
+        n[2] = y_pred[2].item<double>();
+        n.normalize();
+        p.push_back(IRL::Plane(n, y_pred[3].item<double>()));
+
+        n[0] = y_pred[0].item<double>();
+        n[1] = y_pred[1].item<double>() + e;
+        n[2] = y_pred[2].item<double>();
+        n.normalize();
+        p.push_back(IRL::Plane(n, y_pred[3].item<double>()));
+
+        n[0] = y_pred[0].item<double>();
+        n[1] = y_pred[1].item<double>();
+        n[2] = y_pred[2].item<double>() + e;
+        n.normalize();
+        p.push_back(IRL::Plane(n, y_pred[3].item<double>()));
+
+        n[0] = y_pred[0].item<double>();
+        n[1] = y_pred[1].item<double>();
+        n[2] = y_pred[2].item<double>();
+        n.normalize();
+        p.push_back(IRL::Plane(n, y_pred[3].item<double>()+e));
+
+        auto result = gen->get_fractions(plane, true);
+
+        vector<torch::Tensor> ep;
+        vector<torch::Tensor> grads;
+
+        for (int i = 0; i < 4; ++i)
+        {
+            ep.push_back(gen->get_fractions(p[i], true));
+            torch::Tensor temp = torch::zeros(size);
+            for (int j = 0; j < size; ++j)
+            {
+                temp[j] = (ep[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            grads.push_back(temp);
+        }
+
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<PLICBackward>(new grad_functions::PLICBackward(), deleteNode);
+
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->PLIC_grads = grads;
+            grad_fn->y_pred = y_pred;
+
+            set_history(flatten_tensor_args(result), grad_fn);
+        }
+        return result;
+    }
 }
 
 #endif

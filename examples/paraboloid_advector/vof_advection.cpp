@@ -389,7 +389,6 @@ void FullLagrangian::advectVOF(
         (*a_liquid_volume_fraction)(i, j, k) =
             cell_volume_moments[0].volume() / (cell_volume);
         (*a_liquid_centroid)(i, j, k) = cell_volume_moments[0].centroid();
-        std::cout << (*a_liquid_centroid)(i, j, k) << std::endl;
         (*a_gas_centroid)(i, j, k) = cell_volume_moments[1].centroid();
 
         if ((*a_liquid_volume_fraction)(i, j, k) < 0.0) {

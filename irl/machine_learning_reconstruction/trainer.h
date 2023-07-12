@@ -69,6 +69,7 @@ namespace IRL
         IRL::grad_functions *functions;
         
     public:
+        trainer(int);
         trainer(int, int, double, int);
         ~trainer();
         void load_train_data(string, string);
@@ -78,6 +79,7 @@ namespace IRL
         void train_model(bool, string, string);
         void test_model(int);
         IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
+        IRL::Normal get_normal(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
 
         IRL::ReferenceFrame getFrame(int);
     };

@@ -13,15 +13,6 @@ void create_surface(string name, double x, double y, double z, double alpha, dou
     IRL::fractions *gen = new IRL::fractions(3);
     IRL::Paraboloid p1 = gen->new_parabaloid(x,y,z,alpha,beta,gamma,a,b);
 
-    /*IRL::Pt datum;
-    IRL::ReferenceFrame frame;
-    auto t = IRL::trainer(10000, 2000, 0.0001, 6);
-    t.load_train_data("fractions.txt", "coefficients.txt");
-    t.load_test_data("fractions.txt", "coefficients.txt");
-    frame = t.getFrame(1);
-    datum = IRL::Pt(x,y,z);
-    IRL::Paraboloid p1 = IRL::Paraboloid(datum, frame, a, b);*/
-
     const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, p1);
     const double length_scale = 0.05;
     IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
@@ -42,6 +33,8 @@ Trainer options:
 2: Predict paraboloid, training with volume fractions, Finite Difference (This is the default) 
 3: Classification, sheet vs. ligament, uses 3 invariants
 4: Predict paraboloid curvature, training with principal curvatures
+5: Predict surface normal
+6: Predict PLIC
 ************************/
 
 int main(int argc, char* argv[])
@@ -50,23 +43,11 @@ int main(int argc, char* argv[])
 
     //create_surface("test_surface2",-0.128248,0.444811,0.232889,5.07745,3.27663,5.71901,6.08245,3.45158);
     
-    //data_generate(2000,0,2*3.1415,0,2*3.1415,0,2*3.1415,0.5,10,0.5,10,-0.5,0.5,-0.5,0.5,-0.5,0.5);
+    //data_generate(50000,0,2*3.1415,0,2*3.1415,0,2*3.1415,0.2,0.7,0.2,0.7,-0.55,0.55,-0.55,0.55,-0.55,0.55);
 
-    auto t = IRL::trainer(10000, 2000, 0.0001, 6);
-    t.load_train_data("fractions.txt", "coefficients.txt");
-    t.load_test_data("fractions.txt", "coefficients.txt");
+    auto t = IRL::trainer(1000, 100000, 0.0001, 5);
+    t.load_train_data("fractions.txt", "normals.txt");
+    t.load_test_data("fractions.txt", "normals.txt");
     t.train_model(false, "model.pt", "model.pt");
-    t.test_model(3);
-    /*IRL::ReferenceFrame f = t.getFrame(1);
-    std::cout << f[0] << std::endl << f[1] << std::endl << f[2] << std::endl << std::endl;
-
-    IRL::ReferenceFrame frame;
-    std::array<double, 3> angle;
-    frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
-    angle = {5.07745,3.27663,5.71901};
-    IRL::UnitQuaternion x_rotation(angle[0], frame[0]);
-    IRL::UnitQuaternion y_rotation(angle[1], frame[1]);
-    IRL::UnitQuaternion z_rotation(angle[2], frame[2]);
-    frame = x_rotation * y_rotation * z_rotation * frame;
-    std::cout << frame[0] << std::endl << frame[1] << std::endl << frame[2] << std::endl << std::endl;*/
+    t.test_model(5);
 }

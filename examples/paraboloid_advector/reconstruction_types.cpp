@@ -965,17 +965,29 @@ void ML::getReconstruction(const Data<double>& a_liquid_volume_fraction, const D
             {
               for (int ii = i - 1; ii < i + 2; ++ii) 
               {
-                neighborhood(ii - i+1, jj - j+1, kk - k+1) = a_liquid_volume_fraction(ii, jj, kk);
+                neighborhood(ii - i, jj - j, kk - k) = a_liquid_volume_fraction(ii, jj, kk);
                 //cout << neighborhood(ii - i+1, jj - j+1, kk - k+1) << " ";
                 neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1) = a_liquid_centroid(ii, jj, kk);
-                //cout << neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[0] << " ";
+                if (neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[0]!=0)
+                {
+                  neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[0] = neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[0] - mesh.x(i) - 0.5;
+                }
+                if (neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[1]!=0)
+                {
+                  neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[1] = neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[1] - mesh.y(j) - 0.5;
+                }
+                if (neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[2]!=0)
+                {
+                  neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[2] = neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[2] - mesh.z(k) - 0.5;
+                }
+                //cout << neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[0] << " " << mesh.x(i) << std::endl;
                 //cout << neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[1] << " ";
                 //cout << neighborhood_centroid(ii - i+1, jj - j+1, kk - k+1)[2] << " ";
               }
             }
           }
           paraboloid = t.use_model("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model.pt", neighborhood, neighborhood_centroid);
-          std::cout << /*paraboloid.getAlignedParaboloid().a() <<*/ std::endl;
+          std::cout << paraboloid.getAlignedParaboloid().a() << std::endl;
           (*a_interface)(i, j, k) = paraboloid;
         }
       }

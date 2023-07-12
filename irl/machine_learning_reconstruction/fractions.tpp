@@ -107,6 +107,34 @@ namespace IRL
         return torch::tensor(f);  
     }
 
+    torch::Tensor fractions::get_fractions(IRL::Plane p, bool centroids)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    auto& volume = volumes.volume();      
+                    auto& centroid = volumes.centroid();   
+                   
+                    f.push_back(volume);
+                    if (centroids)
+                    {
+                        f.push_back(centroid[0]);
+                        f.push_back(centroid[1]);
+                        f.push_back(centroid[2]);    
+                    }
+                }
+            }
+        }
+        return torch::tensor(f);  
+    }
+
     torch::Tensor fractions::get_fractions_with_gradients(IRL::Paraboloid p, bool centroids)
     {
         DataMesh<double> liquid_volume_fraction(mesh);
@@ -230,6 +258,20 @@ namespace IRL
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
         const auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(cell, a_interface);
+        return moments;
+    }
+
+    template <class MomentType>
+    MomentType fractions::getCellMoments(const IRL::Plane& a_interface,
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
+    {
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
+        const int i(x_loc), j(y_loc), k(z_loc);
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        auto a = IRL::PlanarSeparator::fromOnePlane(a_interface);
+        const auto moments = IRL::getVolumeMoments<MomentType>(cell, a);
         return moments;
     }
 

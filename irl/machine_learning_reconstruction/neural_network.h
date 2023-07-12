@@ -15,24 +15,31 @@ namespace IRL
     {
         int size;
         int out;
-        model(int s, int o) 
+        int depth;
+        model(int s, int o, int d) 
         {
             size = s;
             out = o;
+            depth = d;
             l1 = register_module("l1", torch::nn::Linear(size, 100));
-            l2 = register_module("l2", torch::nn::Linear(100, 100));
-            l3 = register_module("l3", torch::nn::Linear(100, 100));
-            l4 = register_module("l4", torch::nn::Linear(100, out));
+            for (int i = 0; i < d; ++i)
+            {
+                layers.push_back(register_module("l" + std::to_string(i+2), torch::nn::Linear(100, 100)));
+            }
+            l4 = register_module("l" + std::to_string(d+2), torch::nn::Linear(100, out));
         }
         torch::Tensor forward(torch::Tensor x) 
         {
             x = torch::nn::functional::relu(l1(x));
-            x = torch::nn::functional::relu(l2(x));
-            x = torch::nn::functional::relu(l3(x));
+            for (int i = 0; i < depth; ++i)
+            {
+                x = torch::nn::functional::relu(layers[i](x));
+            }
             x = l4(x);
             return x;
         }
-        torch::nn::Linear l1{nullptr}, l2{nullptr}, l3{nullptr}, l4{nullptr};
+        std::vector<torch::nn::Linear> layers;
+        torch::nn::Linear l1{nullptr}, l4{nullptr};
 
         int getSize()
         {
