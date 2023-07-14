@@ -234,40 +234,6 @@ namespace IRL
         return result;
     }
 
-    torch::Tensor grad_functions::CurvatureForward(const torch::Tensor y_pred) 
-    {
-        vector<double> curv;
-        curv.push_back(4*y_pred[0].item<double>()*y_pred[0].item<double>()*y_pred[1].item<double>()*y_pred[1].item<double>());
-
-        vector<double> c;
-        double e = std::sqrt(DBL_EPSILON);
-
-        c.push_back(4*(y_pred[0].item<double>()+e)*(y_pred[0].item<double>()+e)*y_pred[1].item<double>()*y_pred[1].item<double>());
-        c.push_back(4*y_pred[0].item<double>()*y_pred[0].item<double>()*(y_pred[1].item<double>()+e)*(y_pred[1].item<double>()+e));
-
-        vector<torch::Tensor> grads;
-
-        for (int i = 0; i < 2; ++i)
-        {
-            torch::Tensor temp = torch::zeros(size);
-            temp[0] = (c[i] - curv[0]) / e;
-            grads.push_back(temp);
-        }
-        torch::Tensor result = torch::zeros({1,1});
-        result = torch::tensor(curv);
-        if (compute_requires_grad(y_pred)) 
-        {
-            auto grad_fn = std::shared_ptr<CurvatureBackward>(new grad_functions::CurvatureBackward(), deleteNode);
-
-            grad_fn->set_next_edges(collect_next_edges(y_pred));
-            grad_fn->curvature_grads = grads;
-            grad_fn->y_pred = y_pred;
-
-            set_history(flatten_tensor_args(result), grad_fn);
-        }
-        return result;
-    }
-
     torch::Tensor grad_functions::PLICForward(const torch::Tensor y_pred) 
     {
         vector<double> fractions;

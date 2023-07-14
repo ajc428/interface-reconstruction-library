@@ -7,7 +7,7 @@
 % License, v. 2.0. If a copy of the MPL was not distributed with this
 % file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-clear all; clf; close all; 
+%clear all; clf; close all; 
 
 % Read in the mesh data
 viz_directory = '\\wsl$\Ubuntu\home\andrew\Repositories\interface-reconstruction-library\build\compiled_examples\plic_advector\viz\';
@@ -36,7 +36,7 @@ end
 directory = dir([viz_directory, '\vizfile_*']);
 number_of_viz_files = size(directory,1);
 liquid_volume_fraction(1:nx,1:ny,1:nz) = 0.0;
-figure(1)
+figure(4)
 for iteration = 0:number_of_viz_files-1
     clf
     filename = strcat(viz_directory,strcat('vizfile_',int2str(iteration)));

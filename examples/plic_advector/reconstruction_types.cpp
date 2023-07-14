@@ -114,7 +114,7 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
           continue;
         }
         // Build surrounding stencil information.
-        auto t = IRL::trainer(5);
+        auto t = IRL::trainer(4);
         auto n = IRL::Normal();
         Mesh local_mesh(3, 3, 3, 1);
         IRL::Pt lower_domain(-0.5 * local_mesh.getNx(), -0.5 * local_mesh.getNy(), -0.5 * local_mesh.getNz());

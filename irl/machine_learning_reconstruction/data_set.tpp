@@ -52,6 +52,15 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
             delete gen;
             delete sm;
         }
+        else if (m == 4)
+        {
+            vector <double> num1;
+            for (int i = 0; i < 27; ++i)
+            {
+                num1.push_back(num[i*4]);
+            }
+            output.push_back(torch::tensor(num1));
+        }
         else
         {
             output.push_back(torch::tensor(num));

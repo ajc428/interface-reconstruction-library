@@ -30,19 +30,12 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,2,2);
+            nn = make_shared<model>(27,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
         }
         else if (m == 5)
-        {
-            nn = make_shared<model>(108,3,2);
-            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
-            critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
-        }
-        else if (m == 6)
         {
             nn = make_shared<model>(108,4,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
@@ -76,19 +69,12 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,2,2);
+            nn = make_shared<model>(27,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
         }
         else if (m == 5)
-        {
-            nn = make_shared<model>(108,3,6);
-            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
-            critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
-        }
-        else if (m == 6)
         {
             nn = make_shared<model>(108,4,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
@@ -155,7 +141,7 @@ namespace IRL
                 train_out = batch.target;
 
                 torch::Tensor y_pred = torch::zeros({batch_size, 8});
-                if (m == 4)
+                if (m == 3)
                 {
                     y_pred = torch::zeros({batch_size, 1});
                     y_pred = nn_binary->forward(train_in);
@@ -194,7 +180,7 @@ namespace IRL
                     check = y_pred;
                     comp = train_out;
                 }
-                else if (m == 6)
+                else if (m == 5)
                 {
                     check = torch::zeros({batch_size, nn->getSize()});
                     comp = torch::zeros({batch_size, nn->getSize()});
@@ -416,11 +402,11 @@ namespace IRL
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
-                    for (int j = 0; j < 2; ++j)
+                    for (int j = 0; j < 3; ++j)
                     {
                         results_pr << prediction[j].item<double>() << " ";
                     }
-                    for (int j = 0; j < 2; ++j)
+                    for (int j = 0; j < 3; ++j)
                     {
                         results_ex << test_out[j].item<double>() << " ";
                     }
@@ -429,26 +415,6 @@ namespace IRL
                 }
             }
             else if (n == 5)
-            {
-                nn->eval();
-                for(int i = 0; i < data_test.size().value(); ++i)
-                {
-                    test_in = data_test.get(i).data;
-                    test_out = data_test.get(i).target;
-                    auto prediction = nn->forward(test_in);
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        results_pr << prediction[j].item<double>() << " ";
-                    }
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        results_ex << test_out[j].item<double>() << " ";
-                    }
-                    results_ex << "\n";
-                    results_pr << "\n";
-                }
-            }
-            else if (n == 6)
             {
                 nn->eval();
                 for(int i = 0; i < data_test.size().value(); ++i)
@@ -511,9 +477,9 @@ namespace IRL
                 for (int k = 0; k < 3; ++k)
                 {
                     fractions.push_back(liquid_volume_fraction(i, j, k));
-                    fractions.push_back(liquid_centroid(i,j,k)[0]);
-                    fractions.push_back(liquid_centroid(i,j,k)[1]);
-                    fractions.push_back(liquid_centroid(i,j,k)[2]);
+                    //fractions.push_back(liquid_centroid(i,j,k)[0]);
+                    //fractions.push_back(liquid_centroid(i,j,k)[1]);
+                    //fractions.push_back(liquid_centroid(i,j,k)[2]);
                 }
             }
         }

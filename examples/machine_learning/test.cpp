@@ -32,9 +32,8 @@ Trainer options:
 1: Predict paraboloid, training with volume fractions, analytical gradients (broken)
 2: Predict paraboloid, training with volume fractions, Finite Difference (This is the default) 
 3: Classification, sheet vs. ligament, uses 3 invariants
-4: Predict paraboloid curvature, training with principal curvatures
-5: Predict surface normal
-6: Predict PLIC
+4: Predict surface normal
+5: Predict PLIC
 ************************/
 
 int main(int argc, char* argv[])
@@ -43,11 +42,11 @@ int main(int argc, char* argv[])
 
     //create_surface("test_surface2",-0.128248,0.444811,0.232889,5.07745,3.27663,5.71901,6.08245,3.45158);
     
-    //data_generate(50000,0,2*3.1415,0,2*3.1415,0,2*3.1415,0.2,0.7,0.2,0.7,-0.55,0.55,-0.55,0.55,-0.55,0.55);
+    //data_generate(50000,0,2*3.1415,0,2*3.1415,0,2*3.1415,0.1,0.5,0.1,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5);
 
-    auto t = IRL::trainer(1000, 100000, 0.0001, 5);
+    auto t = IRL::trainer(10000, 50000, 0.00001, 4);
     t.load_train_data("fractions.txt", "normals.txt");
     t.load_test_data("fractions.txt", "normals.txt");
-    t.train_model(false, "model.pt", "model.pt");
-    t.test_model(5);
+    t.train_model(true, "model.pt", "model.pt");
+    t.test_model(4);
 }
