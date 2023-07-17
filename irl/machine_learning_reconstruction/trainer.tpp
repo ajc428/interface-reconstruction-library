@@ -42,6 +42,13 @@ namespace IRL
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
         }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(27,6,2);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
         else
         {
             nn = make_shared<model>(108,8,2);
@@ -77,6 +84,13 @@ namespace IRL
         else if (m == 5)
         {
             nn = make_shared<model>(108,4,2);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(3, m);
+        }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(27,6,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
@@ -187,6 +201,33 @@ namespace IRL
                     for (int i = 0; i < batch_size; ++i)
                     {
                         check[i] = functions->PLICForward(y_pred[i]);
+                    }
+                    comp = train_in;
+                }
+                else if (m == 6)
+                {
+                    check = torch::zeros({batch_size, nn->getSize()});
+                    comp = torch::zeros({batch_size, nn->getSize()});
+                    IRL::fractions *gen;
+                    gen = new IRL::fractions(3);
+                    DataMesh<double> liquid_volume_fraction(gen->getMesh());
+                    DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
+                    for (int n = 0; n < batch_size; ++n)
+                    {
+                        for (int i = 0; i < 3; ++i) 
+                        {
+                            for (int j = 0; j < 3; ++j) 
+                            {
+                                for (int k = 0; k < 3; ++k) 
+                                {
+                                    liquid_volume_fraction(i, j, k) = train_in[n][(9*i+3*j+k)].item<double>();
+                                    //liquid_centroid(i, j, k) = IRL::Pt(train_in[n][4*(9*i+3*j+k)+1].item<double>(), train_in[n][4*(9*i+3*j+k)+2].item<double>(), train_in[n][4*(9*i+3*j+k)+3].item<double>());
+                                    //comp[n][(9*i+3*j+k)] = train_in[n][4*(9*i+3*j+k)].item<double>();
+                                }
+                            }
+                        }
+                        IRL::Normal norm = this->get_normal("model_n.pt", liquid_volume_fraction, liquid_centroid);
+                        check[n] = functions->VolumeFracsNormalForward(y_pred[n], norm);
                     }
                     comp = train_in;
                 }
@@ -469,6 +510,8 @@ namespace IRL
 
     IRL::Normal trainer::get_normal(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
     {
+        shared_ptr<IRL::model> nnn;
+        nnn = make_shared<model>(27,3,6);
         vector<double> fractions;
         for (int i = 0; i < 3; ++i)
         {
@@ -484,8 +527,8 @@ namespace IRL
             }
         }
 
-        torch::load(nn, in);
-        auto y_pred = nn->forward(torch::tensor(fractions));
+        torch::load(nnn, in);
+        auto y_pred = nnn->forward(torch::tensor(fractions));
         auto n = IRL::Normal();
         n[0] = y_pred[0].item<double>();
         n[1] = y_pred[1].item<double>();

@@ -68,6 +68,12 @@ void writeOutVisualization(const int a_iteration,
                            const double a_simulation_time,
                            const Data<double>& a_liquid_volume_fraction);
 
+/// \brief Writes the interface to VTK as an unstructured mesh.
+void writeOutInterface(const int a_iteration,
+                       const int a_visualization_frequency,
+                       const double a_simulation_time,
+                       const Data<IRL::PlanarSeparator>& a_interface);
+
 //******************************************************************* //
 //     Template function definitions placed below this.
 //******************************************************************* //
@@ -145,6 +151,7 @@ int runSimulation(const std::string& a_advection_method,
         iteration % a_visualization_frequency == 0) {
       writeOutVisualization(iteration, a_visualization_frequency,
                             simulation_time, liquid_volume_fraction);
+      writeOutInterface(iteration, a_visualization_frequency, simulation_time, interface);
     }
     ++iteration;
   }

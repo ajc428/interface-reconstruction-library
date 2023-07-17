@@ -31,6 +31,10 @@ namespace IRL
         {
             size = 12;
         }
+        else if (s == 6)
+        {
+            size = 27;
+        }
         else
         {
             size = 108;
@@ -293,6 +297,64 @@ namespace IRL
 
             grad_fn->set_next_edges(collect_next_edges(y_pred));
             grad_fn->PLIC_grads = grads;
+            grad_fn->y_pred = y_pred;
+
+            set_history(flatten_tensor_args(result), grad_fn);
+        }
+        return result;
+    }
+
+    torch::Tensor grad_functions::VolumeFracsNormalForward(const torch::Tensor y_pred, IRL::Normal norm) 
+    {
+        double theta = atan(norm[2]/norm[0]);
+        double phi = atan(norm[1]/norm[0]);
+        IRL::Paraboloid paraboloid = gen->new_parabaloid(theta, phi, y_pred[0].item<double>(),
+        y_pred[1].item<double>(), y_pred[2].item<double>(), y_pred[3].item<double>(),
+        y_pred[4].item<double>(), y_pred[5].item<double>());
+
+        vector<IRL::Paraboloid> p;
+        vector<IRL::Paraboloid> p1;
+        double e = std::sqrt(DBL_EPSILON);
+
+        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>()+e, y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()));
+
+        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>()+e, y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()));
+
+        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()+e,
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()));
+
+        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>()+e, y_pred[4].item<double>(), y_pred[5].item<double>()));
+
+        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>()+e, y_pred[5].item<double>()));
+
+        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()+e));
+
+        auto result = gen->get_fractions(paraboloid, false);
+
+        vector<torch::Tensor> ep;
+        vector<torch::Tensor> grads;
+
+        for (int i = 0; i < 6; ++i)
+        {
+            ep.push_back(gen->get_fractions(p[i], false));
+            torch::Tensor temp = torch::zeros(size);
+            for (int j = 0; j < size; ++j)
+            {
+                temp[j] = (ep[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            grads.push_back(temp);
+        }
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<VolumeFracsNormalBackward>(new grad_functions::VolumeFracsNormalBackward(), deleteNode);
+
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->frac_grads = grads;
             grad_fn->y_pred = y_pred;
 
             set_history(flatten_tensor_args(result), grad_fn);
