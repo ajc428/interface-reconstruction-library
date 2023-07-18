@@ -10,6 +10,9 @@
 #ifndef IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 
+#include "irl/interface_reconstruction_methods/elvira.h"
+#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
+
 namespace IRL
 {
     trainer::trainer(int s)
@@ -212,6 +215,9 @@ namespace IRL
                     gen = new IRL::fractions(3);
                     DataMesh<double> liquid_volume_fraction(gen->getMesh());
                     DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
+                    IRL::ELVIRANeighborhood neighborhood;
+                    neighborhood.resize(27);
+                    IRL::RectangularCuboid cells[27];
                     for (int n = 0; n < batch_size; ++n)
                     {
                         for (int i = 0; i < 3; ++i) 
@@ -223,10 +229,15 @@ namespace IRL
                                     liquid_volume_fraction(i, j, k) = train_in[n][(9*i+3*j+k)].item<double>();
                                     //liquid_centroid(i, j, k) = IRL::Pt(train_in[n][4*(9*i+3*j+k)+1].item<double>(), train_in[n][4*(9*i+3*j+k)+2].item<double>(), train_in[n][4*(9*i+3*j+k)+3].item<double>());
                                     //comp[n][(9*i+3*j+k)] = train_in[n][4*(9*i+3*j+k)].item<double>();
+                                    cells[k * 9 + j * 3 + i] = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(gen->getMesh().x(i), gen->getMesh().y(j), gen->getMesh().z(k)), IRL::Pt(gen->getMesh().x(i + 1), gen->getMesh().y(j + 1), gen->getMesh().z(k + 1)));
+                                    neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
                                 }
                             }
                         }
+                        //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
                         IRL::Normal norm = this->get_normal("model_n.pt", liquid_volume_fraction, liquid_centroid);
+                        norm.normalize();
+                        //IRL::Normal norm = p[0].normal();
                         check[n] = functions->VolumeFracsNormalForward(y_pred[n], norm);
                     }
                     comp = train_in;
@@ -471,6 +482,24 @@ namespace IRL
                     {
                         results_ex << test_out[j].item<double>() << " ";
                     }
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+            }
+            else if (n == 6)
+            {
+                nn->eval();
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    auto prediction = nn->forward(test_in);
+                    for (int j = 0; j < 6; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    results_ex << test_out[6].item<double>() << " ";
+                    results_ex << test_out[7].item<double>() << " ";
                     results_ex << "\n";
                     results_pr << "\n";
                 }

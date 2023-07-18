@@ -238,6 +238,9 @@ void FullLagrangian::advectVOF(
           (*a_gas_centroid)(i, j, k) = back_project_vertex(
               (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
         }
+        (*a_liquid_centroid)(i, j, k)[0] = ((*a_liquid_centroid)(i, j, k)[0] - mesh.x(i) - mesh.dx()/2)/mesh.dx();
+        (*a_liquid_centroid)(i, j, k)[1] = ((*a_liquid_centroid)(i, j, k)[1] - mesh.y(j) - mesh.dy()/2)/mesh.dy();
+        (*a_liquid_centroid)(i, j, k)[2] = ((*a_liquid_centroid)(i, j, k)[2] - mesh.z(k) - mesh.dz()/2)/mesh.dz();
       }
     }
   }

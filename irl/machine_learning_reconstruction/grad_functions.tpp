@@ -308,31 +308,99 @@ namespace IRL
     {
         double theta = atan(norm[2]/norm[0]);
         double phi = atan(norm[1]/norm[0]);
-        IRL::Paraboloid paraboloid = gen->new_parabaloid(theta, phi, y_pred[0].item<double>(),
-        y_pred[1].item<double>(), y_pred[2].item<double>(), y_pred[3].item<double>(),
-        y_pred[4].item<double>(), y_pred[5].item<double>());
+        IRL::Pt x_dir = IRL::Pt(0,0,0);
+        if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
+        {
+            x_dir[0] = norm[1];
+            x_dir[1] = -norm[0];
+            x_dir[2] = 0;
+        }
+        else if (abs(norm[1]) >= abs(norm[0]) && abs(norm[0]) >= abs(norm[2]))
+        {
+            x_dir[0] = -norm[1];
+            x_dir[1] = norm[0];
+            x_dir[2] = 0;
+        }
+        else if (abs(norm[0]) >= abs(norm[2]) && abs(norm[2]) >= abs(norm[1]))
+        {
+            x_dir[0] = norm[2];
+            x_dir[2] = -norm[0];
+            x_dir[1] = 0;
+        }
+        else if (abs(norm[1]) >= abs(norm[2]) && abs(norm[2]) >= abs(norm[0]))
+        {
+            x_dir[0] = 0;
+            x_dir[1] = norm[2];
+            x_dir[2] = -norm[1];
+        }
+        else if (abs(norm[2]) >= abs(norm[0]) && abs(norm[0]) >= abs(norm[1]))
+        {
+            x_dir[0] = -norm[2];
+            x_dir[2] = norm[0];
+            x_dir[1] = 0;
+        }
+        else if (abs(norm[2]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[0]))
+        {
+            x_dir[0] = 0;
+            x_dir[1] = -norm[2];
+            x_dir[2] = norm[1];
+        }
+        IRL::Pt y_dir = IRL::Pt(0,0,0);
+        y_dir[0] = norm[1] * x_dir[2] - norm[2] * x_dir[1];
+        y_dir[1] = -(norm[0] * x_dir[2] - norm[2] * x_dir[0]);
+        y_dir[2] = norm[0] * x_dir[1] - norm[1] * x_dir[0];
+
+        IRL::Pt temp = x_dir;
+        x_dir[0] = cos(y_pred[3].item<double>()) * temp[0] + sin(y_pred[3].item<double>()) * y_dir[0];
+        x_dir[1] = cos(y_pred[3].item<double>()) * temp[1] + sin(y_pred[3].item<double>()) * y_dir[1];
+        x_dir[2] = cos(y_pred[3].item<double>()) * temp[2] + sin(y_pred[3].item<double>()) * y_dir[2];
+
+        y_dir[0] = norm[1] * x_dir[2] - norm[2] * x_dir[1];
+        y_dir[1] = -(norm[0] * x_dir[2] - norm[2] * x_dir[0]);
+        y_dir[2] = norm[0] * x_dir[1] - norm[1] * x_dir[0];
+
+        IRL::Pt datum = IRL::Pt(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>());
+        IRL::ReferenceFrame frame = IRL::ReferenceFrame(IRL::Normal(x_dir[0], x_dir[1], x_dir[2]), IRL::Normal(y_dir[0], y_dir[1], y_dir[2]), IRL::Normal(norm[0], norm[1], norm[2]));
+
+        IRL::Paraboloid paraboloid = IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>());/*gen->new_parabaloid(y_pred[0].item<double>(),
+        y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, y_pred[3].item<double>(),
+        y_pred[4].item<double>(), y_pred[5].item<double>());*/
 
         vector<IRL::Paraboloid> p;
         vector<IRL::Paraboloid> p1;
         double e = std::sqrt(DBL_EPSILON);
 
-        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>()+e, y_pred[1].item<double>(), y_pred[2].item<double>(),
-        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()));
+        datum = IRL::Pt(y_pred[0].item<double>()+e, y_pred[1].item<double>(), y_pred[2].item<double>());
+        p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>()+e, y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, 
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>())*/);
 
-        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>()+e, y_pred[2].item<double>(),
-        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()));
+        datum = IRL::Pt(y_pred[0].item<double>(), y_pred[1].item<double>()+e, y_pred[2].item<double>());
+        p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>()+e, y_pred[2].item<double>(), theta, phi, 
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>())*/);
 
-        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()+e,
-        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()));
+        datum = IRL::Pt(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()+e);       
+        p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()+e, theta, phi, 
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>())*/);
 
-        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
-        y_pred[3].item<double>()+e, y_pred[4].item<double>(), y_pred[5].item<double>()));
+        datum = IRL::Pt(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()); 
+        IRL::Pt temp2 = x_dir;
+        IRL::Pt temp3 = x_dir;
+        temp2[0] = cos(y_pred[3].item<double>()+e) * temp[0] + sin(y_pred[3].item<double>()) * y_dir[0];
+        temp2[1] = cos(y_pred[3].item<double>()+e) * temp[1] + sin(y_pred[3].item<double>()) * y_dir[1];
+        temp2[2] = cos(y_pred[3].item<double>()+e) * temp[2] + sin(y_pred[3].item<double>()) * y_dir[2];
 
-        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
-        y_pred[3].item<double>(), y_pred[4].item<double>()+e, y_pred[5].item<double>()));
+        temp3[0] = norm[1] * temp2[2] - norm[2] * temp2[1];
+        temp3[1] = -(norm[0] * temp2[2] - norm[2] * temp2[0]);
+        temp3[2] = norm[0] * temp2[1] - norm[1] * temp2[0];
+        IRL::ReferenceFrame frame2 = IRL::ReferenceFrame(IRL::Normal(temp2[0], temp2[1], temp2[2]), IRL::Normal(temp3[0], temp3[1], temp3[2]), IRL::Normal(norm[0], norm[1], norm[2]));
+        p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, 
+        y_pred[3].item<double>()+e, y_pred[4].item<double>(), y_pred[5].item<double>())*/);
 
-        p.push_back(gen->new_parabaloid(theta, phi, y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
-        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()+e));
+        p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>()+e,y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, 
+        y_pred[3].item<double>(), y_pred[4].item<double>()+e, y_pred[5].item<double>())*/);
+
+        p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>()+e)/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, 
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()+e)*/);
 
         auto result = gen->get_fractions(paraboloid, false);
 

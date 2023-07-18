@@ -111,32 +111,34 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                             a_liquid_volume_fraction(i, j, k) - 0.5);
           (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
               IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
-          continue;
         }
-        // Build surrounding stencil information.
-        auto t = IRL::trainer(4);
-        auto n = IRL::Normal();
-        Mesh local_mesh(3, 3, 3, 1);
-        IRL::Pt lower_domain(-0.5 * local_mesh.getNx(), -0.5 * local_mesh.getNy(), -0.5 * local_mesh.getNz());
-        IRL::Pt upper_domain(0.5 * local_mesh.getNx(), 0.5 * local_mesh.getNy(), 0.5 * local_mesh.getNz());
-        local_mesh.setCellBoundaries(lower_domain, upper_domain);
-        DataMesh<double> local_liquid_volume_fraction(local_mesh);
-        DataMesh<IRL::Pt> local_liquid_centroid(local_mesh);
-        for (int ii = i - 1; ii < i + 2; ++ii) {
-          for (int jj = j - 1; jj < j + 2; ++jj) {
-            for (int kk = k - 1; kk < k + 2; ++kk) {
-              local_liquid_volume_fraction(ii-i+1, jj-j+1, kk-k+1) = a_liquid_volume_fraction(ii, jj, kk);
-              local_liquid_centroid(ii-i+1, jj-j+1, kk-k+1) = a_liquid_centroid(ii, jj, kk);
+        else
+        {
+          // Build surrounding stencil information.
+          auto t = IRL::trainer(4);
+          auto n = IRL::Normal();
+          Mesh local_mesh(3, 3, 3, 1);
+          IRL::Pt lower_domain(-0.5 * local_mesh.getNx(), -0.5 * local_mesh.getNy(), -0.5 * local_mesh.getNz());
+          IRL::Pt upper_domain(0.5 * local_mesh.getNx(), 0.5 * local_mesh.getNy(), 0.5 * local_mesh.getNz());
+          local_mesh.setCellBoundaries(lower_domain, upper_domain);
+          DataMesh<double> local_liquid_volume_fraction(local_mesh);
+          DataMesh<IRL::Pt> local_liquid_centroid(local_mesh);
+          for (int ii = i - 1; ii < i + 2; ++ii) {
+            for (int jj = j - 1; jj < j + 2; ++jj) {
+              for (int kk = k - 1; kk < k + 2; ++kk) {
+                local_liquid_volume_fraction(ii-i+1, jj-j+1, kk-k+1) = a_liquid_volume_fraction(ii, jj, kk);
+                local_liquid_centroid(ii-i+1, jj-j+1, kk-k+1) = a_liquid_centroid(ii, jj, kk);
+              }
             }
           }
-        }
-        n = t.get_normal("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", local_liquid_volume_fraction, local_liquid_centroid);
-        n.normalize();
-        const IRL::Normal& n1 = n;
-        const double d = a_liquid_volume_fraction(i,j,k);
-        const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-        double distance = IRL::findDistanceOnePlane(cube, d, n1);
-        (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
+          n = t.get_normal("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", local_liquid_volume_fraction, local_liquid_centroid);
+          n.normalize();
+          const IRL::Normal& n1 = n;
+          const double d = a_liquid_volume_fraction(i,j,k);
+          const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+          double distance = IRL::findDistanceOnePlane(cube, d, n1);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
+      }
       }
     }
   }
