@@ -50,10 +50,12 @@ void getReconstruction(const std::string& a_reconstruction_method,
                             a_interface);
   } else if (a_reconstruction_method == "ML") {
     ML::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_interface);
+  } else if (a_reconstruction_method == "ML_norm") {
+    ML_norm::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_interface);
   } else {
     std::cout << "Unknown reconstruction method of : "
               << a_reconstruction_method << '\n';
-    std::cout << "Valid entries are: PLIC, CentroidFit, Jibben. \n";
+    std::cout << "Valid entries are: PLIC, CentroidFit, Jibben, ML, ML_norm. \n";
     std::exit(-1);
   }
 }
@@ -988,6 +990,54 @@ void ML::getReconstruction(const Data<double>& a_liquid_volume_fraction, const D
           }
           paraboloid = t.use_model("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model.pt", neighborhood, neighborhood_centroid);
           std::cout << paraboloid.getAlignedParaboloid().a() << std::endl;
+          (*a_interface)(i, j, k) = paraboloid;
+        }
+      }
+    }
+  }
+
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void ML_norm::getReconstruction(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid, Data<IRL::Paraboloid>* a_interface) 
+{
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  auto t = IRL::trainer(6);
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
+  {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
+    {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) 
+      {
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
+        {
+          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
+        } 
+        else if (a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) 
+        {
+          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
+        } 
+        else {
+          IRL::Paraboloid paraboloid;
+
+          auto n = IRL::Normal();
+          Mesh local_mesh(3, 3, 3, 1);
+          IRL::Pt lower_domain(-0.5 * local_mesh.getNx(), -0.5 * local_mesh.getNy(), -0.5 * local_mesh.getNz());
+          IRL::Pt upper_domain(0.5 * local_mesh.getNx(), 0.5 * local_mesh.getNy(), 0.5 * local_mesh.getNz());
+          local_mesh.setCellBoundaries(lower_domain, upper_domain);
+          DataMesh<double> local_liquid_volume_fraction(local_mesh);
+          DataMesh<IRL::Pt> local_liquid_centroid(local_mesh);
+          for (int ii = i - 1; ii < i + 2; ++ii) {
+            for (int jj = j - 1; jj < j + 2; ++jj) {
+              for (int kk = k - 1; kk < k + 2; ++kk) {
+                local_liquid_volume_fraction(ii-i+1, jj-j+1, kk-k+1) = a_liquid_volume_fraction(ii, jj, kk);
+                local_liquid_centroid(ii-i+1, jj-j+1, kk-k+1) = a_liquid_centroid(ii, jj, kk);
+              }
+            }
+          }
+          paraboloid = t.use_model2("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_2.pt", local_liquid_volume_fraction, local_liquid_centroid);
           (*a_interface)(i, j, k) = paraboloid;
         }
       }

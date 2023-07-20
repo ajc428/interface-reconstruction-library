@@ -537,10 +537,88 @@ namespace IRL
         return paraboloid;
     }
 
+    IRL::Paraboloid trainer::use_model2(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    {
+        vector<double> fractions;
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    fractions.push_back(liquid_volume_fraction(i, j, k));
+                }
+            }
+        }
+
+        IRL::fractions *gen = new IRL::fractions(3);
+        torch::load(nn, in);
+        auto y_pred = nn->forward(torch::tensor(fractions));
+        IRL::Normal norm = get_normal("model_n.pt", liquid_volume_fraction, liquid_centroid);
+        IRL::Pt x_dir = IRL::Pt(0,0,0);
+        if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
+        {
+            x_dir[0] = norm[1];
+            x_dir[1] = -norm[0];
+            x_dir[2] = 0;
+        }
+        else if (abs(norm[1]) >= abs(norm[0]) && abs(norm[0]) >= abs(norm[2]))
+        {
+            x_dir[0] = -norm[1];
+            x_dir[1] = norm[0];
+            x_dir[2] = 0;
+        }
+        else if (abs(norm[0]) >= abs(norm[2]) && abs(norm[2]) >= abs(norm[1]))
+        {
+            x_dir[0] = norm[2];
+            x_dir[2] = -norm[0];
+            x_dir[1] = 0;
+        }
+        else if (abs(norm[1]) >= abs(norm[2]) && abs(norm[2]) >= abs(norm[0]))
+        {
+            x_dir[0] = 0;
+            x_dir[1] = norm[2];
+            x_dir[2] = -norm[1];
+        }
+        else if (abs(norm[2]) >= abs(norm[0]) && abs(norm[0]) >= abs(norm[1]))
+        {
+            x_dir[0] = -norm[2];
+            x_dir[2] = norm[0];
+            x_dir[1] = 0;
+        }
+        else if (abs(norm[2]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[0]))
+        {
+            x_dir[0] = 0;
+            x_dir[1] = -norm[2];
+            x_dir[2] = norm[1];
+        }
+        IRL::Pt y_dir = IRL::Pt(0,0,0);
+        y_dir[0] = norm[1] * x_dir[2] - norm[2] * x_dir[1];
+        y_dir[1] = -(norm[0] * x_dir[2] - norm[2] * x_dir[0]);
+        y_dir[2] = norm[0] * x_dir[1] - norm[1] * x_dir[0];
+
+        IRL::Pt temp = x_dir;
+        x_dir[0] = cos(y_pred[3].item<double>()) * temp[0] + sin(y_pred[3].item<double>()) * y_dir[0];
+        x_dir[1] = cos(y_pred[3].item<double>()) * temp[1] + sin(y_pred[3].item<double>()) * y_dir[1];
+        x_dir[2] = cos(y_pred[3].item<double>()) * temp[2] + sin(y_pred[3].item<double>()) * y_dir[2];
+
+        y_dir[0] = norm[1] * x_dir[2] - norm[2] * x_dir[1];
+        y_dir[1] = -(norm[0] * x_dir[2] - norm[2] * x_dir[0]);
+        y_dir[2] = norm[0] * x_dir[1] - norm[1] * x_dir[0];
+
+        IRL::Pt datum = IRL::Pt(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>());
+        IRL::ReferenceFrame frame = IRL::ReferenceFrame(IRL::Normal(x_dir[0], x_dir[1], x_dir[2]), IRL::Normal(y_dir[0], y_dir[1], y_dir[2]), IRL::Normal(norm[0], norm[1], norm[2]));
+
+        IRL::Paraboloid paraboloid = IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>());
+        
+        delete gen;
+        return paraboloid;
+    }
+
     IRL::Normal trainer::get_normal(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
     {
         shared_ptr<IRL::model> nnn;
-        nnn = make_shared<model>(27,3,6);
+        nnn = make_shared<model>(108,3,6);
         vector<double> fractions;
         for (int i = 0; i < 3; ++i)
         {
