@@ -932,7 +932,7 @@ void PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction,
 void ML::getReconstruction(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid, Data<IRL::Paraboloid>* a_interface) 
 {
   const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
-  auto t = IRL::trainer(1, 1, 0.001);
+  auto t = IRL::trainer(2);
 
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
   {
@@ -1038,6 +1038,12 @@ void ML_norm::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
             }
           }
           paraboloid = t.use_model2("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_2.pt", local_liquid_volume_fraction, local_liquid_centroid);
+          IRL::Pt datum = paraboloid.getDatum();
+          datum[0] = (datum[0] + 0.5)*mesh.dx()+mesh.x(i);
+          datum[1] = (datum[1] + 0.5)*mesh.dx()+mesh.y(i);
+          datum[2] = (datum[2] + 0.5)*mesh.dx()+mesh.z(i);
+          paraboloid.setDatum(datum);
+
           (*a_interface)(i, j, k) = paraboloid;
         }
       }

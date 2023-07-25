@@ -40,6 +40,12 @@ namespace IRL
         return IRL::Paraboloid(datum, frame, alpha, beta);
     }
 
+    IRL::Paraboloid fractions::new_parabaloid(double x, double y, double z, IRL::ReferenceFrame frame, double alpha, double beta)
+    {
+        IRL::Pt datum = IRL::Pt(x,y,z);
+        return IRL::Paraboloid(datum, frame, alpha, beta);
+    }
+
     IRL::Paraboloid fractions::new_random_parabaloid(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
     {
         std::random_device rd;  

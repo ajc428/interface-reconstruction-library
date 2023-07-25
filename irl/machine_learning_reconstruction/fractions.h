@@ -49,6 +49,7 @@ namespace IRL
         fractions(const int);
 
         IRL::Paraboloid new_parabaloid(double, double, double, double, double, double, double, double);
+        IRL::Paraboloid new_parabaloid(double, double, double, IRL::ReferenceFrame, double, double);
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
         torch::Tensor get_fractions(IRL::Plane, bool);

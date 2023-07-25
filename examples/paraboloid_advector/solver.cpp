@@ -243,5 +243,6 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
   l2_mean_curv_error = std::sqrt(l2_mean_curv_error);
   avg_mean_curv /= total_surface;
   total_surface = std::sqrt(total_surface);
-  a_output->writeParametrizedInterface(a_time, surfaces);
+  //a_output->writeParametrizedInterface(a_time, surfaces);
+  a_output->writeVTKInterface(a_time, surfaces, false);
 }

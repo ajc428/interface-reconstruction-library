@@ -40,13 +40,6 @@ namespace IRL
         }
         else if (m == 5)
         {
-            nn = make_shared<model>(108,4,2);
-            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
-            critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
-        }
-        else if (m == 6)
-        {
             nn = make_shared<model>(27,6,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -85,13 +78,6 @@ namespace IRL
             functions = new IRL::grad_functions(3, m);
         }
         else if (m == 5)
-        {
-            nn = make_shared<model>(108,4,2);
-            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
-            critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
-        }
-        else if (m == 6)
         {
             nn = make_shared<model>(27,6,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
@@ -201,16 +187,6 @@ namespace IRL
                 {
                     check = torch::zeros({batch_size, nn->getSize()});
                     comp = torch::zeros({batch_size, nn->getSize()});
-                    for (int i = 0; i < batch_size; ++i)
-                    {
-                        check[i] = functions->PLICForward(y_pred[i]);
-                    }
-                    comp = train_in;
-                }
-                else if (m == 6)
-                {
-                    check = torch::zeros({batch_size, nn->getSize()});
-                    comp = torch::zeros({batch_size, nn->getSize()});
                     IRL::fractions *gen;
                     gen = new IRL::fractions(3);
                     DataMesh<double> liquid_volume_fraction(gen->getMesh());
@@ -234,10 +210,10 @@ namespace IRL
                                 }
                             }
                         }
-                        //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
-                        IRL::Normal norm = this->get_normal("model_n.pt", liquid_volume_fraction, liquid_centroid);
-                        norm.normalize();
-                        //IRL::Normal norm = p[0].normal();
+                        IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
+                        //IRL::Normal norm = this->get_normal("model_n.pt", liquid_volume_fraction, liquid_centroid);
+                        //norm.normalize();
+                        IRL::Normal norm = p[0].normal();
                         check[n] = functions->VolumeFracsNormalForward(y_pred[n], norm);
                     }
                     comp = train_in;
@@ -469,34 +445,94 @@ namespace IRL
             else if (n == 5)
             {
                 nn->eval();
-                for(int i = 0; i < data_test.size().value(); ++i)
+                for(int h = 0; h < data_test.size().value(); ++h)
                 {
-                    test_in = data_test.get(i).data;
-                    test_out = data_test.get(i).target;
+                    test_in = data_test.get(h).data;
+                    test_out = data_test.get(h).target;
                     auto prediction = nn->forward(test_in);
-                    for (int j = 0; j < 3; ++j)
+
+                    IRL::fractions *gen;
+                    gen = new IRL::fractions(3);
+                    IRL::ELVIRANeighborhood neighborhood;
+                    neighborhood.resize(27);
+                    IRL::RectangularCuboid cells[27];
+                    DataMesh<double> liquid_volume_fraction(gen->getMesh());
+                    DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
+                    for (int i = 0; i < 3; ++i) 
                     {
-                        results_pr << prediction[j].item<double>() << " ";
+                        for (int j = 0; j < 3; ++j) 
+                        {
+                            for (int k = 0; k < 3; ++k) 
+                            {
+                                liquid_volume_fraction(i, j, k) = test_in[(9*i+3*j+k)].item<double>();
+                                cells[k * 9 + j * 3 + i] = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(gen->getMesh().x(i), gen->getMesh().y(j), gen->getMesh().z(k)), IRL::Pt(gen->getMesh().x(i + 1), gen->getMesh().y(j + 1), gen->getMesh().z(k + 1)));
+                                neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
+                            }
+                        }
                     }
-                    for (int j = 0; j < 3; ++j)
+                    IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
+                    IRL::Normal norm = p[0].normal();
+                    //IRL::Normal norm = get_normal("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", liquid_volume_fraction, liquid_centroid);
+                    IRL::Pt x_dir = IRL::Pt(0,0,0);
+                    if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
                     {
-                        results_ex << test_out[j].item<double>() << " ";
+                        x_dir[0] = norm[1];
+                        x_dir[1] = -norm[0];
+                        x_dir[2] = 0;
                     }
-                    results_ex << "\n";
-                    results_pr << "\n";
-                }
-            }
-            else if (n == 6)
-            {
-                nn->eval();
-                for(int i = 0; i < data_test.size().value(); ++i)
-                {
-                    test_in = data_test.get(i).data;
-                    test_out = data_test.get(i).target;
-                    auto prediction = nn->forward(test_in);
+                    else if (abs(norm[1]) >= abs(norm[0]) && abs(norm[0]) >= abs(norm[2]))
+                    {
+                        x_dir[0] = -norm[1];
+                        x_dir[1] = norm[0];
+                        x_dir[2] = 0;
+                    }
+                    else if (abs(norm[0]) >= abs(norm[2]) && abs(norm[2]) >= abs(norm[1]))
+                    {
+                        x_dir[0] = norm[2];
+                        x_dir[2] = -norm[0];
+                        x_dir[1] = 0;
+                    }
+                    else if (abs(norm[1]) >= abs(norm[2]) && abs(norm[2]) >= abs(norm[0]))
+                    {
+                        x_dir[0] = 0;
+                        x_dir[1] = norm[2];
+                        x_dir[2] = -norm[1];
+                    }
+                    else if (abs(norm[2]) >= abs(norm[0]) && abs(norm[0]) >= abs(norm[1]))
+                    {
+                        x_dir[0] = -norm[2];
+                        x_dir[2] = norm[0];
+                        x_dir[1] = 0;
+                    }
+                    else if (abs(norm[2]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[0]))
+                    {
+                        x_dir[0] = 0;
+                        x_dir[1] = -norm[2];
+                        x_dir[2] = norm[1];
+                    }
+                    IRL::Pt y_dir = IRL::Pt(0,0,0);
+                    y_dir[0] = norm[1] * x_dir[2] - norm[2] * x_dir[1];
+                    y_dir[1] = -(norm[0] * x_dir[2] - norm[2] * x_dir[0]);
+                    y_dir[2] = norm[0] * x_dir[1] - norm[1] * x_dir[0];
+
+                    IRL::Pt temp = x_dir;
+                    x_dir[0] = cos(prediction[3].item<double>()) * temp[0] + sin(prediction[3].item<double>()) * y_dir[0];
+                    x_dir[1] = cos(prediction[3].item<double>()) * temp[1] + sin(prediction[3].item<double>()) * y_dir[1];
+                    x_dir[2] = cos(prediction[3].item<double>()) * temp[2] + sin(prediction[3].item<double>()) * y_dir[2];
+
+                    y_dir[0] = norm[1] * x_dir[2] - norm[2] * x_dir[1];
+                    y_dir[1] = -(norm[0] * x_dir[2] - norm[2] * x_dir[0]);
+                    y_dir[2] = norm[0] * x_dir[1] - norm[1] * x_dir[0];
+
+                    IRL::ReferenceFrame frame = IRL::ReferenceFrame(IRL::Normal(x_dir[0], x_dir[1], x_dir[2]), IRL::Normal(y_dir[0], y_dir[1], y_dir[2]), IRL::Normal(norm[0], norm[1], norm[2]));
+
+                    results_pr << frame[0] << " " << frame[1] << " " << frame[2] << " ";
                     for (int j = 0; j < 6; ++j)
                     {
-                        results_pr << prediction[j].item<double>() << " ";
+                        if(j != 3)
+                        {
+                            results_pr << prediction[j].item<double>() << " ";
+                        }
                     }
                     results_ex << test_out[6].item<double>() << " ";
                     results_ex << test_out[7].item<double>() << " ";
@@ -540,6 +576,11 @@ namespace IRL
     IRL::Paraboloid trainer::use_model2(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
     {
         vector<double> fractions;
+        IRL::fractions *gen;
+        gen = new IRL::fractions(3);
+        IRL::ELVIRANeighborhood neighborhood;
+        neighborhood.resize(27);
+        IRL::RectangularCuboid cells[27];
         for (int i = 0; i < 3; ++i)
         {
             for (int j = 0; j < 3; ++j)
@@ -547,14 +588,17 @@ namespace IRL
                 for (int k = 0; k < 3; ++k)
                 {
                     fractions.push_back(liquid_volume_fraction(i, j, k));
+                    cells[k * 9 + j * 3 + i] = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(gen->getMesh().x(i), gen->getMesh().y(j), gen->getMesh().z(k)), IRL::Pt(gen->getMesh().x(i + 1), gen->getMesh().y(j + 1), gen->getMesh().z(k + 1)));
+                    neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
                 }
             }
         }
 
-        IRL::fractions *gen = new IRL::fractions(3);
         torch::load(nn, in);
         auto y_pred = nn->forward(torch::tensor(fractions));
-        IRL::Normal norm = get_normal("model_n.pt", liquid_volume_fraction, liquid_centroid);
+        //IRL::Normal norm = get_normal("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", liquid_volume_fraction, liquid_centroid);
+        IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
+        IRL::Normal norm = p[0].normal();
         IRL::Pt x_dir = IRL::Pt(0,0,0);
         if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
         {
@@ -610,7 +654,7 @@ namespace IRL
         IRL::ReferenceFrame frame = IRL::ReferenceFrame(IRL::Normal(x_dir[0], x_dir[1], x_dir[2]), IRL::Normal(y_dir[0], y_dir[1], y_dir[2]), IRL::Normal(norm[0], norm[1], norm[2]));
 
         IRL::Paraboloid paraboloid = IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>());
-        
+
         delete gen;
         return paraboloid;
     }

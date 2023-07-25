@@ -52,7 +52,7 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
             delete gen;
             delete sm;
         }
-        else if (m == 4 || m == 6)
+        else if (m == 4 || m == 5)
         {
             vector <double> num1;
             for (int i = 0; i < 27; ++i)

@@ -31,7 +31,7 @@ namespace IRL
         {
             size = 12;
         }
-        else if (s == 6)
+        else if (s == 4 || s == 5)
         {
             size = 27;
         }
@@ -306,8 +306,6 @@ namespace IRL
 
     torch::Tensor grad_functions::VolumeFracsNormalForward(const torch::Tensor y_pred, IRL::Normal norm) 
     {
-        double theta = atan(norm[2]/norm[0]);
-        double phi = atan(norm[1]/norm[0]);
         IRL::Pt x_dir = IRL::Pt(0,0,0);
         if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
         {
@@ -393,7 +391,7 @@ namespace IRL
         temp3[1] = -(norm[0] * temp2[2] - norm[2] * temp2[0]);
         temp3[2] = norm[0] * temp2[1] - norm[1] * temp2[0];
         IRL::ReferenceFrame frame2 = IRL::ReferenceFrame(IRL::Normal(temp2[0], temp2[1], temp2[2]), IRL::Normal(temp3[0], temp3[1], temp3[2]), IRL::Normal(norm[0], norm[1], norm[2]));
-        p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>(),y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, 
+        p.push_back(IRL::Paraboloid(datum,frame2,y_pred[4].item<double>(),y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, 
         y_pred[3].item<double>()+e, y_pred[4].item<double>(), y_pred[5].item<double>())*/);
 
         p.push_back(IRL::Paraboloid(datum,frame,y_pred[4].item<double>()+e,y_pred[5].item<double>())/*gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(), theta, phi, 
