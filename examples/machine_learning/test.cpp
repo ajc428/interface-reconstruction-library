@@ -47,11 +47,11 @@ int main(int argc, char* argv[])
 
     //create_surface("test_surface",-0.32953017950058, -0.306852430105209, 0.152877509593964,0,0,0,1.27375507354736, 1.15622889995575);
     
-    //data_generate(20000,0,2*3.1415,0,2*3.1415,0,2*3.1415,3,5,0.1,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5);
+    //data_generate(30000,0,2*3.1415,0,2*3.1415,0,2*3.1415,0.2,0.5,0.2,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5);
 
-    auto t = IRL::trainer(1000, 100, 0.00001, 5);
-    t.load_train_data("fractions.txt", "coefficients.txt");
-    t.load_test_data("fractions.txt", "coefficients.txt");
-    t.train_model(false, "model.pt", "model.pt");
-    t.test_model(5);
+    auto t = IRL::trainer(10000, 90000, 0.00001, 4);
+    t.load_train_data("fractions.txt", "normals.txt");
+    t.load_test_data("fractions_test.txt", "normals_test.txt");
+    t.train_model(true, "model.pt", "model.pt");
+    t.test_model(4);
 }

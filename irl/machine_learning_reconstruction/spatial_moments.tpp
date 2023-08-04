@@ -110,9 +110,9 @@ namespace IRL
                 for(int k = 0; k < 3; ++k)
                 {
                     m000 = m000 + a_liquid_volume_fraction(i,j,k);
-                    m100 = m100 + ((mesh.x(i)+mesh.x(i+1))/2)*a_liquid_volume_fraction(i,j,k);
-                    m010 = m010 + ((mesh.y(j)+mesh.y(j+1))/2)*a_liquid_volume_fraction(i,j,k);
-                    m001 = m001 + ((mesh.z(k)+mesh.z(k+1))/2)*a_liquid_volume_fraction(i,j,k);
+                    m100 = m100 + a_liquid_centroid(i,j,k)[0]*a_liquid_volume_fraction(i,j,k);
+                    m010 = m010 + a_liquid_centroid(i,j,k)[1]*a_liquid_volume_fraction(i,j,k);
+                    m001 = m001 + a_liquid_centroid(i,j,k)[2]*a_liquid_volume_fraction(i,j,k);
 
                     mx000 = mx000 + a_liquid_centroid(i,j,k)[0];
                     mx100 = mx100 + ((mesh.x(i)+mesh.x(i+1))/2)*a_liquid_centroid(i,j,k)[0];
@@ -153,12 +153,12 @@ namespace IRL
             {
                 for(int k = 0; k < 3; ++k)
                 {
-                    mu101 = mu101 + ((mesh.x(i)+mesh.x(i+1))/2-xc)*((mesh.z(k)+mesh.z(k+1))/2-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu011 = mu011 + ((mesh.y(j)+mesh.y(j+1))/2-yc)*((mesh.z(k)+mesh.z(k+1))/2-zc)*a_liquid_volume_fraction(i,j,k);
-                    mu110 = mu110 + ((mesh.x(i)+mesh.x(i+1))/2-xc)*((mesh.y(j)+mesh.y(j+1))/2-yc)*a_liquid_volume_fraction(i,j,k);
-                    mu200 = mu200 + pow(((mesh.x(i)+mesh.x(i+1))/2-xc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu020 = mu020 + pow(((mesh.y(j)+mesh.y(j+1))/2-yc),2.0)*a_liquid_volume_fraction(i,j,k);
-                    mu002 = mu002 + pow(((mesh.z(k)+mesh.z(k+1))/2-zc),2.0)*a_liquid_volume_fraction(i,j,k);
+                    mu101 = mu101 + (a_liquid_centroid(i,j,k)[0]-xc)*(a_liquid_centroid(i,j,k)[2]-zc)*a_liquid_volume_fraction(i,j,k);
+                    mu011 = mu011 + (a_liquid_centroid(i,j,k)[1]-yc)*(a_liquid_centroid(i,j,k)[2]-zc)*a_liquid_volume_fraction(i,j,k);
+                    mu110 = mu110 + (a_liquid_centroid(i,j,k)[0]-xc)*(a_liquid_centroid(i,j,k)[1]-yc)*a_liquid_volume_fraction(i,j,k);
+                    mu200 = mu200 + pow((a_liquid_centroid(i,j,k)[0]-xc),2.0)*a_liquid_volume_fraction(i,j,k);
+                    mu020 = mu020 + pow((a_liquid_centroid(i,j,k)[1]-yc),2.0)*a_liquid_volume_fraction(i,j,k);
+                    mu002 = mu002 + pow((a_liquid_centroid(i,j,k)[2]-zc),2.0)*a_liquid_volume_fraction(i,j,k);
 
                     centroid_x[0] = centroid_x[0] + ((mesh.x(i)+mesh.x(i+1))/2-x_xc)*((mesh.z(k)+mesh.z(k+1))/2-x_zc)*a_liquid_centroid(i,j,k)[0];
                     centroid_x[1] = centroid_x[1] + ((mesh.y(j)+mesh.y(j+1))/2-x_yc)*((mesh.z(k)+mesh.z(k+1))/2-x_zc)*a_liquid_centroid(i,j,k)[0];
@@ -203,7 +203,7 @@ namespace IRL
         temp.push_back(J1);
         temp.push_back(J2);
         temp.push_back(J3);
-        temp.push_back(J1_x);
+        /*temp.push_back(J1_x);
         temp.push_back(J2_x);
         temp.push_back(J3_x);
         temp.push_back(J1_y);
@@ -211,9 +211,18 @@ namespace IRL
         temp.push_back(J3_y);
         temp.push_back(J1_z);
         temp.push_back(J2_z);
-        temp.push_back(J3_z);
+        temp.push_back(J3_z);*/
 
         return torch::tensor(temp);
+    }
+
+    vector<double> spatial_moments::get_mass_centers()
+    {
+        vector<double> centers;
+        centers.push_back(xc);
+        centers.push_back(yc);
+        centers.push_back(zc);
+        return centers;
     }
 }
 

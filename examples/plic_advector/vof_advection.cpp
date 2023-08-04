@@ -206,10 +206,8 @@ void FullLagrangian::advectVOF(
         IRL::Dodecahedron transported_cell;
         for (IRL::UnsignedIndex_t n = 0; n < 8; ++n) {
           transported_cell[n] =
-              back_project_vertex(cell[n], -a_dt, a_U, a_V, a_W);
+             back_project_vertex(cell[n], -a_dt, a_U, a_V, a_W);
         }
-        // Determine the bounding volume that the transported Dodecahedron
-        // covers.
 
         // Now perform the actual cutting.
         IRL::SeparatedMoments<IRL::VolumeMoments> cell_volume_moments =

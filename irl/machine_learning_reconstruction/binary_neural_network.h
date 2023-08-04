@@ -26,7 +26,7 @@ namespace IRL
             l7 = register_module("l7", torch::nn::Linear(100, 100));
             l8 = register_module("l8", torch::nn::Linear(100, 100));
             l9 = register_module("l9", torch::nn::Linear(100, 100));
-            l10 = register_module("l10", torch::nn::Linear(100, 1));
+            l10 = register_module("l10", torch::nn::Linear(100, 3));
         }
         torch::Tensor forward(torch::Tensor x) 
         {
@@ -39,7 +39,7 @@ namespace IRL
             x = torch::nn::functional::relu(l7(x));
             x = torch::nn::functional::relu(l8(x));
             x = torch::nn::functional::relu(l9(x));
-            x = torch::sigmoid(l10(x));
+            x = torch::softmax(l10(x),-1);
             return x;
         }
         torch::nn::Linear l1{nullptr}, l2{nullptr}, l3{nullptr}, l4{nullptr}, l5{nullptr}, l6{nullptr}, l7{nullptr}, l8{nullptr}, l9{nullptr}, l10{nullptr};

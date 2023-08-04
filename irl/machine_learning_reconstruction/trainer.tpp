@@ -26,21 +26,23 @@ namespace IRL
         m = s;
         if (m == 3)
         {
-            nn_binary = make_shared<binary_model>(12);
+            nn_binary = make_shared<binary_model>(3);
             optimizer = new torch::optim::Adam(nn_binary->parameters(), learning_rate);
-            critereon_BCE = torch::nn::BCELoss();
+            critereon_BCE = torch::nn::CrossEntropyLoss();
             functions = new IRL::grad_functions(3, m);
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(27,3,6);
+            nn = make_shared<model>(108,3,6);
+            nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
         }
         else if (m == 5)
         {
-            nn = make_shared<model>(27,6,2);
+            nn = make_shared<model>(108,6,2);
+            nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
@@ -48,6 +50,7 @@ namespace IRL
         else
         {
             nn = make_shared<model>(108,8,2);
+            nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
@@ -65,14 +68,14 @@ namespace IRL
         m = s;
         if (m == 3)
         {
-            nn_binary = make_shared<binary_model>(12);
+            nn_binary = make_shared<binary_model>(3);
             optimizer = new torch::optim::Adam(nn_binary->parameters(), learning_rate);
-            critereon_BCE = torch::nn::BCELoss();
+            critereon_BCE = torch::nn::CrossEntropyLoss();
             functions = new IRL::grad_functions(3, m);
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(27,3,6);
+            nn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
@@ -146,7 +149,7 @@ namespace IRL
                 torch::Tensor y_pred = torch::zeros({batch_size, 8});
                 if (m == 3)
                 {
-                    y_pred = torch::zeros({batch_size, 1});
+                    y_pred = torch::zeros({batch_size, 3});
                     y_pred = nn_binary->forward(train_in);
                 }
                 else
@@ -178,8 +181,8 @@ namespace IRL
                 }
                 else if (m == 3)
                 {
-                    check = torch::zeros({batch_size, 1});
-                    comp = torch::zeros({batch_size, 1});
+                    check = torch::zeros({batch_size, 3});
+                    comp = torch::zeros({batch_size, 3});
                     check = y_pred;
                     comp = train_out;
                 }
@@ -234,15 +237,22 @@ namespace IRL
                     for (int i = 0; i < batch_size; ++i)
                     {
                         int x;
-                        if (y_pred[i].item<double>() >= 0.5)
+                        for (int j = 0; j < 3; ++j)
                         {
-                            x = 1;
+                            if (comp[i][j].item<double>() == 1)
+                            {
+                                for (int k = 0; k < 3; ++k)
+                                {
+                                    x = 1;
+                                    if (y_pred[i][j].item<double>() < y_pred[i][k].item<double>())
+                                    {
+                                        x = 0;
+                                        break;
+                                    }
+                                }
+                            }
                         }
-                        else
-                        {
-                            x = 0;
-                        }
-                        if (x == comp[i].item<int>())
+                        if (x == 1)
                         {
                             ++count;
                         }
@@ -387,35 +397,37 @@ namespace IRL
                 {
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
-                    for (int j = 0; j < 12; ++j)
+                    for (int j = 0; j < 3; ++j)
                     {
                         invariants << test_in[j].item<double>() << " ";
                     }
                     invariants << "\n";
-                    torch::Tensor prediction = torch::zeros({1, 1});
+                    torch::Tensor prediction = torch::zeros({1, 3});
                     prediction = nn_binary->forward(test_in);
                     
                     int x;
-                    if (prediction[0].item<double>() >= 0.5)
+                    for (int j = 0; j < 3; ++j)
                     {
-                        x = 1;
+                        if (test_out[j].item<double>() == 1)
+                        {
+                            for (int k = 0; k < 3; ++k)
+                            {
+                                x = 1;
+                                if (prediction[j].item<double>() < prediction[k].item<double>())
+                                {
+                                    x = 0;
+                                    break;
+                                }
+                            }
+                        }
                     }
-                    else if (prediction[0].item<double>() < 0.5)
-                    {
-                        x = 0;
-                    }
-                    else
-                    {
-                        x = 3;
-                        --total;
-                    }
-                    if (x == test_out[0].item<int>())
+                    if (x == 1)
                     {
                         ++count;
                     }
 
-                    results_pr << prediction[0].item<double>() << " ";
-                    results_ex << test_out[0].item<double>() << " ";
+                    results_pr << prediction[0].item<double>() << " " << prediction[1].item<double>() << " " << prediction[2].item<double>();
+                    results_ex << test_out[0].item<double>() << " " << test_out[1].item<double>() << " " << test_out[2].item<double>() << " ";
 
                     results_ex << "\n";
                     results_pr << "\n";
@@ -659,10 +671,20 @@ namespace IRL
         return paraboloid;
     }
 
-    IRL::Normal trainer::get_normal(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    void trainer::load_model(std::string in, int i)
     {
-        shared_ptr<IRL::model> nnn;
-        nnn = make_shared<model>(108,3,6);
+        if (i == 0)
+        {
+            torch::load(nn, in);
+        }
+        else
+        {
+            torch::load(nnn, in);
+        }
+    }
+
+    IRL::Normal trainer::get_normal(const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    {
         vector<double> fractions;
         for (int i = 0; i < 3; ++i)
         {
@@ -671,14 +693,13 @@ namespace IRL
                 for (int k = 0; k < 3; ++k)
                 {
                     fractions.push_back(liquid_volume_fraction(i, j, k));
-                    //fractions.push_back(liquid_centroid(i,j,k)[0]);
-                    //fractions.push_back(liquid_centroid(i,j,k)[1]);
-                    //fractions.push_back(liquid_centroid(i,j,k)[2]);
+                    fractions.push_back(liquid_centroid(i,j,k)[0]);
+                    fractions.push_back(liquid_centroid(i,j,k)[1]);
+                    fractions.push_back(liquid_centroid(i,j,k)[2]);
                 }
             }
         }
 
-        torch::load(nnn, in);
         auto y_pred = nnn->forward(torch::tensor(fractions));
         auto n = IRL::Normal();
         n[0] = y_pred[0].item<double>();

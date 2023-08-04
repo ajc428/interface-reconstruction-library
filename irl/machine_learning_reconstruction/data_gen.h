@@ -11,6 +11,8 @@
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_DATA_GEN_H_
 
 #include "irl/machine_learning_reconstruction/fractions.h"
+#include <iostream>
+#include <cstdlib>
 
 namespace IRL 
 {
@@ -53,11 +55,20 @@ namespace IRL
                 coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
                 << "," << angles[0] << "," << angles[1] << "," << angles[2]
                 << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
                 coefficients.close();
 
                 std::ofstream curvatures;
                 std::string curv_name = "curvatures.txt";
                 curvatures.open(curv_name, std::ios_base::app);
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
 
@@ -67,23 +78,33 @@ namespace IRL
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
                 auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
                 auto surface = surface_and_moments.getSurface();
-                auto normal = surface.getAverageNormalNotNormalizedNonAligned();
+                auto normal = surface.getAverageNormalNonAligned();
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
                 normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
                 normals.close();
 
                 std::ofstream classification;
                 std::string data_name = "type.txt";
                 classification.open(data_name, std::ios_base::app);
-                int x;
                 if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
                 {
-                    x = 0;
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                }
+                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
+                {
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
                 }
                 else
                 {
-                    x = 1;
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
                 }
-                classification << x << " \n";
                 classification.close();
 
                 auto result = gen->get_fractions(paraboloid, true);
@@ -94,6 +115,49 @@ namespace IRL
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
                     output << result[i].item<double>() << ",";
+                }
+                output << "\n";
+                srand((unsigned) time(NULL));
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {   
+                    int r = rand() % 3 - 1;
+                    double x = result[i].item<double>() + r*result[i].item<double>()*0.01;
+                    if (i % 4 == 0 && x < 0)
+                    {
+                        x = 0;
+                    }
+                    else if (i % 4 != 0 && x > 0.5)
+                    {
+                        x = 0.5;
+                    }
+                    else if (i % 4 != 0 && x < -0.5)
+                    {
+                        x = -0.5;
+                    }
+                    output << x << ",";
+                }
+                output << "\n";
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {   
+                    int r = rand() % 3 - 1;
+                    double x = result[i].item<double>() + r*result[i].item<double>()*0.01;
+                    if (x == 0)
+                    {
+                        x = result[i].item<double>() + r*0.001;
+                    }
+                    if (i % 4 == 0 && x < 0)
+                    {
+                        x = 0;
+                    }
+                    else if (i % 4 != 0 && x > 0.5)
+                    {
+                        x = 0.5;
+                    }
+                    else if (i % 4 != 0 && x < -0.5)
+                    {
+                        x = -0.5;
+                    }
+                    output << x << ",";
                 }
                 output << "\n";
                 output.close();                    

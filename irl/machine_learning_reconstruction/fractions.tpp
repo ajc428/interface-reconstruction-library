@@ -103,9 +103,18 @@ namespace IRL
                     f.push_back(volume);
                     if (centroids)
                     {
-                        f.push_back(centroid[0]);
-                        f.push_back(centroid[1]);
-                        f.push_back(centroid[2]);    
+                        if (volume < 10e-15)
+                        {
+                            f.push_back(0);
+                            f.push_back(0);
+                            f.push_back(0);    
+                        }
+                        else
+                        {
+                            f.push_back(centroid[0] - mesh.xm(i));
+                            f.push_back(centroid[1] - mesh.ym(j));
+                            f.push_back(centroid[2] - mesh.zm(k));    
+                        }
                     }
                 }
             }
@@ -131,9 +140,9 @@ namespace IRL
                     f.push_back(volume);
                     if (centroids)
                     {
-                        f.push_back(centroid[0]);
-                        f.push_back(centroid[1]);
-                        f.push_back(centroid[2]);    
+                        f.push_back(centroid[0] - mesh.xm(i));
+                        f.push_back(centroid[1] - mesh.ym(j));
+                        f.push_back(centroid[2] - mesh.zm(k));    
                     }
                 }
             }
@@ -248,12 +257,10 @@ namespace IRL
     {
         const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
-        IRL::Pt datum = IRL::Pt(a_interface.getDatum()[0] - (i-1), a_interface.getDatum()[1] - (j-1), a_interface.getDatum()[2] - (k-1));
-        IRL::Paraboloid p = IRL::Paraboloid(datum, a_interface.getReferenceFrame(), a_interface.getAlignedParaboloid().a(), a_interface.getAlignedParaboloid().b());
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
-            IRL::Pt(mesh.x(1), mesh.y(1), mesh.z(1)),
-            IRL::Pt(mesh.x(2), mesh.y(2), mesh.z(2)));
-        return IRL::getVolumeMoments<IRL::AddSurfaceOutput<MomentType, SurfaceType>, IRL::HalfEdgeCutting>(cell, p);
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        return IRL::getVolumeMoments<IRL::AddSurfaceOutput<MomentType, SurfaceType>, IRL::HalfEdgeCutting>(cell, a_interface);
     }
 
     template <class MomentType>
@@ -262,16 +269,16 @@ namespace IRL
     {
         const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
-        IRL::Pt datum = IRL::Pt(a_interface.getDatum()[0] - (i-1), a_interface.getDatum()[1] - (j-1), a_interface.getDatum()[2] - (k-1));
-        IRL::Paraboloid p = IRL::Paraboloid(datum, a_interface.getReferenceFrame(), a_interface.getAlignedParaboloid().a(), a_interface.getAlignedParaboloid().b());
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
-            IRL::Pt(mesh.x(1), mesh.y(1), mesh.z(1)),
-            IRL::Pt(mesh.x(2), mesh.y(2), mesh.z(2)));
-        const auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(cell, p);
-        /*auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-        const auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(cell, a_interface);*/
+        auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(cell, a_interface);
+        if (moments.volume() > 10e-15)
+        {
+            moments.centroid()[0] = moments.centroid()[0] / moments.volume();
+            moments.centroid()[1] = moments.centroid()[1] / moments.volume();
+            moments.centroid()[2] = moments.centroid()[2] / moments.volume();
+        }
         return moments;
     }
 
@@ -295,14 +302,12 @@ namespace IRL
     {
         const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
-        IRL::Pt datum = IRL::Pt(a_interface.getDatum()[0] - (i-1), a_interface.getDatum()[1] - (j-1), a_interface.getDatum()[2] - (k-1));
-        IRL::Paraboloid p = IRL::Paraboloid(datum, a_interface.getReferenceFrame(), a_interface.getAlignedParaboloid().a(), a_interface.getAlignedParaboloid().b());
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
-            IRL::Pt(mesh.x(1), mesh.y(1), mesh.z(1)),
-            IRL::Pt(mesh.x(2), mesh.y(2), mesh.z(2)));
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
         using MyPtType = IRL::PtWithGradient<IRL::ParaboloidGradientLocal>;
         auto cube = IRL::StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
-        return IRL::getVolumeMoments<IRL::AddSurfaceOutput<MomentType, SurfaceType>, IRL::HalfEdgeCutting>(cube, p);
+        return IRL::getVolumeMoments<IRL::AddSurfaceOutput<MomentType, SurfaceType>, IRL::HalfEdgeCutting>(cube, a_interface);
     }
 
     template <class MomentType>
@@ -311,14 +316,12 @@ namespace IRL
     {
         const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         const int i(x_loc), j(y_loc), k(z_loc);
-        IRL::Pt datum = IRL::Pt(a_interface.getDatum()[0] - (i-1), a_interface.getDatum()[1] - (j-1), a_interface.getDatum()[2] - (k-1));
-        IRL::Paraboloid p = IRL::Paraboloid(datum, a_interface.getReferenceFrame(), a_interface.getAlignedParaboloid().a(), a_interface.getAlignedParaboloid().b());
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
-            IRL::Pt(mesh.x(1), mesh.y(1), mesh.z(1)),
-            IRL::Pt(mesh.x(2), mesh.y(2), mesh.z(2)));
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
         using MyPtType = IRL::PtWithGradient<IRL::ParaboloidGradientLocal>;
         auto cube = IRL::StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
-        const auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(cube, p);
+        const auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(cube, a_interface);
 
         return moments;
     }
