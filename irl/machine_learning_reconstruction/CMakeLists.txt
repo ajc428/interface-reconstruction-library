@@ -16,6 +16,8 @@ target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/spa
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/spatial_moments.tpp)
 
 find_package(Torch REQUIRED)
+include_directories(SYSTEM ${TORCH_INCLUDE_DIRS})
+set(CMAKE_PREFIX_PATH "/home/andrew/libtorch/share/cmake/Torch")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 find_package(MPI REQUIRED)

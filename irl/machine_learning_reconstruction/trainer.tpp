@@ -10,8 +10,8 @@
 #ifndef IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 
-#include "irl/interface_reconstruction_methods/elvira.h"
-#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
+//#include "irl/interface_reconstruction_methods/elvira.h"
+//#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
 
 namespace IRL
 {
@@ -213,10 +213,11 @@ namespace IRL
                                 }
                             }
                         }
-                        IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
-                        //IRL::Normal norm = this->get_normal("model_n.pt", liquid_volume_fraction, liquid_centroid);
-                        //norm.normalize();
-                        IRL::Normal norm = p[0].normal();
+                        //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
+                        load_model("model_n.pt", 1);
+                        IRL::Normal norm = this->get_normal(liquid_volume_fraction, liquid_centroid);
+                        norm.normalize();
+                        //IRL::Normal norm = p[0].normal();
                         check[n] = functions->VolumeFracsNormalForward(y_pred[n], norm);
                     }
                     comp = train_in;
@@ -482,9 +483,10 @@ namespace IRL
                             }
                         }
                     }
-                    IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
-                    IRL::Normal norm = p[0].normal();
-                    //IRL::Normal norm = get_normal("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", liquid_volume_fraction, liquid_centroid);
+                    //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
+                    //IRL::Normal norm = p[0].normal();
+                    load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", 1);
+                    IRL::Normal norm = get_normal(liquid_volume_fraction, liquid_centroid);
                     IRL::Pt x_dir = IRL::Pt(0,0,0);
                     if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
                     {
@@ -608,9 +610,10 @@ namespace IRL
 
         torch::load(nn, in);
         auto y_pred = nn->forward(torch::tensor(fractions));
-        //IRL::Normal norm = get_normal("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", liquid_volume_fraction, liquid_centroid);
-        IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
-        IRL::Normal norm = p[0].normal();
+        load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", 1);
+        IRL::Normal norm = get_normal(liquid_volume_fraction, liquid_centroid);
+        //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
+        //IRL::Normal norm = p[0].normal();
         IRL::Pt x_dir = IRL::Pt(0,0,0);
         if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
         {

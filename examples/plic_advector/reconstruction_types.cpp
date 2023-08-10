@@ -102,7 +102,7 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
   t.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", 1);
   const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
   // Loop over cells in domain. Skip if cell is not mixed phase.
-
+  int count = 0;
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
@@ -116,6 +116,20 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
         }
         else
         {
+          int tol = 0;
+          if (a_liquid_volume_fraction(i-1, j, k) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i+1, j, k) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i, j-1, k) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i, j+1, k) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i, j, k-1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i, j, k+1) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i-1, j-1, k) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i-1, j+1, k) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i+1, j-1, k) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i+1, j+1, k) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i-1, j, k-1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i-1, j, k+1) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i+1, j, k-1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i+1, j, k+1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i, j-1, k-1) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i, j-1, k+1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i, j+1, k-1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i, j+1, k+1) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i-1, j-1, k-1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i+1, j-1, k-1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i-1, j+1, k-1) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i-1, j-1, k+1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i+1, j+1, k-1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i+1, j-1, k+1) < IRL::global_constants::VF_LOW){++tol;}
+          if(a_liquid_volume_fraction(i-1, j+1, k+1) < IRL::global_constants::VF_LOW){++tol;} if(a_liquid_volume_fraction(i+1, j+1, k+1) < IRL::global_constants::VF_LOW){++tol;}
+          if (tol >= 20)
+          {
+            ++count;
+          }
           // Build surrounding stencil information.
           auto n = IRL::Normal();
           Mesh local_mesh(3, 3, 3, 1);
@@ -341,6 +355,10 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
       }
       }
     }
+  }
+  if (count > 0)
+  {
+    std::cout << "\nSpurious Planes: " << count << std::endl;
   }
   a_interface->updateBorder();
   correctInterfacePlaneBorders(a_interface);

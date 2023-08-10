@@ -33,6 +33,17 @@ void c_reconstructELVIRA3D(const c_ELVIRANeigh* a_elvira_neighborhood,
       reconstructionWithELVIRA3D(*a_elvira_neighborhood->obj_ptr);
 }
 
+void c_reconstructML(const c_ELVIRANeigh* a_elvira_neighborhood, const double* a_liquid_centroids,
+                           c_PlanarSep* a_separator) {
+  assert(a_elvira_neighborhood != nullptr);
+  assert(a_elvira_neighborhood->obj_ptr != nullptr);
+  assert(a_liquid_centroids != nullptr);
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  *a_separator->obj_ptr =
+      reconstructionWithML(*a_elvira_neighborhood->obj_ptr, a_liquid_centroids);
+}
+
 void c_reconstructMOF2D_RectCub(const c_RectCub* a_cell,
                                 const c_SepVM* a_separated_volume_moments,
                                 c_PlanarSep* a_separator) {

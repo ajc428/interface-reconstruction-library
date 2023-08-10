@@ -19,6 +19,7 @@
 #include "irl/interface_reconstruction_methods/optimization_behavior.h"
 #include "irl/interface_reconstruction_methods/reconstruction_cleaning.h"
 #include "irl/planar_reconstruction/planar_separator.h"
+#include "irl/machine_learning_reconstruction/trainer.h"
 
 namespace IRL {
 
@@ -58,6 +59,10 @@ inline PlanarSeparator reconstructionWithELVIRA2D(
 /// \brief Perform ELVIRA Reconstruction for 3D.
 inline PlanarSeparator reconstructionWithELVIRA3D(
     const ELVIRANeighborhood& a_neighborhood_geometry);
+
+/// \brief Perform ML Reconstruction for 3D.
+inline PlanarSeparator reconstructionWithML(
+    const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids);
 
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>

@@ -105,6 +105,43 @@ PlanarSeparator reconstructionWithELVIRA3D(
   return elvira_system.solve(&a_neighborhood_geometry);
 }
 
+PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids) 
+{
+  auto t = IRL::trainer(4);
+  t.load_model("/home/andrew/Repositories/interface-reconstruction-library/machine_learning_reconstruction/model.pt", 1);
+  auto n = IRL::Normal();
+  Mesh local_mesh(3, 3, 3, 1);
+  IRL::Pt lower_domain(-0.5 * local_mesh.getNx(), -0.5 * local_mesh.getNy(), -0.5 * local_mesh.getNz());
+  IRL::Pt upper_domain(0.5 * local_mesh.getNx(), 0.5 * local_mesh.getNy(), 0.5 * local_mesh.getNz());
+  local_mesh.setCellBoundaries(lower_domain, upper_domain);
+  DataMesh<double> local_liquid_volume_fraction(local_mesh);
+  DataMesh<IRL::Pt> local_liquid_centroid(local_mesh);
+
+  for (int k = 0; k < 3; ++k)
+  {
+    for (int j = 0; j < 3; ++j)
+    {
+      for (int i = 0; i < 3; ++i)
+      {
+        double dx = a_neighborhood_geometry.getCell(i-1,j-1,k-1).calculateSideLength(0);
+        double dy = a_neighborhood_geometry.getCell(i-1,j-1,k-1).calculateSideLength(1);
+        double dz = a_neighborhood_geometry.getCell(i-1,j-1,k-1).calculateSideLength(2);
+        local_liquid_volume_fraction(i, j, k) = a_neighborhood_geometry.getStoredMoments(i-1, j-1, k-1);
+        local_liquid_centroid(i, j, k)[0] = (a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(i-1,j-1,k-1).calculateCentroid()[0])/dx;
+        local_liquid_centroid(i, j, k)[1] = (a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(i-1,j-1,k-1).calculateCentroid()[1])/dy;
+        local_liquid_centroid(i, j, k)[2] = (a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(i-1,j-1,k-1).calculateCentroid()[2])/dz;
+      }
+    }
+  }
+  
+  n = t.get_normal(local_liquid_volume_fraction, local_liquid_centroid);
+  const IRL::Normal& n1 = n;
+  const double d = local_liquid_volume_fraction(1,1,1);
+  const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCell(0,0,0);
+  double distance = IRL::findDistanceOnePlane(cube, d, n1);
+  return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
+}
+
 template <class CellType>
 PlanarSeparator reconstructionWithLVIRA2D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
