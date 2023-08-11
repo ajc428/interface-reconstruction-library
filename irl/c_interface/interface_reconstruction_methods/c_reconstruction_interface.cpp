@@ -44,6 +44,11 @@ void c_reconstructML(const c_ELVIRANeigh* a_elvira_neighborhood, const double* a
       reconstructionWithML(*a_elvira_neighborhood->obj_ptr, a_liquid_centroids);
 }
 
+void c_loadML(const char* name) {
+  assert(name != nullptr);
+      IRL::loadML(name);
+}
+
 void c_reconstructMOF2D_RectCub(const c_RectCub* a_cell,
                                 const c_SepVM* a_separated_volume_moments,
                                 c_PlanarSep* a_separator) {

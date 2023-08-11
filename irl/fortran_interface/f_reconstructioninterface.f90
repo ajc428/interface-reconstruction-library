@@ -151,6 +151,16 @@ module f_ReconstructionInterface
   end interface
 
   interface
+  subroutine F_loadML(file) &
+  bind(C, name="c_loadML")
+    use, intrinsic :: iso_c_binding
+    import
+    implicit none
+    character(kind=c_char) :: file(*)
+  end subroutine F_loadML
+end interface
+
+  interface
     subroutine F_reconstructMOF2D_RectCub(a_rectangular_cuboid, a_separated_volume_moments, a_planar_separator) &
     bind(C, name="c_reconstructMOF2D_RectCub")
       use, intrinsic :: iso_c_binding
@@ -469,6 +479,14 @@ module f_ReconstructionInterface
       call F_reconstructML(a_elvira_neighborhood%c_object, a_liquid_centroids, a_planar_separator%c_object)
 
   end subroutine reconstructML
+
+  subroutine loadML(name)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      character(kind=c_char), intent(in) :: name(*)
+      call F_loadML(name)
+
+  end subroutine loadML
 
   subroutine reconstructMOF2D_RectCub(a_rectangular_cuboid, a_separated_volume_moments, a_planar_separator)
     use, intrinsic :: iso_c_binding

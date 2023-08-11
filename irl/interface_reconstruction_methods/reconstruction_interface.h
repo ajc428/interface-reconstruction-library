@@ -10,6 +10,8 @@
 #ifndef IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_H_
 #define IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_H_
 
+#include <string>
+#include <iostream>
 #include "irl/interface_reconstruction_methods/advected_plane_reconstruction.h"
 #include "irl/interface_reconstruction_methods/elvira.h"
 #include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
@@ -22,6 +24,8 @@
 #include "irl/machine_learning_reconstruction/trainer.h"
 
 namespace IRL {
+
+IRL::trainer t = IRL::trainer(4);
 
 /// \brief Perform R2P reconstruction for a 2D problem in the x-y plane.
 template <class CellType>
@@ -63,6 +67,8 @@ inline PlanarSeparator reconstructionWithELVIRA3D(
 /// \brief Perform ML Reconstruction for 3D.
 inline PlanarSeparator reconstructionWithML(
     const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids);
+
+void loadML(std::string name);
 
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>

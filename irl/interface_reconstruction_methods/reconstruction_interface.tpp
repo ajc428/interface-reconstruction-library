@@ -107,8 +107,6 @@ PlanarSeparator reconstructionWithELVIRA3D(
 
 PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids) 
 {
-  auto t = IRL::trainer(4);
-  t.load_model("/home/andrew/Repositories/interface-reconstruction-library/machine_learning_reconstruction/model.pt", 1);
   auto n = IRL::Normal();
   Mesh local_mesh(3, 3, 3, 1);
   IRL::Pt lower_domain(-0.5 * local_mesh.getNx(), -0.5 * local_mesh.getNy(), -0.5 * local_mesh.getNz());
@@ -140,6 +138,11 @@ PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_ge
   const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCell(0,0,0);
   double distance = IRL::findDistanceOnePlane(cube, d, n1);
   return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
+}
+
+void loadML(std::string name)
+{
+  t.load_model(name, 1);
 }
 
 template <class CellType>
