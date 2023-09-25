@@ -26,7 +26,7 @@ namespace IRL
             l7 = register_module("l7", torch::nn::Linear(100, 100));
             l8 = register_module("l8", torch::nn::Linear(100, 100));
             l9 = register_module("l9", torch::nn::Linear(100, 100));
-            l10 = register_module("l10", torch::nn::Linear(100, 3));
+            l10 = register_module("l10", torch::nn::Linear(100, 2));
         }
         torch::Tensor forward(torch::Tensor x) 
         {

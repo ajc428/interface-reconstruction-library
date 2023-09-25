@@ -85,6 +85,64 @@ namespace IRL
         return p;
     }
 
+    IRL::Paraboloid fractions::new_interface_parabaloid(double coa_l, double coa_h, double cob_l, double cob_h, IRL::Paraboloid para)
+    {
+        std::random_device rd;  
+        std::mt19937_64 a_eng(rd());
+        DataMesh<double> liquid_volume_fraction(mesh);
+        IRL::Pt datum;
+        IRL::ReferenceFrame frame = para.getReferenceFrame();
+        double alpha;
+        double beta;
+        int attempt = 0;
+        std::uniform_real_distribution<double> random_coeffsa(-coa_h, -coa_l);
+        std::uniform_real_distribution<double> random_coeffsb(-cob_h, -cob_l);
+        std::uniform_real_distribution<double> random_translationx(-1.5, 1.5);
+        std::uniform_real_distribution<double> random_translationy(-1.5, 1.5);
+        std::uniform_real_distribution<double> random_translationz(-1.5, 1.5);
+        IRL::Paraboloid p;
+
+        do
+        {
+            alpha = random_coeffsa(a_eng);
+            beta = random_coeffsb(a_eng);
+            datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
+
+            p = IRL::Paraboloid(datum, frame, alpha, beta);
+        } while ((isParaboloidInCenterCell(p, liquid_volume_fraction)) || areParaboloidsInSameCell(p, para, liquid_volume_fraction));
+
+        return p;
+    }
+
+    IRL::Paraboloid fractions::new_interface_parabaloid_in_cell(double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, IRL::Paraboloid para)
+    {
+        std::random_device rd;  
+        std::mt19937_64 a_eng(rd());
+        DataMesh<double> liquid_volume_fraction(mesh);
+        IRL::Pt datum;
+        IRL::ReferenceFrame frame = para.getReferenceFrame();
+        double alpha;
+        double beta;
+        int attempt = 0;
+        std::uniform_real_distribution<double> random_coeffsa(-coa_h, -coa_l);
+        std::uniform_real_distribution<double> random_coeffsb(-cob_h, -cob_l);
+        std::uniform_real_distribution<double> random_translationx(ox_l, ox_h);
+        std::uniform_real_distribution<double> random_translationy(oy_l, oy_h);
+        std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
+        IRL::Paraboloid p;
+
+        do
+        {
+            alpha = random_coeffsa(a_eng);
+            beta = random_coeffsb(a_eng);
+            datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
+
+            p = IRL::Paraboloid(datum, frame, alpha, beta);
+        } while (doParaboloidsIntersect(p, para));
+
+        return p;
+    }
+
     torch::Tensor fractions::get_fractions(IRL::Paraboloid p, bool centroids)
     {
         DataMesh<double> liquid_volume_fraction(mesh);
@@ -101,6 +159,49 @@ namespace IRL
                     auto& centroid = volumes.centroid();   
                    
                     f.push_back(volume);
+                    if (centroids)
+                    {
+                        if (volume < 10e-15)
+                        {
+                            f.push_back(0);
+                            f.push_back(0);
+                            f.push_back(0);    
+                        }
+                        else
+                        {
+                            f.push_back(centroid[0] - mesh.xm(i));
+                            f.push_back(centroid[1] - mesh.ym(j));
+                            f.push_back(centroid[2] - mesh.zm(k));    
+                        }
+                    }
+                }
+            }
+        }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_fractions_gas(IRL::Paraboloid p, bool centroids)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    auto& volume = volumes.volume();      
+                    auto& centroid = volumes.centroid();  
+                    if (volume < 10e-15)
+                    {
+                        f.push_back(0);
+                    }
+                    else
+                    {
+                        f.push_back(volume);
+                    }
                     if (centroids)
                     {
                         if (volume < 10e-15)
@@ -283,6 +384,25 @@ namespace IRL
     }
 
     template <class MomentType>
+    MomentType fractions::getCellMomentsGas(const IRL::Paraboloid& a_interface,
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
+    {
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
+        const int i(x_loc), j(y_loc), k(z_loc);
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        auto moments = IRL::getVolumeMoments<IRL::SeparatedMoments<MomentType>>(cell, a_interface);
+        if (moments[1].volume() > 10e-15)
+        {
+            moments[1].centroid()[0] = moments[1].centroid()[0] / moments[1].volume();
+            moments[1].centroid()[1] = moments[1].centroid()[1] / moments[1].volume();
+            moments[1].centroid()[2] = moments[1].centroid()[2] / moments[1].volume();
+        }
+        return moments[1];
+    }
+
+    template <class MomentType>
     MomentType fractions::getCellMoments(const IRL::Plane& a_interface,
     const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
     {
@@ -348,6 +468,76 @@ namespace IRL
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
         const double volume_fraction = IRL::getVolumeMoments<IRL::Volume, IRL::HalfEdgeCutting>(cell, a_interface);
         return volume_fraction < IRL::global_constants::VF_HIGH && volume_fraction > IRL::global_constants::VF_LOW;
+    }
+
+    bool fractions::areParaboloidsInSameCell(IRL::Paraboloid& p, IRL::Paraboloid& p1, const DataMesh<double>& a_liquid_volume_fraction)
+    {
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
+        bool intersect = false;
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    auto cell = IRL::RectangularCuboid::fromBoundingPts(
+                        IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+                        IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+                    const double volume_fraction = IRL::getVolumeMoments<IRL::Volume, IRL::HalfEdgeCutting>(cell, p);
+                    const double volume_fraction1 = IRL::getVolumeMoments<IRL::Volume, IRL::HalfEdgeCutting>(cell, p1);
+                    if ((volume_fraction < IRL::global_constants::VF_HIGH && volume_fraction > IRL::global_constants::VF_LOW) && (volume_fraction1 < IRL::global_constants::VF_HIGH && volume_fraction1 > IRL::global_constants::VF_LOW))
+                    {
+                        intersect = true;
+                    }
+                }
+            }
+        }
+        return intersect;
+    }
+
+    bool fractions::doParaboloidsIntersect(IRL::Paraboloid& p1, IRL::Paraboloid& p2)
+    {
+        bool result = false;
+        double a1 = p1.getReferenceFrame()[2][0];
+        double b1 = p1.getReferenceFrame()[2][1];
+        double c1 = p1.getReferenceFrame()[2][2];
+        double x1 = p1.getDatum()[0];
+        double y1 = p1.getDatum()[1];
+        double z1 = p1.getDatum()[2];
+
+        double a2 = p2.getReferenceFrame()[2][0];
+        double b2 = p2.getReferenceFrame()[2][1];
+        double c2 = p2.getReferenceFrame()[2][2];
+        double x2 = p2.getDatum()[0];
+        double y2 = p2.getDatum()[1];
+        double z2 = p2.getDatum()[2];
+
+        if (a1 > 0 && x2 > x1)
+        {
+            result = true;
+        }
+        else if (a1 < 0 && x2 < x1)
+        {
+            result = true;
+        }
+        else if (b1 > 0 && y2 > y1)
+        {
+            result = true;
+        }
+        else if (b1 < 0 && y2 < y1)
+        {
+            result = true;
+        }
+        else if (c1 > 0 && z2 > z1)
+        {
+            result = true;
+        }
+        else if (c1 < 0 && z2 < z1)
+        {
+            result = true;
+        }
+
+        return result;
     }
 }
 

@@ -55,13 +55,75 @@ namespace IRL
                 coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
                 << "," << angles[0] << "," << angles[1] << "," << angles[2]
                 << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
-                << "," << angles[0] << "," << angles[1] << "," << angles[2]
-                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
-                << "," << angles[0] << "," << angles[1] << "," << angles[2]
-                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
+
+                std::ofstream curvatures;
+                std::string curv_name = "curvatures.txt";
+                curvatures.open(curv_name, std::ios_base::app);
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();
+
+                std::ofstream classification;
+                std::string data_name = "type.txt";
+                classification.open(data_name, std::ios_base::app);
+                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
+                {
+                    classification << "0,1,0" << " \n";
+                }
+                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
+                {
+                    classification << "1,0,0" << " \n";
+                }
+                else
+                {
+                    classification << "0,0,1" << " \n";
+                }
+                classification.close();
+
+                auto result = gen->get_fractions(paraboloid, true);
+                std::ofstream output;
+                data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    output << result[i].item<double>() << ",";
+                }
+                output << "\n";
+                output.close();                    
+            }  
+        }; 
+
+        void generate_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        {
+            for (int n = 0; n < Ntests; ++n) 
+            {
+                std::cout << n << endl;
+                IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string name = "coefficients.txt";
+                coefficients.open(name, std::ios_base::app);
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
 
                 std::ofstream curvatures;
@@ -107,6 +169,14 @@ namespace IRL
                 }
                 classification.close();
 
+                std::ofstream inter;
+                std::string interface_name = "interface.txt";
+                inter.open(interface_name, std::ios_base::app);
+                inter << "1,0" << " \n";
+                inter << "1,0" << " \n";
+                inter << "1,0" << " \n";
+                inter.close();
+
                 auto result = gen->get_fractions(paraboloid, true);
                 std::ofstream output;
                 data_name = "fractions.txt";
@@ -126,6 +196,10 @@ namespace IRL
                     {
                         x = 0;
                     }
+                    else if (i % 4 == 0 && x > 1)
+                    {
+                        x = 1;
+                    }
                     else if (i % 4 != 0 && x > 0.5)
                     {
                         x = 0.5;
@@ -141,13 +215,13 @@ namespace IRL
                 {   
                     int r = rand() % 3 - 1;
                     double x = result[i].item<double>() + r*result[i].item<double>()*0.01;
-                    if (x == 0)
-                    {
-                        x = result[i].item<double>() + r*0.001;
-                    }
                     if (i % 4 == 0 && x < 0)
                     {
                         x = 0;
+                    }
+                    else if (i % 4 == 0 && x > 1)
+                    {
+                        x = 1;
                     }
                     else if (i % 4 != 0 && x > 0.5)
                     {
@@ -161,6 +235,381 @@ namespace IRL
                 }
                 output << "\n";
                 output.close();                    
+            }           
+        };
+
+        void generate_two_paraboloids(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        {
+            for (int n = 0; n < Ntests; ++n) 
+            {
+                std::cout << n << endl;
+                IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                IRL::Paraboloid interface = gen->new_interface_parabaloid(coa_l, coa_h, cob_l, cob_h, paraboloid);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string name = "coefficients.txt";
+                coefficients.open(name, std::ios_base::app);
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                std::ofstream curvatures;
+                std::string curv_name = "curvatures.txt";
+                curvatures.open(curv_name, std::ios_base::app);
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();
+
+                std::ofstream classification;
+                std::string data_name = "type.txt";
+                classification.open(data_name, std::ios_base::app);
+                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
+                {
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                }
+                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
+                {
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
+                }
+                else
+                {
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
+                }
+                classification.close();
+
+                std::ofstream inter;
+                std::string interface_name = "interface.txt";
+                inter.open(interface_name, std::ios_base::app);
+                inter << "0,1" << " \n";
+                inter << "0,1" << " \n";
+                inter << "0,1" << " \n";
+                inter.close();
+
+                auto result = gen->get_fractions(paraboloid, true);
+                auto result1 = gen->get_fractions_gas(interface, true);
+                std::ofstream output;
+                data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+                bool option;
+
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                    {
+                        option = true;
+                    }
+                    else if (i%4 == 0)
+                    {
+                        option = false;
+                    }
+                    if (option)
+                    {
+                        output << result1[i].item<double>() << ",";
+                        result[i] = result1[i];
+                    }
+                    else
+                    {
+                        output << result[i].item<double>() << ",";
+                    }
+                }
+                output << "\n";
+                srand((unsigned) time(NULL));
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {   
+                    int r = rand() % 3 - 1;
+                    double x = result[i].item<double>() + r*result[i].item<double>()*0.01;
+                    if (i % 4 == 0 && x < 0)
+                    {
+                        x = 0;
+                    }
+                    else if (i % 4 == 0 && x > 1)
+                    {
+                        x = 1;
+                    }
+                    else if (i % 4 != 0 && x > 0.5)
+                    {
+                        x = 0.5;
+                    }
+                    else if (i % 4 != 0 && x < -0.5)
+                    {
+                        x = -0.5;
+                    }
+                    output << x << ",";
+                }
+                output << "\n";
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {   
+                    int r = rand() % 3 - 1;
+                    double x = result[i].item<double>() + r*result[i].item<double>()*0.01;
+                    if (i % 4 == 0 && x < 0)
+                    {
+                        x = 0;
+                    }
+                    else if (i % 4 == 0 && x > 1)
+                    {
+                        x = 1;
+                    }
+                    else if (i % 4 != 0 && x > 0.5)
+                    {
+                        x = 0.5;
+                    }
+                    else if (i % 4 != 0 && x < -0.5)
+                    {
+                        x = -0.5;
+                    }
+                    output << x << ",";
+                }
+                output << "\n";
+                output.close();      
+
+                /*for (int i = 0; i < 3; ++i)
+                {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                            const auto bottom_corner = IRL::Pt(-1.5+i, -1.5+j, -1.5+k);
+                            const auto top_corner = IRL::Pt(-0.5+i, -0.5+j, -0.5+k);
+                            const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+
+                            const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                            const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                            auto surface = first_moments_and_surface.getSurface();
+                            auto surface2 = first_moments_and_surface2.getSurface();
+                            const double length_scale = 0.05;
+                            IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                            IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
+                            string name = "p" + std::to_string(n)+std::to_string(i)+std::to_string(j)+std::to_string(k);
+                            string name2 = "i" + std::to_string(n)+std::to_string(i)+std::to_string(j)+std::to_string(k);
+                            triangulated_surface.write(name);
+                            triangulated_surface2.write(name2);
+                        }
+                    }
+                }*/              
+            }       
+        };
+
+        void generate_two_paraboloids_in_cell(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        {
+            for (int n = 0; n < Ntests; ++n) 
+            {
+                std::cout << n << endl;
+                IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                IRL::Paraboloid interface = gen->new_interface_parabaloid_in_cell(coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, paraboloid);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string name = "coefficients.txt";
+                coefficients.open(name, std::ios_base::app);
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                std::ofstream curvatures;
+                std::string curv_name = "curvatures.txt";
+                curvatures.open(curv_name, std::ios_base::app);
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();
+
+                std::ofstream classification;
+                std::string data_name = "type.txt";
+                classification.open(data_name, std::ios_base::app);
+                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
+                {
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                }
+                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
+                {
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
+                }
+                else
+                {
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
+                }
+                classification.close();
+
+                std::ofstream inter;
+                std::string interface_name = "interface.txt";
+                inter.open(interface_name, std::ios_base::app);
+                inter << "0,1" << " \n";
+                inter << "0,1" << " \n";
+                inter << "0,1" << " \n";
+                inter.close();
+
+                auto result = gen->get_fractions(paraboloid, true);
+                auto result1 = gen->get_fractions_gas(interface, true);
+                std::ofstream output;
+                data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+                int option;
+                int count = 0;
+
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    if (i%4 == 0 && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                    {
+                        double v = result[i].item<double>() + result1[i].item<double>();
+                        output << v << ",";
+                        result[i] = v;
+                        option = 2;
+                        count = 0;
+                    }
+                    else if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                    {
+                        option = 0;
+                    }
+                    else if (i%4 == 0)
+                    {
+                        option = 1;
+                    }
+                    if (option == 0)
+                    {
+                        output << result1[i].item<double>() << ",";
+                        result[i] = result1[i];
+                    }
+                    else if (option == 1)
+                    {
+                        output << result[i].item<double>() << ",";
+                    }
+                    else if (option == 2 && i%4 != 0)
+                    {
+                        ++count;
+                        double x = result[i-count].item<double>() - result1[i-count].item<double>();
+                        double y = result1[i-count].item<double>();
+                        double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
+                        //std::cout << x << " " << result[i].item<double>() << " " << y << " " << result1[i].item<double>() << " " << c << std::endl;
+                        output << c << ",";
+                        result[i] = c;
+                    }
+                }
+                output << "\n";
+                srand((unsigned) time(NULL));
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {   
+                    int r = rand() % 3 - 1;
+                    double x = result[i].item<double>() + r*result[i].item<double>()*0.01;
+                    if (i % 4 == 0 && x < 0)
+                    {
+                        x = 0;
+                    }
+                    else if (i % 4 == 0 && x > 1)
+                    {
+                        x = 1;
+                    }
+                    else if (i % 4 != 0 && x > 0.5)
+                    {
+                        x = 0.5;
+                    }
+                    else if (i % 4 != 0 && x < -0.5)
+                    {
+                        x = -0.5;
+                    }
+                    output << x << ",";
+                }
+                output << "\n";
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {   
+                    int r = rand() % 3 - 1;
+                    double x = result[i].item<double>() + r*result[i].item<double>()*0.01;
+                    if (i % 4 == 0 && x < 0)
+                    {
+                        x = 0;
+                    }
+                    else if (i % 4 == 0 && x > 1)
+                    {
+                        x = 1;
+                    }
+                    else if (i % 4 != 0 && x > 0.5)
+                    {
+                        x = 0.5;
+                    }
+                    else if (i % 4 != 0 && x < -0.5)
+                    {
+                        x = -0.5;
+                    }
+                    output << x << ",";
+                }
+                output << "\n";
+                output.close();      
+
+                /*for (int i = 0; i < 3; ++i)
+                {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                            const auto bottom_corner = IRL::Pt(-1.5+i, -1.5+j, -1.5+k);
+                            const auto top_corner = IRL::Pt(-0.5+i, -0.5+j, -0.5+k);
+                            const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+
+                            const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                            const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                            auto surface = first_moments_and_surface.getSurface();
+                            auto surface2 = first_moments_and_surface2.getSurface();
+                            const double length_scale = 0.05;
+                            IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                            IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
+                            string name = "p" + std::to_string(n)+std::to_string(i)+std::to_string(j)+std::to_string(k);
+                            string name2 = "i" + std::to_string(n)+std::to_string(i)+std::to_string(j)+std::to_string(k);
+                            triangulated_surface.write(name);
+                            triangulated_surface2.write(name2);
+                        }
+                    }
+                }   */    
             }       
         };
     };

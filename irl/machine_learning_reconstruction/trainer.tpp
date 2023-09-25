@@ -26,10 +26,11 @@ namespace IRL
         m = s;
         if (m == 3)
         {
-            nn_binary = make_shared<binary_model>(3);
+            nn_binary = make_shared<binary_model>(108);
             optimizer = new torch::optim::Adam(nn_binary->parameters(), learning_rate);
             critereon_BCE = torch::nn::CrossEntropyLoss();
-            functions = new IRL::grad_functions(3, m);
+            //functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(4, m);
         }
         else if (m == 4)
         {
@@ -37,7 +38,7 @@ namespace IRL
             nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(4, m);
         }
         else if (m == 5)
         {
@@ -45,7 +46,7 @@ namespace IRL
             nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(5, m);
         }
         else
         {
@@ -53,7 +54,7 @@ namespace IRL
             nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(1, m);
         }
     }
 
@@ -68,31 +69,32 @@ namespace IRL
         m = s;
         if (m == 3)
         {
-            nn_binary = make_shared<binary_model>(3);
+            nn_binary = make_shared<binary_model>(108);
             optimizer = new torch::optim::Adam(nn_binary->parameters(), learning_rate);
             critereon_BCE = torch::nn::CrossEntropyLoss();
-            functions = new IRL::grad_functions(3, m);
+            //functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(4, m);
         }
         else if (m == 4)
         {
             nn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(4, m);
         }
         else if (m == 5)
         {
             nn = make_shared<model>(27,6,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(5, m);
         }
         else
         {
             nn = make_shared<model>(108,8,2);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(3, m);
+            functions = new IRL::grad_functions(1, m);
         }
     }
 
@@ -117,7 +119,7 @@ namespace IRL
     void trainer::train_model(bool load, std::string in, std::string out)
     {
         cout << "Hello from rank " << rank << endl;
-        auto data_train = MyDataset(train_in_file, train_out_file, data_size, m).map(torch::data::transforms::Stack<>());
+        auto data_train = MyDataset(train_in_file, train_out_file, data_size, 4/*m*/).map(torch::data::transforms::Stack<>());
         batch_size = data_train.size().value() / numranks;
         if (rank == 0)
         {
@@ -181,8 +183,8 @@ namespace IRL
                 }
                 else if (m == 3)
                 {
-                    check = torch::zeros({batch_size, 3});
-                    comp = torch::zeros({batch_size, 3});
+                    check = torch::zeros({batch_size, 2});
+                    comp = torch::zeros({batch_size, 2});
                     check = y_pred;
                     comp = train_out;
                 }
@@ -194,8 +196,8 @@ namespace IRL
                     gen = new IRL::fractions(3);
                     DataMesh<double> liquid_volume_fraction(gen->getMesh());
                     DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
-                    IRL::ELVIRANeighborhood neighborhood;
-                    neighborhood.resize(27);
+                    //IRL::ELVIRANeighborhood neighborhood;
+                    //neighborhood.resize(27);
                     IRL::RectangularCuboid cells[27];
                     for (int n = 0; n < batch_size; ++n)
                     {
@@ -209,7 +211,7 @@ namespace IRL
                                     //liquid_centroid(i, j, k) = IRL::Pt(train_in[n][4*(9*i+3*j+k)+1].item<double>(), train_in[n][4*(9*i+3*j+k)+2].item<double>(), train_in[n][4*(9*i+3*j+k)+3].item<double>());
                                     //comp[n][(9*i+3*j+k)] = train_in[n][4*(9*i+3*j+k)].item<double>();
                                     cells[k * 9 + j * 3 + i] = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(gen->getMesh().x(i), gen->getMesh().y(j), gen->getMesh().z(k)), IRL::Pt(gen->getMesh().x(i + 1), gen->getMesh().y(j + 1), gen->getMesh().z(k + 1)));
-                                    neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
+                                    //neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
                                 }
                             }
                         }
@@ -238,11 +240,11 @@ namespace IRL
                     for (int i = 0; i < batch_size; ++i)
                     {
                         int x;
-                        for (int j = 0; j < 3; ++j)
+                        for (int j = 0; j < 2; ++j)
                         {
                             if (comp[i][j].item<double>() == 1)
                             {
-                                for (int k = 0; k < 3; ++k)
+                                for (int k = 0; k < 2; ++k)
                                 {
                                     x = 1;
                                     if (y_pred[i][j].item<double>() < y_pred[i][k].item<double>())
@@ -320,7 +322,7 @@ namespace IRL
     {
         if (rank == 0)
         {
-            auto data_test = MyDataset(test_in_file, test_out_file, data_size, m);
+            auto data_test = MyDataset(test_in_file, test_out_file, data_size, 4/*m*/);
             results_ex.open("result_ex.txt");
             results_pr.open("result_pr.txt");
 
@@ -390,7 +392,7 @@ namespace IRL
             }
             else if (n == 3)
             {
-                invariants.open("invariants.txt");
+                //invariants.open("invariants.txt");
                 nn_binary->eval();
                 int count = 0;
                 int total = data_test.size().value();
@@ -398,20 +400,20 @@ namespace IRL
                 {
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
-                    for (int j = 0; j < 3; ++j)
+                    /*for (int j = 0; j < 3; ++j)
                     {
                         invariants << test_in[j].item<double>() << " ";
                     }
-                    invariants << "\n";
+                    invariants << "\n";*/
                     torch::Tensor prediction = torch::zeros({1, 3});
                     prediction = nn_binary->forward(test_in);
                     
                     int x;
-                    for (int j = 0; j < 3; ++j)
+                    for (int j = 0; j < 2; ++j)
                     {
                         if (test_out[j].item<double>() == 1)
                         {
-                            for (int k = 0; k < 3; ++k)
+                            for (int k = 0; k < 2; ++k)
                             {
                                 x = 1;
                                 if (prediction[j].item<double>() < prediction[k].item<double>())
@@ -427,8 +429,8 @@ namespace IRL
                         ++count;
                     }
 
-                    results_pr << prediction[0].item<double>() << " " << prediction[1].item<double>() << " " << prediction[2].item<double>();
-                    results_ex << test_out[0].item<double>() << " " << test_out[1].item<double>() << " " << test_out[2].item<double>() << " ";
+                    results_pr << prediction[0].item<double>() << " " << prediction[1].item<double>();// << " " << prediction[2].item<double>();
+                    results_ex << test_out[0].item<double>() << " " << test_out[1].item<double>();// << " " << test_out[2].item<double>() << " ";
 
                     results_ex << "\n";
                     results_pr << "\n";
@@ -466,8 +468,8 @@ namespace IRL
 
                     IRL::fractions *gen;
                     gen = new IRL::fractions(3);
-                    IRL::ELVIRANeighborhood neighborhood;
-                    neighborhood.resize(27);
+                    //IRL::ELVIRANeighborhood neighborhood;
+                    //neighborhood.resize(27);
                     IRL::RectangularCuboid cells[27];
                     DataMesh<double> liquid_volume_fraction(gen->getMesh());
                     DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
@@ -479,7 +481,7 @@ namespace IRL
                             {
                                 liquid_volume_fraction(i, j, k) = test_in[(9*i+3*j+k)].item<double>();
                                 cells[k * 9 + j * 3 + i] = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(gen->getMesh().x(i), gen->getMesh().y(j), gen->getMesh().z(k)), IRL::Pt(gen->getMesh().x(i + 1), gen->getMesh().y(j + 1), gen->getMesh().z(k + 1)));
-                                neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
+                                //neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
                             }
                         }
                     }
@@ -592,8 +594,8 @@ namespace IRL
         vector<double> fractions;
         IRL::fractions *gen;
         gen = new IRL::fractions(3);
-        IRL::ELVIRANeighborhood neighborhood;
-        neighborhood.resize(27);
+        //IRL::ELVIRANeighborhood neighborhood;
+        //neighborhood.resize(27);
         IRL::RectangularCuboid cells[27];
         for (int i = 0; i < 3; ++i)
         {
@@ -603,7 +605,7 @@ namespace IRL
                 {
                     fractions.push_back(liquid_volume_fraction(i, j, k));
                     cells[k * 9 + j * 3 + i] = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(gen->getMesh().x(i), gen->getMesh().y(j), gen->getMesh().z(k)), IRL::Pt(gen->getMesh().x(i + 1), gen->getMesh().y(j + 1), gen->getMesh().z(k + 1)));
-                    neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
+                    //neighborhood.setMember(&cells[(k) * 9 + (j) * 3 + (i)], &liquid_volume_fraction(i, j, k), i-1, j-1, k-1);
                 }
             }
         }
@@ -680,9 +682,13 @@ namespace IRL
         {
             torch::load(nn, in);
         }
-        else
+        else if (i == 1)
         {
             torch::load(nnn, in);
+        }
+        else if (i == 2)
+        {
+            torch::load(nn_binary, in);
         }
     }
 
@@ -709,6 +715,36 @@ namespace IRL
         n[1] = y_pred[1].item<double>();
         n[2] = y_pred[2].item<double>();
         return n;
+    }
+
+    int trainer::getNumberOfInterfaces(const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    {
+        vector<double> fractions;
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    fractions.push_back(liquid_volume_fraction(i, j, k));
+                    fractions.push_back(liquid_centroid(i,j,k)[0]);
+                    fractions.push_back(liquid_centroid(i,j,k)[1]);
+                    fractions.push_back(liquid_centroid(i,j,k)[2]);
+                }
+            }
+        }
+
+        auto y_pred = nn_binary->forward(torch::tensor(fractions));
+        int x;
+        if (y_pred[0].item<double>() < y_pred[1].item<double>())
+        {
+            x = 0;
+        }
+        else
+        {
+            x = 1;
+        }
+        return x;
     }
 
     IRL::ReferenceFrame trainer::getFrame(int num)

@@ -105,9 +105,10 @@ PlanarSeparator reconstructionWithELVIRA3D(
   return elvira_system.solve(&a_neighborhood_geometry);
 }
 
-PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids) 
+PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids, int flag) 
 {
   auto n = IRL::Normal();
+  auto n2 = IRL::Normal();
   Mesh local_mesh(3, 3, 3, 1);
   IRL::Pt lower_domain(-0.5 * local_mesh.getNx(), -0.5 * local_mesh.getNy(), -0.5 * local_mesh.getNz());
   IRL::Pt upper_domain(0.5 * local_mesh.getNx(), 0.5 * local_mesh.getNy(), 0.5 * local_mesh.getNz());
@@ -132,7 +133,19 @@ PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_ge
     }
   }
   
-  n = t.get_normal(local_liquid_volume_fraction, local_liquid_centroid);
+  //int inter = b.getNumberOfInterfaces(local_liquid_volume_fraction, local_liquid_centroid);
+  //if (inter == 1) /*{std::cout << "hi" << std::endl;}*/
+  if (flag == 0)
+  {
+    n = t.get_normal(local_liquid_volume_fraction, local_liquid_centroid);
+    n.normalize();
+  }
+  else if (flag == 1)
+  {
+    n = t.get_normal(local_liquid_volume_fraction, local_liquid_centroid);
+    n.normalize();
+  }
+
   const IRL::Normal& n1 = n;
   const double d = local_liquid_volume_fraction(1,1,1);
   const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCell(0,0,0);
@@ -140,9 +153,11 @@ PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_ge
   return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
 }
 
-void loadML(std::string name)
+void loadML(std::string name/*, std::string name1, std::string name2*/)
 {
   t.load_model(name, 1);
+  //t2.load_model(name1, 1);
+  //b.load_model(name2, 2);
 }
 
 template <class CellType>

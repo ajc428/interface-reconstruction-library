@@ -45,13 +45,18 @@ namespace IRL
 
         Mesh initializeMesh(const int); 
         bool isParaboloidInCenterCell(const IRL::Paraboloid&, const DataMesh<double>&);
+        bool areParaboloidsInSameCell(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
+        bool doParaboloidsIntersect(IRL::Paraboloid&, IRL::Paraboloid&);
     public:
         fractions(const int);
 
         IRL::Paraboloid new_parabaloid(double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_parabaloid(double, double, double, IRL::ReferenceFrame, double, double);
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
+        IRL::Paraboloid new_interface_parabaloid(double, double, double, double, IRL::Paraboloid);
+        IRL::Paraboloid new_interface_parabaloid_in_cell(double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
+        torch::Tensor get_fractions_gas(IRL::Paraboloid, bool);
         torch::Tensor get_fractions(IRL::Plane, bool);
         torch::Tensor get_fractions_with_gradients(IRL::Paraboloid, bool);
         torch::Tensor get_gradients(int);
@@ -61,6 +66,9 @@ namespace IRL
         
         template <class MomentType>
         MomentType getCellMoments(const IRL::Paraboloid&,const DataMesh<double>&, int, int, int); 
+
+        template <class MomentType>
+        MomentType getCellMomentsGas(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int);
 
         template <class MomentType>
         MomentType getCellMoments(const IRL::Plane&,const DataMesh<double>&, int, int, int); 

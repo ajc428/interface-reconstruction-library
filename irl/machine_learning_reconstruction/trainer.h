@@ -83,6 +83,7 @@ namespace IRL
         IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
         IRL::Paraboloid use_model2(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
         IRL::Normal get_normal(const DataMesh<double>, const DataMesh<IRL::Pt>);
+        int getNumberOfInterfaces(const DataMesh<double>, const DataMesh<IRL::Pt>);
 
         IRL::ReferenceFrame getFrame(int);
     };

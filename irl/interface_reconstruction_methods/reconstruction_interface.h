@@ -26,6 +26,8 @@
 namespace IRL {
 
 IRL::trainer t = IRL::trainer(4);
+IRL::trainer t2 = IRL::trainer(4);
+IRL::trainer b = IRL::trainer(3);
 
 /// \brief Perform R2P reconstruction for a 2D problem in the x-y plane.
 template <class CellType>
@@ -66,9 +68,9 @@ inline PlanarSeparator reconstructionWithELVIRA3D(
 
 /// \brief Perform ML Reconstruction for 3D.
 inline PlanarSeparator reconstructionWithML(
-    const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids);
+    const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids, int flag);
 
-void loadML(std::string name);
+void loadML(std::string name/*, std::string name1, std::string name2*/);
 
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>
