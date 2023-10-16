@@ -139,25 +139,28 @@ module f_ReconstructionInterface
   end interface
 
   interface
-    subroutine F_reconstructML(a_ELVIRANeigh, a_liquid_centroids, a_planar_separator, flag) &
+    subroutine F_reconstructML(a_ELVIRANeigh, a_LVIRANeigh, a_r2p, a_liquid_centroids, a_planar_separator, flag) &
     bind(C, name="c_reconstructML")
       use, intrinsic :: iso_c_binding
       import
       implicit none
       integer(C_INT), dimension(0:0), intent(in) :: flag
-      type(c_ELVIRANeigh) :: a_ELVIRANeigh ! Pointer to a ELVIRANeigh object
+      type(c_ELVIRANeigh) :: a_ELVIRANeigh
+      type(c_LVIRANeigh_RectCub) :: a_LVIRANeigh ! Pointer to a ELVIRANeigh object
+      type(c_R2PNeigh_RectCub) :: a_r2p
       real(C_DOUBLE), dimension(0:2,0:26), intent(in) :: a_liquid_centroids
       type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
     end subroutine F_reconstructML
   end interface
 
   interface
-  subroutine F_loadML(file) &
+  subroutine F_loadML(file, file2) &
   bind(C, name="c_loadML")
     use, intrinsic :: iso_c_binding
     import
     implicit none
     character(kind=c_char) :: file(*)
+    character(kind=c_char) :: file2(*)
   end subroutine F_loadML
 end interface
 
@@ -471,22 +474,25 @@ end interface
 
   end subroutine reconstructELVIRA3D
 
-  subroutine reconstructML(a_elvira_neighborhood, a_liquid_centroids, a_planar_separator, flag)
+  subroutine reconstructML(a_neighborhood, a_lvira, a_r2p, a_centroids, a_separator, flag)
     use, intrinsic :: iso_c_binding
     implicit none
       integer(c_int), dimension(0:0), intent(in) :: flag
-      type(ELVIRANeigh_type), intent(in) :: a_elvira_neighborhood
-      real(IRL_double), dimension(0:2,0:26), intent(in) :: a_liquid_centroids
-      type(PlanarSep_type), intent(inout) :: a_planar_separator
-      call F_reconstructML(a_elvira_neighborhood%c_object, a_liquid_centroids, a_planar_separator%c_object, flag)
+      type(ELVIRANeigh_type), intent(in) :: a_neighborhood
+      type(LVIRANeigh_RectCub_type), intent(in) :: a_lvira
+      type(R2PNeigh_RectCub_type), intent(in) :: a_r2p
+      real(IRL_double), dimension(0:2,0:26), intent(in) :: a_centroids
+      type(PlanarSep_type), intent(inout) :: a_separator
+      call F_reconstructML(a_neighborhood%c_object, a_lvira%c_object, a_r2p%c_object, a_centroids, a_separator%c_object, flag)
 
   end subroutine reconstructML
 
-  subroutine loadML(name)
+  subroutine loadML(name, name2)
     use, intrinsic :: iso_c_binding
     implicit none
       character(kind=c_char), intent(in) :: name(*)
-      call F_loadML(name)
+      character(kind=c_char), intent(in) :: name2(*)
+      call F_loadML(name, name2)
 
   end subroutine loadML
 

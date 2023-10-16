@@ -46,10 +46,10 @@ void c_reconstructELVIRA2D(const c_ELVIRANeigh* a_elvira_neighborhood,
 void c_reconstructELVIRA3D(const c_ELVIRANeigh* a_elvira_neighborhood,
                            c_PlanarSep* a_separator);
 
-void c_reconstructML(const c_ELVIRANeigh* a_elvira_neighborhood, const double* a_liquid_centroids,
-                           c_PlanarSep* a_separator, const int* flag);
+void c_reconstructML(const c_ELVIRANeigh* a_elvira_neighborhood, const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const c_R2PNeigh_RectCub* a_r2p_neighborhood, const double* a_liquid_centroids,
+                           c_PlanarSep* a_separator, int* flag);
 
-void c_loadML(const char* name/*, const char* name1, const char* name2*/);
+void c_loadML(const char* name/*, const char* name1*/, const char* name2);
 
 void c_reconstructMOF2D_RectCub(const c_RectCub* a_cell,
                                 const c_SepVM* a_separated_volume_moments,

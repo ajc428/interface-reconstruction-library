@@ -48,6 +48,14 @@ namespace IRL
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(5, m);
         }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(108,1,6);
+            nnn = make_shared<model>(108,1,6);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(6, m);
+        }
         else
         {
             nn = make_shared<model>(108,8,2);
@@ -89,6 +97,14 @@ namespace IRL
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(5, m);
         }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(108,1,6);
+            nnn = make_shared<model>(108,1,6);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(6, m);
+        }
         else
         {
             nn = make_shared<model>(108,8,2);
@@ -119,7 +135,7 @@ namespace IRL
     void trainer::train_model(bool load, std::string in, std::string out)
     {
         cout << "Hello from rank " << rank << endl;
-        auto data_train = MyDataset(train_in_file, train_out_file, data_size, 4/*m*/).map(torch::data::transforms::Stack<>());
+        auto data_train = MyDataset(train_in_file, train_out_file, data_size, m).map(torch::data::transforms::Stack<>());
         batch_size = data_train.size().value() / numranks;
         if (rank == 0)
         {
@@ -440,11 +456,13 @@ namespace IRL
             else if (n == 4)
             {
                 nn->eval();
+                loss_out.open("loss.txt");
                 for(int i = 0; i < data_test.size().value(); ++i)
                 {
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
+                    auto loss = critereon_MSE(prediction, test_out);
                     for (int j = 0; j < 3; ++j)
                     {
                         results_pr << prediction[j].item<double>() << " ";
@@ -453,9 +471,11 @@ namespace IRL
                     {
                         results_ex << test_out[j].item<double>() << " ";
                     }
+                    loss_out << loss.item<double>() << "\n";
                     results_ex << "\n";
                     results_pr << "\n";
                 }
+                loss_out.close();
             }
             else if (n == 5)
             {
@@ -555,6 +575,21 @@ namespace IRL
                     results_ex << "\n";
                     results_pr << "\n";
                 }
+            }
+            else if (n == 6)
+            {
+                nn->eval();
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    auto prediction = nn->forward(test_in);
+                    results_pr << prediction.item<double>() << " ";
+                    results_ex << test_out.item<double>() << " ";
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+                loss_out.close();
             }
 
             results_ex.close();
@@ -715,6 +750,27 @@ namespace IRL
         n[1] = y_pred[1].item<double>();
         n[2] = y_pred[2].item<double>();
         return n;
+    }
+
+    double trainer::get_normal_loss(const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    {
+        vector<double> fractions;
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    fractions.push_back(liquid_volume_fraction(i, j, k));
+                    fractions.push_back(liquid_centroid(i,j,k)[0]);
+                    fractions.push_back(liquid_centroid(i,j,k)[1]);
+                    fractions.push_back(liquid_centroid(i,j,k)[2]);
+                }
+            }
+        }
+
+        auto y_pred = nnn->forward(torch::tensor(fractions));
+        return y_pred.item<double>();
     }
 
     int trainer::getNumberOfInterfaces(const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)

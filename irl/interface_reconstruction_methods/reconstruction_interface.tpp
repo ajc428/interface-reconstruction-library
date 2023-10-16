@@ -105,7 +105,8 @@ PlanarSeparator reconstructionWithELVIRA3D(
   return elvira_system.solve(&a_neighborhood_geometry);
 }
 
-PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids, int flag) 
+template <class CellType>
+PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_geometry, const LVIRANeighborhood<CellType>& lvnh, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, PlanarSeparator p, int* flag) 
 {
   auto n = IRL::Normal();
   auto n2 = IRL::Normal();
@@ -133,31 +134,53 @@ PlanarSeparator reconstructionWithML(const ELVIRANeighborhood& a_neighborhood_ge
     }
   }
   
-  //int inter = b.getNumberOfInterfaces(local_liquid_volume_fraction, local_liquid_centroid);
+  double inter = b.get_normal_loss(local_liquid_volume_fraction, local_liquid_centroid);
   //if (inter == 1) /*{std::cout << "hi" << std::endl;}*/
-  if (flag == 0)
-  {
+  //if (flag == 0)
+  //{
     n = t.get_normal(local_liquid_volume_fraction, local_liquid_centroid);
-    n.normalize();
-  }
-  else if (flag == 1)
-  {
-    n = t.get_normal(local_liquid_volume_fraction, local_liquid_centroid);
-    n.normalize();
-  }
+    /*int tol = 0;
+    int i,j,k = 1;
+    if(local_liquid_volume_fraction(i-1, j, k) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i+1, j, k) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i, j-1, k) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i, j+1, k) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i, j, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i, j, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i-1, j-1, k) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i-1, j+1, k) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i+1, j-1, k) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i+1, j+1, k) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i-1, j, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i-1, j, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i+1, j, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i+1, j, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i, j-1, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i, j-1, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i, j+1, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i, j+1, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i-1, j-1, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i+1, j-1, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i-1, j+1, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i-1, j-1, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i+1, j+1, k-1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i+1, j-1, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if(local_liquid_volume_fraction(i-1, j+1, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;} if(local_liquid_volume_fraction(i+1, j+1, k+1) <= 10000*IRL::global_constants::VF_LOW){++tol;}
+    if (tol >= 21)
+    {
+      n = IRL::Normal(0.0,0.0,0.0);
+    }
+    else */if (/*n.calculateMagnitude() < 0.3 ||*/ inter > 0.002/* && flag[0] != 2*/)
+    {
+      //volume_loss = volume_loss + local_liquid_volume_fraction(1,1,1) * a_neighborhood_geometry.getCell(0,0,0).calculateVolume();
+      //n = p[0].normal();//IRL::Normal(0.0,0.0,0.0);
+      //return reconstructionWithELVIRA3D(a_neighborhood_geometry);
+      flag[0] = 1;
+      return reconstructionWithLVIRA3D(lvnh, p);
+      //return reconstructionWithR2P3D(r2pnh, p);
+    }
+  //}
+  flag[0] = 0;
+  n.normalize();
 
+  previous = n;
   const IRL::Normal& n1 = n;
   const double d = local_liquid_volume_fraction(1,1,1);
   const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCell(0,0,0);
   double distance = IRL::findDistanceOnePlane(cube, d, n1);
+  //std::cout << volume_loss << std::endl;
   return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
 }
 
-void loadML(std::string name/*, std::string name1, std::string name2*/)
+void loadML(std::string name/*, std::string name1*/, std::string name2)
 {
   t.load_model(name, 1);
   //t2.load_model(name1, 1);
-  //b.load_model(name2, 2);
+  b.load_model(name2, 1);
 }
 
 template <class CellType>

@@ -85,6 +85,42 @@ namespace IRL
         return p;
     }
 
+    IRL::Paraboloid fractions::new_random_parabaloid_not_center(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+    {
+        std::random_device rd;  
+        std::mt19937_64 a_eng(rd());
+        DataMesh<double> liquid_volume_fraction(mesh);
+        IRL::Pt datum;
+        IRL::ReferenceFrame frame;
+        double z_offset;
+        double alpha;
+        double beta;
+        int attempt = 0;
+        std::uniform_real_distribution<double> random_rotationa(rota_l, rota_h);
+        std::uniform_real_distribution<double> random_rotationb(rotb_l, rotb_h);
+        std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
+        std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
+        std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
+        std::uniform_real_distribution<double> random_translationx(ox_l, ox_h);
+        std::uniform_real_distribution<double> random_translationy(oy_l, oy_h);
+        std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
+        IRL::Paraboloid p;
+
+        alpha = random_coeffsa(a_eng);
+        beta = random_coeffsb(a_eng);
+        frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
+        datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
+        angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
+
+        IRL::UnitQuaternion x_rotation(angles[0], frame[0]);
+        IRL::UnitQuaternion y_rotation(angles[1], frame[1]);
+        IRL::UnitQuaternion z_rotation(angles[2], frame[2]);
+        frame = x_rotation * y_rotation * z_rotation * frame;
+        p = IRL::Paraboloid(datum, frame, alpha, beta);
+
+        return p;
+    }
+
     IRL::Paraboloid fractions::new_interface_parabaloid(double coa_l, double coa_h, double cob_l, double cob_h, IRL::Paraboloid para)
     {
         std::random_device rd;  
@@ -109,7 +145,7 @@ namespace IRL
             datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
 
             p = IRL::Paraboloid(datum, frame, alpha, beta);
-        } while ((isParaboloidInCenterCell(p, liquid_volume_fraction)) || areParaboloidsInSameCell(p, para, liquid_volume_fraction));
+        } while ((isParaboloidInCenterCell(p, liquid_volume_fraction)) || doParaboloidsIntersect(p, para)  || areParaboloidsInSameCell(p, para, liquid_volume_fraction));
 
         return p;
     }

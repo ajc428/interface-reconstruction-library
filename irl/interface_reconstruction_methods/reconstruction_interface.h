@@ -12,6 +12,7 @@
 
 #include <string>
 #include <iostream>
+#include <cstdlib>
 #include "irl/interface_reconstruction_methods/advected_plane_reconstruction.h"
 #include "irl/interface_reconstruction_methods/elvira.h"
 #include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
@@ -27,7 +28,9 @@ namespace IRL {
 
 IRL::trainer t = IRL::trainer(4);
 IRL::trainer t2 = IRL::trainer(4);
-IRL::trainer b = IRL::trainer(3);
+IRL::trainer b = IRL::trainer(6);
+IRL::Normal previous = IRL::Normal();
+double volume_loss = 0;
 
 /// \brief Perform R2P reconstruction for a 2D problem in the x-y plane.
 template <class CellType>
@@ -67,10 +70,11 @@ inline PlanarSeparator reconstructionWithELVIRA3D(
     const ELVIRANeighborhood& a_neighborhood_geometry);
 
 /// \brief Perform ML Reconstruction for 3D.
+template <class CellType>
 inline PlanarSeparator reconstructionWithML(
-    const ELVIRANeighborhood& a_neighborhood_geometry, const double* a_liquid_centroids, int flag);
+    const ELVIRANeighborhood& a_neighborhood_geometry, const LVIRANeighborhood<CellType>& lvnh, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, PlanarSeparator p, int* flag);
 
-void loadML(std::string name/*, std::string name1, std::string name2*/);
+void loadML(std::string name/*, std::string name1*/, std::string name2);
 
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>

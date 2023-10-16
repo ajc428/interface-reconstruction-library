@@ -94,13 +94,13 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
                     for (int k = 0; k < 3; ++k)
                     {
                         num1.push_back(liquid_volume_fraction(i, j, k));
-                        if (liquid_volume_fraction(i, j, k) > 0 && liquid_volume_fraction(i, j, k) < 1)
+                        /*if (liquid_volume_fraction(i, j, k) > 0 && liquid_volume_fraction(i, j, k) < 1)
                         {
                             num1.push_back(liquid_centroid(i, j, k)[0] - centers[0]);
                             num1.push_back(liquid_centroid(i, j, k)[1] - centers[1]);
                             num1.push_back(liquid_centroid(i, j, k)[2] - centers[2]);
                         }
-                        else
+                        else*/
                         {
                             num1.push_back(liquid_centroid(i, j, k)[0]);
                             num1.push_back(liquid_centroid(i, j, k)[1]);
