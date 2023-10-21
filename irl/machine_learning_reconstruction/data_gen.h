@@ -1096,9 +1096,9 @@ namespace IRL
                     {
                         for (int k = 0; k < 3; ++k)
                         {
-                            int r = rand() % 10;
+                            //int r = rand() % 10;
                             //if (k+j*3+i*9 == r)
-                            if (r == 0)
+                            //if (r == 0)
                             {
                                 paraboloid[k+3*j+9*i] = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, 0.01, 0.01, 0.01, 0.01, -0.3+(i-1), 0.3+(i-1), -0.3+(j-1), 0.3+(j-1), -0.3+(k-1), 0.3+(k-1));
                             }
@@ -1109,7 +1109,10 @@ namespace IRL
                 std::ofstream normals;
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
-                auto normal = IRL::Normal(0,0,0);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid[13]);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
                 normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
                 normals.close();
 

@@ -34,7 +34,7 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,3,6);
+            nn = make_shared<model>(108,3,2);
             nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -233,7 +233,7 @@ namespace IRL
                         }
                         //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
                         load_model("model_n.pt", 1);
-                        IRL::Normal norm = this->get_normal(liquid_volume_fraction, liquid_centroid);
+                        IRL::Normal norm = IRL::Normal();//this->get_normal(liquid_volume_fraction, liquid_centroid);
                         norm.normalize();
                         //IRL::Normal norm = p[0].normal();
                         check[n] = functions->VolumeFracsNormalForward(y_pred[n], norm);
@@ -508,7 +508,7 @@ namespace IRL
                     //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
                     //IRL::Normal norm = p[0].normal();
                     load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", 1);
-                    IRL::Normal norm = get_normal(liquid_volume_fraction, liquid_centroid);
+                    IRL::Normal norm = IRL::Normal();//get_normal(liquid_volume_fraction, liquid_centroid);
                     IRL::Pt x_dir = IRL::Pt(0,0,0);
                     if (abs(norm[0]) >= abs(norm[1]) && abs(norm[1]) >= abs(norm[2]))
                     {
@@ -648,7 +648,7 @@ namespace IRL
         torch::load(nn, in);
         auto y_pred = nn->forward(torch::tensor(fractions));
         load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/paraboloid_advector/model_n.pt", 1);
-        IRL::Normal norm = get_normal(liquid_volume_fraction, liquid_centroid);
+        IRL::Normal norm = get_normal(fractions);
         //IRL::PlanarSeparator p = IRL::reconstructionWithELVIRA3D(neighborhood);
         //IRL::Normal norm = p[0].normal();
         IRL::Pt x_dir = IRL::Pt(0,0,0);
@@ -727,10 +727,10 @@ namespace IRL
         }
     }
 
-    IRL::Normal trainer::get_normal(const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    IRL::Normal trainer::get_normal(vector<double> fractions/*const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid*/)
     {
-        vector<double> fractions;
-        for (int i = 0; i < 3; ++i)
+        //vector<double> fractions;
+        /*for (int i = 0; i < 3; ++i)
         {
             for (int j = 0; j < 3; ++j)
             {
@@ -742,7 +742,7 @@ namespace IRL
                     fractions.push_back(liquid_centroid(i,j,k)[2]);
                 }
             }
-        }
+        }*/
 
         auto y_pred = nnn->forward(torch::tensor(fractions));
         auto n = IRL::Normal();
@@ -752,9 +752,9 @@ namespace IRL
         return n;
     }
 
-    double trainer::get_normal_loss(const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
+    double trainer::get_normal_loss(vector<double> fractions/*const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid*/)
     {
-        vector<double> fractions;
+        /*vector<double> fractions;
         for (int i = 0; i < 3; ++i)
         {
             for (int j = 0; j < 3; ++j)
@@ -767,7 +767,7 @@ namespace IRL
                     fractions.push_back(liquid_centroid(i,j,k)[2]);
                 }
             }
-        }
+        }*/
 
         auto y_pred = nnn->forward(torch::tensor(fractions));
         return y_pred.item<double>();
