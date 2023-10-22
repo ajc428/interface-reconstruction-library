@@ -130,7 +130,7 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
   }
   
   double inter = b.get_normal_loss(fractions);
-  if ((inter > 0.001 && flag[0] != 2) || (inter > 0.01 && flag[0] == 2))
+  if ((flag[0] != 2) || (inter > 0.015 && flag[0] == 2))
   {
     flag[0] = 1;
     return reconstructionWithLVIRA3D(a_neighborhood_geometry, p);
