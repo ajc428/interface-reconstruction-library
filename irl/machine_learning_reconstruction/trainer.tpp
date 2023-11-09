@@ -34,7 +34,7 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,3,2);
+            nn = make_shared<model>(108,3,6);
             nnn = make_shared<model>(108,3,6);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -743,7 +743,6 @@ namespace IRL
                 }
             }
         }*/
-
         auto y_pred = nnn->forward(torch::tensor(fractions));
         auto n = IRL::Normal();
         n[0] = y_pred[0].item<double>();

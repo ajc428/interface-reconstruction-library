@@ -106,7 +106,7 @@ PlanarSeparator reconstructionWithELVIRA3D(
 }
 
 template <class CellType>
-PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, /*const R2PNeighborhood<CellType>& r2pnh,*/ const double* a_liquid_centroids, PlanarSeparator p, int* flag) 
+PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, PlanarSeparator p, int* flag) 
 {
   auto n = IRL::Normal();
   auto n2 = IRL::Normal();
@@ -130,15 +130,28 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
   }
   
   double inter = b.get_normal_loss(fractions);
-  if ((inter > 0.001 && flag[0] != 2) || (inter > 0.01 && flag[0] == 2))
+  if ((flag[0] != 2) || (inter > 0.015 && flag[0] == 2))
   {
     flag[0] = 1;
     return reconstructionWithLVIRA3D(a_neighborhood_geometry, p);
+    //return reconstructionWithR2P3D(r2pnh, p);
   }
 
   flag[0] = 0;
   n = t.get_normal(fractions);
   n.normalize();
+  /*if (n[1] > 0.998)
+  {
+    n[0] = 0;
+    n[1] = 1;
+    n[2] = 0;
+  }
+  else if (-n[1] > 0.998)
+  {
+    n[0] = 0;
+    n[1] = -1;
+    n[2] = 0;
+  }*/
 
   previous = n;
   const IRL::Normal& n1 = n;

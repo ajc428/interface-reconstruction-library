@@ -33,6 +33,8 @@ class MyDataset : public torch::data::Dataset<MyDataset>
 
         vector<torch::Tensor> read_data(string, int, int);
         torch::data::Example<> get(size_t index) override;
+        torch::Tensor get_data();
+        torch::Tensor get_target();
         torch::optional<size_t> size() const override 
         {
             return data_out.size();

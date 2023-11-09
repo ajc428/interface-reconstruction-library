@@ -23,12 +23,16 @@
 #include "irl/interface_reconstruction_methods/reconstruction_cleaning.h"
 #include "irl/planar_reconstruction/planar_separator.h"
 #include "irl/machine_learning_reconstruction/trainer.h"
+//#include "irl/machine_learning_reconstruction/trainer_cuda.h"
 
 namespace IRL {
 
 IRL::trainer t = IRL::trainer(4);
 IRL::trainer t2 = IRL::trainer(4);
 IRL::trainer b = IRL::trainer(6);
+/*IRL::trainer_cuda tc = IRL::trainer_cuda(4);
+IRL::trainer_cuda tc2 = IRL::trainer_cuda(4);
+IRL::trainer_cuda bc = IRL::trainer_cuda(6);*/
 IRL::Normal previous = IRL::Normal();
 double volume_loss = 0;
 
@@ -72,7 +76,7 @@ inline PlanarSeparator reconstructionWithELVIRA3D(
 /// \brief Perform ML Reconstruction for 3D.
 template <class CellType>
 inline PlanarSeparator reconstructionWithML(
-    /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, /*const R2PNeighborhood<CellType>& r2pnh,*/ const double* a_liquid_centroids, PlanarSeparator p, int* flag);
+    /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, PlanarSeparator p, int* flag);
 
 void loadML(std::string name/*, std::string name1*/, std::string name2);
 

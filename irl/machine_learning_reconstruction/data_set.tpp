@@ -29,7 +29,7 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
             num.push_back(stod(value));
         }
 
-        if (m == 0)
+        if (m != 3)
         {
             output.push_back(torch::tensor(num));
         }
@@ -65,54 +65,54 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
             }
             output.push_back(torch::tensor(num1));
         }
-        else
-        {
-            vector <double> num1;
-            IRL::fractions *gen;
-            IRL::spatial_moments *sm;
-            gen = new IRL::fractions(3);
-            sm = new IRL::spatial_moments();
-            DataMesh<double> liquid_volume_fraction(gen->getMesh());
-            DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
-            for (int i = 0; i < 3; ++i)
-            {
-                for (int j = 0; j < 3; ++j)
-                {
-                    for (int k = 0; k < 3; ++k)
-                    {
-                        liquid_volume_fraction(i, j, k) = num[4*(i*9+j*3+k)];
-                        liquid_centroid(i, j, k) = IRL::Pt(num[4*(i*9+j*3+k)+1], num[4*(i*9+j*3+k)+2], num[4*(i*9+j*3+k)+3]);
-                    }
-                }
-            }
-            sm->calculate_moments(liquid_volume_fraction, liquid_centroid, gen->getMesh());
-            vector<double> centers = sm->get_mass_centers();
-            for (int i = 0; i < 3; ++i)
-            {
-                for (int j = 0; j < 3; ++j)
-                {
-                    for (int k = 0; k < 3; ++k)
-                    {
-                        num1.push_back(liquid_volume_fraction(i, j, k));
-                        /*if (liquid_volume_fraction(i, j, k) > 0 && liquid_volume_fraction(i, j, k) < 1)
-                        {
-                            num1.push_back(liquid_centroid(i, j, k)[0] - centers[0]);
-                            num1.push_back(liquid_centroid(i, j, k)[1] - centers[1]);
-                            num1.push_back(liquid_centroid(i, j, k)[2] - centers[2]);
-                        }
-                        else*/
-                        {
-                            num1.push_back(liquid_centroid(i, j, k)[0]);
-                            num1.push_back(liquid_centroid(i, j, k)[1]);
-                            num1.push_back(liquid_centroid(i, j, k)[2]);
-                        }
-                    }
-                }
-            }
-            output.push_back(torch::tensor(num1));
-            delete gen;
-            delete sm;
-        }
+        // else
+        // {
+        //     vector <double> num1;
+        //     IRL::fractions *gen;
+        //     IRL::spatial_moments *sm;
+        //     gen = new IRL::fractions(3);
+        //     sm = new IRL::spatial_moments();
+        //     DataMesh<double> liquid_volume_fraction(gen->getMesh());
+        //     DataMesh<IRL::Pt> liquid_centroid(gen->getMesh());
+        //     for (int i = 0; i < 3; ++i)
+        //     {
+        //         for (int j = 0; j < 3; ++j)
+        //         {
+        //             for (int k = 0; k < 3; ++k)
+        //             {
+        //                 liquid_volume_fraction(i, j, k) = num[4*(i*9+j*3+k)];
+        //                 liquid_centroid(i, j, k) = IRL::Pt(num[4*(i*9+j*3+k)+1], num[4*(i*9+j*3+k)+2], num[4*(i*9+j*3+k)+3]);
+        //             }
+        //         }
+        //     }
+        //     sm->calculate_moments(liquid_volume_fraction, liquid_centroid, gen->getMesh());
+        //     vector<double> centers = sm->get_mass_centers();
+        //     for (int i = 0; i < 3; ++i)
+        //     {
+        //         for (int j = 0; j < 3; ++j)
+        //         {
+        //             for (int k = 0; k < 3; ++k)
+        //             {
+        //                 num1.push_back(liquid_volume_fraction(i, j, k));
+        //                 /*if (liquid_volume_fraction(i, j, k) > 0 && liquid_volume_fraction(i, j, k) < 1)
+        //                 {
+        //                     num1.push_back(liquid_centroid(i, j, k)[0] - centers[0]);
+        //                     num1.push_back(liquid_centroid(i, j, k)[1] - centers[1]);
+        //                     num1.push_back(liquid_centroid(i, j, k)[2] - centers[2]);
+        //                 }
+        //                 else*/
+        //                 {
+        //                     num1.push_back(liquid_centroid(i, j, k)[0]);
+        //                     num1.push_back(liquid_centroid(i, j, k)[1]);
+        //                     num1.push_back(liquid_centroid(i, j, k)[2]);
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     output.push_back(torch::tensor(num1));
+        //     delete gen;
+        //     delete sm;
+        // }
         ++i;
     }
     indata.close();
@@ -122,6 +122,28 @@ vector<torch::Tensor> MyDataset::read_data(string file, int data_size, int m)
 torch::data::Example<> MyDataset::get(size_t index)
 {
     return {data_in[index], data_out[index]};
+} 
+
+torch::Tensor MyDataset::get_data()
+{
+    int len = data_in.size();
+    torch::Tensor r = torch::zeros({len,108});
+    for (int i = 0; i < data_in.size(); ++i)
+    {
+        r[i] = data_in[i];
+    }
+    return r;
+} 
+
+torch::Tensor MyDataset::get_target()
+{
+    int len = data_out.size();
+    torch::Tensor r = torch::zeros({len,3});
+    for (int i = 0; i < data_out.size(); ++i)
+    {
+        r[i] = data_out[i];
+    }
+    return r;
 } 
 
 #endif

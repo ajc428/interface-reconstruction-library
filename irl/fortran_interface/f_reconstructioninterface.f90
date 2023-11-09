@@ -139,7 +139,7 @@ module f_ReconstructionInterface
   end interface
 
   interface
-    subroutine F_reconstructML(a_LVIRANeigh, a_liquid_centroids, a_planar_separator, flag) &
+    subroutine F_reconstructML(a_LVIRANeigh, a_r2p, a_liquid_centroids, a_planar_separator, flag) &
     bind(C, name="c_reconstructML")
       use, intrinsic :: iso_c_binding
       import
@@ -147,7 +147,7 @@ module f_ReconstructionInterface
       integer(C_INT), dimension(0:0), intent(in) :: flag
       !type(c_ELVIRANeigh) :: a_ELVIRANeigh
       type(c_LVIRANeigh_RectCub) :: a_LVIRANeigh ! Pointer to a ELVIRANeigh object
-      !type(c_R2PNeigh_RectCub) :: a_r2p
+      type(c_R2PNeigh_RectCub) :: a_r2p
       real(C_DOUBLE), dimension(0:2,0:26), intent(in) :: a_liquid_centroids
       type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
     end subroutine F_reconstructML
@@ -474,16 +474,16 @@ end interface
 
   end subroutine reconstructELVIRA3D
 
-  subroutine reconstructML(a_lvira, a_centroids, a_separator, flag)
+  subroutine reconstructML(a_lvira, a_r2p, a_centroids, a_separator, flag)
     use, intrinsic :: iso_c_binding
     implicit none
       integer(c_int), dimension(0:0), intent(in) :: flag
       !type(ELVIRANeigh_type), intent(in) :: a_neighborhood
       type(LVIRANeigh_RectCub_type), intent(in) :: a_lvira
-      !type(R2PNeigh_RectCub_type), intent(in) :: a_r2p
+      type(R2PNeigh_RectCub_type), intent(in) :: a_r2p
       real(IRL_double), dimension(0:2,0:26), intent(in) :: a_centroids
       type(PlanarSep_type), intent(inout) :: a_separator
-      call F_reconstructML(a_lvira%c_object, a_centroids, a_separator%c_object, flag)
+      call F_reconstructML(a_lvira%c_object, a_r2p%c_object, a_centroids, a_separator%c_object, flag)
 
   end subroutine reconstructML
 
