@@ -65,7 +65,7 @@ namespace IRL
     public:
         spatial_moments();
         torch::Tensor calculate_moments(const DataMesh<double>&, DataMesh<IRL::Pt>&, Mesh);
-        vector<double> get_mass_centers();
+        vector<double> get_mass_centers(vector<double> fractions);
 
         vector<double> getMoments()
         {

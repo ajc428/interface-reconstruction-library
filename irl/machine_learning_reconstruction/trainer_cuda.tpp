@@ -24,7 +24,7 @@ namespace IRL
         
         if (m == 4)
         {
-            nn = make_shared<model>(108,3,6);
+            nn = make_shared<model>(108,3,3);
             nn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -61,7 +61,7 @@ namespace IRL
         m = s;
         if (m == 4)
         {
-            nn = make_shared<model>(108,3,6);
+            nn = make_shared<model>(108,3,3);
             nn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -120,6 +120,7 @@ namespace IRL
         if (load)
         {
             torch::load(nn, in);
+            nn->to(device);
         }
         for (int epoch = 0; epoch < epochs; ++epoch)
         {
@@ -177,6 +178,7 @@ namespace IRL
             
         }
 
+        nn->to(torch::kCPU);
         torch::save(nn, out);
     }
 

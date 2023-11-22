@@ -34,8 +34,8 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,3,6);
-            nnn = make_shared<model>(108,3,6);
+            nn = make_shared<model>(108,3,3);
+            nnn = make_shared<model>(108,3,3);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
@@ -85,7 +85,7 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,3,6);
+            nn = make_shared<model>(108,3,3);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);

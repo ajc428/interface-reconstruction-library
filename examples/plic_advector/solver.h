@@ -124,6 +124,7 @@ int runSimulation(const std::string& a_advection_method,
   writeOutDiagnostics(iteration, a_dt, simulation_time, velU, velV, velW,
                       liquid_volume_fraction, interface, advect_VOF_time,
                       recon_time);
+  load();
   while (simulation_time < a_end_time) {
     const double time_step_to_use =
         std::fmin(a_dt, a_end_time - simulation_time);

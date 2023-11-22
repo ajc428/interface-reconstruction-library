@@ -76,7 +76,7 @@ inline PlanarSeparator reconstructionWithELVIRA3D(
 /// \brief Perform ML Reconstruction for 3D.
 template <class CellType>
 inline PlanarSeparator reconstructionWithML(
-    /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, PlanarSeparator p, int* flag);
+    /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
 
 void loadML(std::string name/*, std::string name1*/, std::string name2);
 

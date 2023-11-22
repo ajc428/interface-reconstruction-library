@@ -216,8 +216,28 @@ namespace IRL
         return torch::tensor(temp);
     }
 
-    vector<double> spatial_moments::get_mass_centers()
+    vector<double> spatial_moments::get_mass_centers(vector<double> fractions)
     {
+        m000 = 0;
+        m100 = 0;
+        m010 = 0;
+        m001 = 0;
+        for(int i = 0; i < 3; ++i)
+        {
+            for(int j = 0; j < 3; ++j)
+            {
+                for(int k = 0; k < 3; ++k)
+                {
+                    m000 = m000 + fractions[4*(i*9+j*3+k)+0];
+                    m100 = m100 + (fractions[4*(i*9+j*3+k)+1]+(i-1))*fractions[4*(i*9+j*3+k)+0];
+                    m010 = m010 + (fractions[4*(i*9+j*3+k)+2]+(j-1))*fractions[4*(i*9+j*3+k)+0];
+                    m001 = m001 + (fractions[4*(i*9+j*3+k)+3]+(k-1))*fractions[4*(i*9+j*3+k)+0];
+                }
+            }
+        }
+        xc = m100 / m000;
+        yc = m010 / m000;
+        zc = m001 / m000;
         vector<double> centers;
         centers.push_back(xc);
         centers.push_back(yc);
