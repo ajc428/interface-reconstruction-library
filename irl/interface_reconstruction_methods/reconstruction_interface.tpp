@@ -155,491 +155,487 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
   int direction = 0;
   if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
   {
-    direction = 1;
-    if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
-    {
-        direction = 1;
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (i == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                fractions[7*(2*9+j*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                fractions[7*(2*9+j*3+k)+1] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                fractions[7*(2*9+j*3+k)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                fractions[7*(2*9+j*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
-                fractions[7*(2*9+j*3+k)+4] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
-                fractions[7*(2*9+j*3+k)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                fractions[7*(2*9+j*3+k)+6] = temp;
-            }
-            else if (i == 1)
-            {
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
-            }
-            }
-        }
-        }
-    }
-    else if (center[0] >= 0 && center[1] < 0 && center[2] >= 0)
-    {
-        direction = 2;
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (j == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                fractions[7*(i*9+2*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                fractions[7*(i*9+2*3+k)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                fractions[7*(i*9+2*3+k)+2] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                fractions[7*(i*9+2*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
-                fractions[7*(i*9+2*3+k)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
-                fractions[7*(i*9+2*3+k)+5] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                fractions[7*(i*9+2*3+k)+6] = temp;
-            }
-            else if (j == 1)
-            {
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
-            }
-            }
-        }
-        }
-    }
-    else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
-    {
-        direction = 3;
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (k == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                fractions[7*(i*9+j*3+2)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                fractions[7*(i*9+j*3+2)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                fractions[7*(i*9+j*3+2)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                fractions[7*(i*9+j*3+2)+3] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
-                fractions[7*(i*9+j*3+2)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
-                fractions[7*(i*9+j*3+2)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                fractions[7*(i*9+j*3+2)+6] = -temp;
-            }
-            else if (k == 1)
-            {
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
-            }
-            }
-        }
-        }
-    }
-    else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
-    {
-        direction = 4;
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (i == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                fractions[7*(2*9+j*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                fractions[7*(2*9+j*3+k)+1] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                fractions[7*(2*9+j*3+k)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                fractions[7*(2*9+j*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
-                fractions[7*(2*9+j*3+k)+4] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
-                fractions[7*(2*9+j*3+k)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                fractions[7*(2*9+j*3+k)+6] = temp;
-            }
-            else if (i == 1)
-            {
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
-            }
-            }
-        }
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (j == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                fractions[7*(i*9+2*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                fractions[7*(i*9+2*3+k)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                fractions[7*(i*9+2*3+k)+2] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                fractions[7*(i*9+2*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
-                fractions[7*(i*9+2*3+k)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
-                fractions[7*(i*9+2*3+k)+5] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                fractions[7*(i*9+2*3+k)+6] = temp;
-            }
-            else if (j == 1)
-            {
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
-            }
-            }
-        }
-        }
-    }
-    else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
-    {
-        direction = 5;
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (i == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                fractions[7*(2*9+j*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                fractions[7*(2*9+j*3+k)+1] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                fractions[7*(2*9+j*3+k)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                fractions[7*(2*9+j*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
-                fractions[7*(2*9+j*3+k)+4] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
-                fractions[7*(2*9+j*3+k)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                fractions[7*(2*9+j*3+k)+6] = temp;
-            }
-            else if (i == 1)
-            {
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
-            }
-            }
-        }
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (k == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                fractions[7*(i*9+j*3+2)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                fractions[7*(i*9+j*3+2)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                fractions[7*(i*9+j*3+2)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                fractions[7*(i*9+j*3+2)+3] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
-                fractions[7*(i*9+j*3+2)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
-                fractions[7*(i*9+j*3+2)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                fractions[7*(i*9+j*3+2)+6] = -temp;
-            }
-            else if (k == 1)
-            {
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
-            }
-            }
-        }
-        }
-    }
-    else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
-    {
-        direction = 6;
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (j == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                fractions[7*(i*9+2*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                fractions[7*(i*9+2*3+k)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                fractions[7*(i*9+2*3+k)+2] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                fractions[7*(i*9+2*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
-                fractions[7*(i*9+2*3+k)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
-                fractions[7*(i*9+2*3+k)+5] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                fractions[7*(i*9+2*3+k)+6] = temp;
-            }
-            else if (j == 1)
-            {
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
-            }
-            }
-        }
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (k == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                fractions[7*(i*9+j*3+2)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                fractions[7*(i*9+j*3+2)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                fractions[7*(i*9+j*3+2)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                fractions[7*(i*9+j*3+2)+3] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
-                fractions[7*(i*9+j*3+2)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
-                fractions[7*(i*9+j*3+2)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                fractions[7*(i*9+j*3+2)+6] = -temp;
-            }
-            else if (k == 1)
-            {
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
-            }
-            }
-        }
-        }
-    }
-    else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
-    {
-        direction = 7;
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (i == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                fractions[7*(2*9+j*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                fractions[7*(2*9+j*3+k)+1] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                fractions[7*(2*9+j*3+k)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                fractions[7*(2*9+j*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
-                fractions[7*(2*9+j*3+k)+4] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
-                fractions[7*(2*9+j*3+k)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                fractions[7*(2*9+j*3+k)+6] = temp;
-            }
-            else if (i == 1)
-            {
-                fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
-            }
-            }
-        }
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (j == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                fractions[7*(i*9+2*3+k)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                fractions[7*(i*9+2*3+k)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                fractions[7*(i*9+2*3+k)+2] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                fractions[7*(i*9+2*3+k)+3] = temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
-                fractions[7*(i*9+2*3+k)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
-                fractions[7*(i*9+2*3+k)+5] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                fractions[7*(i*9+2*3+k)+6] = temp;
-            }
-            else if (j == 1)
-            {
-                fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
-            }
-            }
-        }
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-        for (int j = 0; j < 3; ++j)
-        {
-            for (int k = 0; k < 3; ++k)
-            {
-            if (k == 0)
-            {
-                double temp = fractions[7*(i*9+j*3+k)+0];
-                fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                fractions[7*(i*9+j*3+2)+0] = temp;
-                temp = fractions[7*(i*9+j*3+k)+1];
-                fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                fractions[7*(i*9+j*3+2)+1] = temp;
-                temp = fractions[7*(i*9+j*3+k)+2];
-                fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                fractions[7*(i*9+j*3+2)+2] = temp;
-                temp = fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                fractions[7*(i*9+j*3+2)+3] = -temp;
-                temp = fractions[7*(i*9+j*3+k)+4];
-                fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
-                fractions[7*(i*9+j*3+2)+4] = temp;
-                temp = fractions[7*(i*9+j*3+k)+5];
-                fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
-                fractions[7*(i*9+j*3+2)+5] = temp;
-                temp = fractions[7*(i*9+j*3+k)+6];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                fractions[7*(i*9+j*3+2)+6] = -temp;
-            }
-            else if (k == 1)
-            {
-                fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
-            }
-            }
-        }
-        }
-    }
+      direction = 1;
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (i == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+              fractions[7*(2*9+j*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+              fractions[7*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+              fractions[7*(2*9+j*3+k)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+              fractions[7*(2*9+j*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+              fractions[7*(2*9+j*3+k)+4] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+              fractions[7*(2*9+j*3+k)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+              fractions[7*(2*9+j*3+k)+6] = temp;
+          }
+          else if (i == 1)
+          {
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+          }
+          }
+      }
+      }
+  }
+  else if (center[0] >= 0 && center[1] < 0 && center[2] >= 0)
+  {
+      direction = 2;
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (j == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+              fractions[7*(i*9+2*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+              fractions[7*(i*9+2*3+k)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+              fractions[7*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+              fractions[7*(i*9+2*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+              fractions[7*(i*9+2*3+k)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+              fractions[7*(i*9+2*3+k)+5] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+              fractions[7*(i*9+2*3+k)+6] = temp;
+          }
+          else if (j == 1)
+          {
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+          }
+          }
+      }
+      }
+  }
+  else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
+  {
+      direction = 3;
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (k == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+              fractions[7*(i*9+j*3+2)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+              fractions[7*(i*9+j*3+2)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+              fractions[7*(i*9+j*3+2)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+              fractions[7*(i*9+j*3+2)+3] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+              fractions[7*(i*9+j*3+2)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+              fractions[7*(i*9+j*3+2)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+              fractions[7*(i*9+j*3+2)+6] = -temp;
+          }
+          else if (k == 1)
+          {
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+          }
+          }
+      }
+      }
+  }
+  else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
+  {
+      direction = 4;
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (i == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+              fractions[7*(2*9+j*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+              fractions[7*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+              fractions[7*(2*9+j*3+k)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+              fractions[7*(2*9+j*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+              fractions[7*(2*9+j*3+k)+4] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+              fractions[7*(2*9+j*3+k)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+              fractions[7*(2*9+j*3+k)+6] = temp;
+          }
+          else if (i == 1)
+          {
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+          }
+          }
+      }
+      }
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (j == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+              fractions[7*(i*9+2*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+              fractions[7*(i*9+2*3+k)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+              fractions[7*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+              fractions[7*(i*9+2*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+              fractions[7*(i*9+2*3+k)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+              fractions[7*(i*9+2*3+k)+5] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+              fractions[7*(i*9+2*3+k)+6] = temp;
+          }
+          else if (j == 1)
+          {
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+          }
+          }
+      }
+      }
+  }
+  else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
+  {
+      direction = 5;
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (i == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+              fractions[7*(2*9+j*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+              fractions[7*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+              fractions[7*(2*9+j*3+k)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+              fractions[7*(2*9+j*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+              fractions[7*(2*9+j*3+k)+4] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+              fractions[7*(2*9+j*3+k)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+              fractions[7*(2*9+j*3+k)+6] = temp;
+          }
+          else if (i == 1)
+          {
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+          }
+          }
+      }
+      }
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (k == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+              fractions[7*(i*9+j*3+2)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+              fractions[7*(i*9+j*3+2)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+              fractions[7*(i*9+j*3+2)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+              fractions[7*(i*9+j*3+2)+3] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+              fractions[7*(i*9+j*3+2)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+              fractions[7*(i*9+j*3+2)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+              fractions[7*(i*9+j*3+2)+6] = -temp;
+          }
+          else if (k == 1)
+          {
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+          }
+          }
+      }
+      }
+  }
+  else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
+  {
+      direction = 6;
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (j == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+              fractions[7*(i*9+2*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+              fractions[7*(i*9+2*3+k)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+              fractions[7*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+              fractions[7*(i*9+2*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+              fractions[7*(i*9+2*3+k)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+              fractions[7*(i*9+2*3+k)+5] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+              fractions[7*(i*9+2*3+k)+6] = temp;
+          }
+          else if (j == 1)
+          {
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+          }
+          }
+      }
+      }
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (k == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+              fractions[7*(i*9+j*3+2)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+              fractions[7*(i*9+j*3+2)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+              fractions[7*(i*9+j*3+2)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+              fractions[7*(i*9+j*3+2)+3] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+              fractions[7*(i*9+j*3+2)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+              fractions[7*(i*9+j*3+2)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+              fractions[7*(i*9+j*3+2)+6] = -temp;
+          }
+          else if (k == 1)
+          {
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+          }
+          }
+      }
+      }
+  }
+  else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
+  {
+      direction = 7;
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (i == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+              fractions[7*(2*9+j*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+              fractions[7*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+              fractions[7*(2*9+j*3+k)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+              fractions[7*(2*9+j*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+              fractions[7*(2*9+j*3+k)+4] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+              fractions[7*(2*9+j*3+k)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+              fractions[7*(2*9+j*3+k)+6] = temp;
+          }
+          else if (i == 1)
+          {
+              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+          }
+          }
+      }
+      }
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (j == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+              fractions[7*(i*9+2*3+k)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+              fractions[7*(i*9+2*3+k)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+              fractions[7*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+              fractions[7*(i*9+2*3+k)+3] = temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+              fractions[7*(i*9+2*3+k)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+              fractions[7*(i*9+2*3+k)+5] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+              fractions[7*(i*9+2*3+k)+6] = temp;
+          }
+          else if (j == 1)
+          {
+              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+          }
+          }
+      }
+      }
+      for (int i = 0; i < 3; ++i)
+      {
+      for (int j = 0; j < 3; ++j)
+      {
+          for (int k = 0; k < 3; ++k)
+          {
+          if (k == 0)
+          {
+              double temp = fractions[7*(i*9+j*3+k)+0];
+              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+              fractions[7*(i*9+j*3+2)+0] = temp;
+              temp = fractions[7*(i*9+j*3+k)+1];
+              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+              fractions[7*(i*9+j*3+2)+1] = temp;
+              temp = fractions[7*(i*9+j*3+k)+2];
+              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+              fractions[7*(i*9+j*3+2)+2] = temp;
+              temp = fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+              fractions[7*(i*9+j*3+2)+3] = -temp;
+              temp = fractions[7*(i*9+j*3+k)+4];
+              fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+              fractions[7*(i*9+j*3+2)+4] = temp;
+              temp = fractions[7*(i*9+j*3+k)+5];
+              fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+              fractions[7*(i*9+j*3+2)+5] = temp;
+              temp = fractions[7*(i*9+j*3+k)+6];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+              fractions[7*(i*9+j*3+2)+6] = -temp;
+          }
+          else if (k == 1)
+          {
+              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+          }
+          }
+      }
+      }
   }
    
   //double inter = b.get_normal_loss(fractions);
