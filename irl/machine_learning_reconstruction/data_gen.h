@@ -82,6 +82,628 @@ namespace IRL
 
                 auto result = gen->get_fractions(paraboloid, true);
                 bool flip = false;
+                if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                {
+                    flip = true;
+                    result = gen->get_fractions_gas(paraboloid, true);
+                }
+                std::vector<double> fractions;
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    fractions.push_back(result[i].item<double>());
+                }
+                
+
+                auto sm = IRL::spatial_moments();
+                std::vector<double> center = sm.get_mass_centers(fractions);
+                int direction = 0;
+                if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
+                {
+                    direction = 1;
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (i == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                            fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                            fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                            fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                            fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                            fractions[7*(2*9+j*3+k)+4] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                            fractions[7*(2*9+j*3+k)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                            fractions[7*(2*9+j*3+k)+6] = temp;*/
+                        }
+                        else if (i == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                            //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                        }
+                        }
+                    }
+                    }
+                }
+                else if (center[0] >= 0 && center[1] < 0 && center[2] >= 0)
+                {
+                    direction = 2;
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (j == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                            fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                            fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                            fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                            fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                            fractions[7*(i*9+2*3+k)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                            fractions[7*(i*9+2*3+k)+5] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                            fractions[7*(i*9+2*3+k)+6] = temp;*/
+                        }
+                        else if (j == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                            //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                        }
+                        }
+                    }
+                    }
+                }
+                else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
+                {
+                    direction = 3;
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (k == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                            fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                            fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                            fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                            fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                            fractions[7*(i*9+j*3+2)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                            fractions[7*(i*9+j*3+2)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                            fractions[7*(i*9+j*3+2)+6] = -temp;*/
+                        }
+                        else if (k == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                            //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                        }
+                        }
+                    }
+                    }
+                }
+                else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
+                {
+                    direction = 4;
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (i == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                            fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                            fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                            fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                            fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                            fractions[7*(2*9+j*3+k)+4] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                            fractions[7*(2*9+j*3+k)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                            fractions[7*(2*9+j*3+k)+6] = temp;*/
+                        }
+                        else if (i == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                            //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                        }
+                        }
+                    }
+                    }
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (j == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                            fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                            fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                            fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                            fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                            fractions[7*(i*9+2*3+k)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                            fractions[7*(i*9+2*3+k)+5] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                            fractions[7*(i*9+2*3+k)+6] = temp;*/
+                        }
+                        else if (j == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                            //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                        }
+                        }
+                    }
+                    }
+                }
+                else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
+                {
+                    direction = 5;
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (i == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                            fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                            fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                            fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                            fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                            fractions[7*(2*9+j*3+k)+4] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                            fractions[7*(2*9+j*3+k)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                            fractions[7*(2*9+j*3+k)+6] = temp;*/
+                        }
+                        else if (i == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                            //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                        }
+                        }
+                    }
+                    }
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (k == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                            fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                            fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                            fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                            fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                            fractions[7*(i*9+j*3+2)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                            fractions[7*(i*9+j*3+2)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                            fractions[7*(i*9+j*3+2)+6] = -temp;*/
+                        }
+                        else if (k == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                            //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                        }
+                        }
+                    }
+                    }
+                }
+                else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
+                {
+                    direction = 6;
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (j == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                            fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                            fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                            fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                            fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                            fractions[7*(i*9+2*3+k)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                            fractions[7*(i*9+2*3+k)+5] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                            fractions[7*(i*9+2*3+k)+6] = temp;*/
+                        }
+                        else if (j == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                            //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                        }
+                        }
+                    }
+                    }
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (k == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                            fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                            fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                            fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                            fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                            fractions[7*(i*9+j*3+2)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                            fractions[7*(i*9+j*3+2)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                            fractions[7*(i*9+j*3+2)+6] = -temp;*/
+                        }
+                        else if (k == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                            //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                        }
+                        }
+                    }
+                    }
+                }
+                else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
+                {
+                    direction = 7;
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (i == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                            fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                            fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                            fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                            fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                            fractions[7*(2*9+j*3+k)+4] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                            fractions[7*(2*9+j*3+k)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                            fractions[7*(2*9+j*3+k)+6] = temp;*/
+                        }
+                        else if (i == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                            //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                        }
+                        }
+                    }
+                    }
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (j == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                            fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                            fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                            fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                            fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                            fractions[7*(i*9+2*3+k)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                            fractions[7*(i*9+2*3+k)+5] = -temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                            fractions[7*(i*9+2*3+k)+6] = temp;*/
+                        }
+                        else if (j == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                            //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                        }
+                        }
+                    }
+                    }
+                    for (int i = 0; i < 3; ++i)
+                    {
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        for (int k = 0; k < 3; ++k)
+                        {
+                        if (k == 0)
+                        {
+                            double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                            fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                            fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                            fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                            fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                            fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                            fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                            temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                            fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                            /*temp = fractions[7*(i*9+j*3+k)+4];
+                            fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                            fractions[7*(i*9+j*3+2)+4] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+5];
+                            fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                            fractions[7*(i*9+j*3+2)+5] = temp;
+                            temp = fractions[7*(i*9+j*3+k)+6];
+                            fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                            fractions[7*(i*9+j*3+2)+6] = -temp;*/
+                        }
+                        else if (k == 1)
+                        {
+                            fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                            //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                        }
+                        }
+                    }
+                    }
+                }
+                std::ofstream output;
+                data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    output << fractions[i] << ",";
+                }
+                output << "\n";
+                output.close();  
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+
+                switch (direction)
+                {
+                    case 1:
+                    normal[0] = -normal[0];
+                    break;
+                    case 2:
+                    normal[1] = -normal[1];
+                    break;
+                    case 3:
+                    normal[2] = -normal[2];
+                    break;
+                    case 4:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    break;
+                    case 5:
+                    normal[0] = -normal[0];
+                    normal[2] = -normal[2];
+                    break;
+                    case 6:
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    break;
+                    case 7:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    break;
+                }
+                if (!flip)
+                {
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                }
+
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();                  
+            }  
+        }; 
+
+        void generate_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        {
+            for (int n = 0; n < Ntests; ++n) 
+            {
+                std::cout << n << endl;
+                IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string name = "coefficients.txt";
+                coefficients.open(name, std::ios_base::app);
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                std::ofstream curvatures;
+                std::string curv_name = "curvatures.txt";
+                curvatures.open(curv_name, std::ios_base::app);
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                std::ofstream classification;
+                std::string data_name = "type.txt";
+                classification.open(data_name, std::ios_base::app);
+                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
+                {
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                    classification << "0,1,0" << " \n";
+                }
+                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
+                {
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
+                    classification << "1,0,0" << " \n";
+                }
+                else
+                {
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
+                    classification << "0,0,1" << " \n";
+                }
+                classification.close();
+
+                std::ofstream inter;
+                std::string interface_name = "interface.txt";
+                inter.open(interface_name, std::ios_base::app);
+                inter << "1,0" << " \n";
+                inter << "1,0" << " \n";
+                inter << "1,0" << " \n";
+                inter.close();
+
+                auto result = gen->get_fractions(paraboloid, true);
+                bool flip = false;
                 if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
                 {
                     flip = true;
@@ -591,455 +1213,24 @@ namespace IRL
                     output << fractions[i] << ",";
                 }
                 output << "\n";
-                output.close();  
-
-                std::ofstream normals;
-                std::string normals_name = "normals.txt";
-                normals.open(normals_name, std::ios_base::app);
-                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
-                auto surface = surface_and_moments.getSurface();
-                auto normal = surface.getAverageNormalNonAligned();
-
-                switch (direction)
-                {
-                    case 1:
-                    normal[0] = -normal[0];
-                    break;
-                    case 2:
-                    normal[1] = -normal[1];
-                    break;
-                    case 3:
-                    normal[2] = -normal[2];
-                    break;
-                    case 4:
-                    normal[0] = -normal[0];
-                    normal[1] = -normal[1];
-                    break;
-                    case 5:
-                    normal[0] = -normal[0];
-                    normal[2] = -normal[2];
-                    break;
-                    case 6:
-                    normal[1] = -normal[1];
-                    normal[2] = -normal[2];
-                    break;
-                    case 7:
-                    normal[0] = -normal[0];
-                    normal[1] = -normal[1];
-                    normal[2] = -normal[2];
-                    break;
-                }
-                if (!flip)
-                {
-                    normal[0] = -normal[0];
-                    normal[1] = -normal[1];
-                    normal[2] = -normal[2];
-                }
-
-                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
-                normals.close();                  
-            }  
-        }; 
-
-        void generate_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
-        {
-            for (int n = 0; n < Ntests; ++n) 
-            {
-                std::cout << n << endl;
-                IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-                angles = gen->getAngles();
-
-                std::ofstream coefficients;
-                std::string name = "coefficients.txt";
-                coefficients.open(name, std::ios_base::app);
-                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
-                << "," << angles[0] << "," << angles[1] << "," << angles[2]
-                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
-                << "," << angles[0] << "," << angles[1] << "," << angles[2]
-                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
-                << "," << angles[0] << "," << angles[1] << "," << angles[2]
-                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                coefficients.close();
-
-                std::ofstream curvatures;
-                std::string curv_name = "curvatures.txt";
-                curvatures.open(curv_name, std::ios_base::app);
-                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
-                coefficients.close();
-
-                std::ofstream classification;
-                std::string data_name = "type.txt";
-                classification.open(data_name, std::ios_base::app);
-                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
-                {
-                    classification << "0,1,0" << " \n";
-                    classification << "0,1,0" << " \n";
-                    classification << "0,1,0" << " \n";
-                }
-                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
-                {
-                    classification << "1,0,0" << " \n";
-                    classification << "1,0,0" << " \n";
-                    classification << "1,0,0" << " \n";
-                }
-                else
-                {
-                    classification << "0,0,1" << " \n";
-                    classification << "0,0,1" << " \n";
-                    classification << "0,0,1" << " \n";
-                }
-                classification.close();
-
-                std::ofstream inter;
-                std::string interface_name = "interface.txt";
-                inter.open(interface_name, std::ios_base::app);
-                inter << "1,0" << " \n";
-                inter << "1,0" << " \n";
-                inter << "1,0" << " \n";
-                inter.close();
-
-                auto result = gen->get_fractions(paraboloid, true);
-                bool flip = false;
-                if (result[((result.sizes()[0]-4)/8)*4].item<double>() > 0.5)
-                {
-                    flip = true;
-                    result = gen->get_fractions_gas(paraboloid, true);
-                }
-                std::vector<double> fractions;
-                for (int i = 0; i < 108; ++i)
-                {
-                    fractions.push_back(result[i].item<double>());
-                }
-                
-
-                auto sm = IRL::spatial_moments();
-                std::vector<double> center = sm.get_mass_centers(fractions);
-                int direction = 0;
-                if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
-                {
-                    direction = 1;
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (i == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(2*9+j*3+k)+0];
-                            fractions[4*(2*9+j*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(2*9+j*3+k)+1];
-                            fractions[4*(2*9+j*3+k)+1] = -temp;
-                        }
-                        else if (i == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                }
-                else if (center[0] >= 0 && center[1] < 0 && center[2] > 0)
-                {
-                    direction = 2;
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (j == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+2*3+k)+0];
-                            fractions[4*(i*9+2*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+2*3+k)+1];
-                            fractions[4*(i*9+2*3+k)+1] = -temp;
-                        }
-                        else if (j == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                }
-                else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
-                {
-                    direction = 3;
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (k == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+j*3+2)+0];
-                            fractions[4*(i*9+j*3+2)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+2)+1];
-                            fractions[4*(i*9+j*3+2)+1] = -temp;
-                        }
-                        else if (k == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                }
-                else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
-                {
-                    direction = 4;
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (i == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(2*9+j*3+k)+0];
-                            fractions[4*(2*9+j*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(2*9+j*3+k)+1];
-                            fractions[4*(2*9+j*3+k)+1] = -temp;
-                        }
-                        else if (i == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (j == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+2*3+k)+0];
-                            fractions[4*(i*9+2*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+2*3+k)+1];
-                            fractions[4*(i*9+2*3+k)+1] = -temp;
-                        }
-                        else if (j == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                }
-                else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
-                {
-                    direction = 5;
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (i == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(2*9+j*3+k)+0];
-                            fractions[4*(2*9+j*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(2*9+j*3+k)+1];
-                            fractions[4*(2*9+j*3+k)+1] = -temp;
-                        }
-                        else if (i == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (k == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+j*3+2)+0];
-                            fractions[4*(i*9+j*3+2)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+2)+1];
-                            fractions[4*(i*9+j*3+2)+1] = -temp;
-                        }
-                        else if (k == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                }
-                else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
-                {
-                    direction = 6;
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (j == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+2*3+k)+0];
-                            fractions[4*(i*9+2*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+2*3+k)+1];
-                            fractions[4*(i*9+2*3+k)+1] = -temp;
-                        }
-                        else if (j == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (k == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+j*3+2)+0];
-                            fractions[4*(i*9+j*3+2)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+2)+1];
-                            fractions[4*(i*9+j*3+2)+1] = -temp;
-                        }
-                        else if (k == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                }
-                else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
-                {
-                    direction = 7;
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (i == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(2*9+j*3+k)+0];
-                            fractions[4*(2*9+j*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(2*9+j*3+k)+1];
-                            fractions[4*(2*9+j*3+k)+1] = -temp;
-                        }
-                        else if (i == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (j == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+2*3+k)+0];
-                            fractions[4*(i*9+2*3+k)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+2*3+k)+1];
-                            fractions[4*(i*9+2*3+k)+1] = -temp;
-                        }
-                        else if (j == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                    for (int i = 0; i < 3; ++i)
-                    {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        for (int k = 0; k < 3; ++k)
-                        {
-                        if (k == 0)
-                        {
-                            double temp = fractions[4*(i*9+j*3+k)+0];
-                            fractions[4*(i*9+j*3+k)+0] = fractions[4*(i*9+j*3+2)+0];
-                            fractions[4*(i*9+j*3+2)+0] = temp;
-                            temp = fractions[4*(i*9+j*3+k)+1];
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+2)+1];
-                            fractions[4*(i*9+j*3+2)+1] = -temp;
-                        }
-                        else if (k == 1)
-                        {
-                            fractions[4*(i*9+j*3+k)+1] = -fractions[4*(i*9+j*3+k)+1];
-                        }
-                        }
-                    }
-                    }
-                }
-
-                std::ofstream output;
-                data_name = "fractions.txt";
-                output.open(data_name, std::ios_base::app);
-
-                for (int i = 0; i < result.sizes()[0]; ++i)
-                {
-                    output << fractions[i] << ",";
-                }
-                output << "\n";
                 srand((unsigned) time(NULL));
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {   
                     int r = rand() % 3 - 1;
                     double x = fractions[i] + r*fractions[i]*0.01;
-                    if (i % 4 == 0 && x < 0)
+                    if (i % 7 == 0 && x < 0)
                     {
                         x = 0;
                     }
-                    else if (i % 4 == 0 && x > 1)
+                    else if (i % 7 == 0 && x > 1)
                     {
                         x = 1;
                     }
-                    else if (i % 4 != 0 && x > 0.5)
+                    else if (i % 7 != 0 && x > 0.5)
                     {
                         x = 0.5;
                     }
-                    else if (i % 4 != 0 && x < -0.5)
+                    else if (i % 7 != 0 && x < -0.5)
                     {
                         x = -0.5;
                     }
@@ -1050,19 +1241,19 @@ namespace IRL
                 {   
                     int r = rand() % 3 - 1;
                     double x = fractions[i] + r*fractions[i]*0.01;
-                    if (i % 4 == 0 && x < 0)
+                    if (i % 7 == 0 && x < 0)
                     {
                         x = 0;
                     }
-                    else if (i % 4 == 0 && x > 1)
+                    else if (i % 7 == 0 && x > 1)
                     {
                         x = 1;
                     }
-                    else if (i % 4 != 0 && x > 0.5)
+                    else if (i % 7 != 0 && x > 0.5)
                     {
                         x = 0.5;
                     }
-                    else if (i % 4 != 0 && x < -0.5)
+                    else if (i % 7 != 0 && x < -0.5)
                     {
                         x = -0.5;
                     }

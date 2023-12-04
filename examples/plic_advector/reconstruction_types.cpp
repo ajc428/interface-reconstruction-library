@@ -224,9 +224,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj < mesh.jmin() && kk < mesh.kmin())
                   {
@@ -234,9 +234,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && jj > mesh.jmax() && kk < mesh.kmin())
                   {
@@ -244,9 +244,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && jj < mesh.jmin() && kk > mesh.kmax())
                   {
@@ -254,9 +254,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj > mesh.jmax() && kk > mesh.kmax())
                   {
@@ -264,9 +264,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && jj < mesh.jmin() && kk < mesh.kmin())
                   {
@@ -274,9 +274,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj > mesh.jmax() && kk < mesh.kmin())
                   {
@@ -284,9 +284,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj < mesh.jmax() && kk > mesh.kmax())
                   {
@@ -294,9 +294,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
                   }
 
 
@@ -306,9 +306,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && kk > mesh.kmax())
                   {
@@ -316,9 +316,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (jj > mesh.jmax() && kk > mesh.kmax())
                   {
@@ -326,9 +326,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   
 
@@ -338,9 +338,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && kk < mesh.kmin())
                   {
@@ -348,9 +348,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (jj > mesh.jmax() && kk < mesh.kmin())
                   {
@@ -358,9 +358,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
 
 
@@ -370,9 +370,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && kk < mesh.kmin())
                   {
@@ -380,9 +380,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (jj < mesh.jmin() && kk < mesh.kmin())
                   {
@@ -390,9 +390,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
 
 
@@ -402,9 +402,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && kk > mesh.kmax())
                   {
@@ -412,9 +412,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (jj < mesh.jmin() && kk > mesh.kmax())
                   {
@@ -422,9 +422,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   
                   
@@ -434,9 +434,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (jj > mesh.jmax())
                   {
@@ -444,9 +444,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (kk > mesh.kmax())
                   {
@@ -454,9 +454,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii < mesh.imin())
                   {
@@ -464,9 +464,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (jj < mesh.jmin())
                   {
@@ -474,9 +474,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (kk < mesh.kmin())
                   {
@@ -484,9 +484,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
 
 
@@ -496,9 +496,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_liquid_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_liquid_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_liquid_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_gas_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_gas_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_gas_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_gas_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_gas_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_gas_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                 }
               }
@@ -515,9 +515,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj < mesh.jmin() && kk < mesh.kmin())
                   {
@@ -525,9 +525,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && jj > mesh.jmax() && kk < mesh.kmin())
                   {
@@ -535,9 +535,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && jj < mesh.jmin() && kk > mesh.kmax())
                   {
@@ -545,9 +545,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj > mesh.jmax() && kk > mesh.kmax())
                   {
@@ -555,9 +555,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && jj < mesh.jmin() && kk < mesh.kmin())
                   {
@@ -565,9 +565,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj > mesh.jmax() && kk < mesh.kmin())
                   {
@@ -575,9 +575,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && jj < mesh.jmax() && kk > mesh.kmax())
                   {
@@ -585,9 +585,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
                   }
 
 
@@ -597,9 +597,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && kk > mesh.kmax())
                   {
@@ -607,9 +607,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (jj > mesh.jmax() && kk > mesh.kmax())
                   {
@@ -617,9 +617,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   
 
@@ -629,9 +629,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii > mesh.imax() && kk < mesh.kmin())
                   {
@@ -639,9 +639,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (jj > mesh.jmax() && kk < mesh.kmin())
                   {
@@ -649,9 +649,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
 
 
@@ -661,9 +661,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && kk < mesh.kmin())
                   {
@@ -671,9 +671,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
                   else if (jj < mesh.jmin() && kk < mesh.kmin())
                   {
@@ -681,9 +681,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
 
 
@@ -693,9 +693,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (ii < mesh.imin() && kk > mesh.kmax())
                   {
@@ -703,9 +703,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (jj < mesh.jmin() && kk > mesh.kmax())
                   {
@@ -713,9 +713,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   
                   
@@ -725,9 +725,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (jj > mesh.jmax())
                   {
@@ -735,9 +735,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (kk > mesh.kmax())
                   {
@@ -745,9 +745,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
                   }
                   else if (ii < mesh.imin())
                   {
@@ -755,9 +755,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (jj < mesh.jmin())
                   {
@@ -765,9 +765,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                   else if (kk < mesh.kmin())
                   {
@@ -775,9 +775,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
                   }
 
 
@@ -787,9 +787,9 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                     fractions.push_back((a_gas_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
                     fractions.push_back((a_gas_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
                     fractions.push_back((a_gas_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
-                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
-                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
-                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    //fractions.push_back((a_liquid_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
                   }
                 }
               }
@@ -810,19 +810,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (i == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                      fractions[7*(2*9+j*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                      fractions[7*(2*9+j*3+k)+1] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                      fractions[7*(2*9+j*3+k)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                      fractions[7*(2*9+j*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                      fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                      fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                      fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                      fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
                       fractions[7*(2*9+j*3+k)+4] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -830,12 +830,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(2*9+j*3+k)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                      fractions[7*(2*9+j*3+k)+6] = temp;
+                      fractions[7*(2*9+j*3+k)+6] = temp;*/
                   }
                   else if (i == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                      //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
                   }
                   }
               }
@@ -852,19 +852,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (j == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                      fractions[7*(i*9+2*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                      fractions[7*(i*9+2*3+k)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                      fractions[7*(i*9+2*3+k)+2] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                      fractions[7*(i*9+2*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                      fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                      fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                      fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                      fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
                       fractions[7*(i*9+2*3+k)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -872,12 +872,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+2*3+k)+5] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                      fractions[7*(i*9+2*3+k)+6] = temp;
+                      fractions[7*(i*9+2*3+k)+6] = temp;*/
                   }
                   else if (j == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                      //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
                   }
                   }
               }
@@ -894,19 +894,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (k == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                      fractions[7*(i*9+j*3+2)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                      fractions[7*(i*9+j*3+2)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                      fractions[7*(i*9+j*3+2)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                      fractions[7*(i*9+j*3+2)+3] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                      fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                      fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                      fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                      fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
                       fractions[7*(i*9+j*3+2)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -914,12 +914,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+j*3+2)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                      fractions[7*(i*9+j*3+2)+6] = -temp;
+                      fractions[7*(i*9+j*3+2)+6] = -temp;*/
                   }
                   else if (k == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                      //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
                   }
                   }
               }
@@ -936,19 +936,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (i == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                      fractions[7*(2*9+j*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                      fractions[7*(2*9+j*3+k)+1] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                      fractions[7*(2*9+j*3+k)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                      fractions[7*(2*9+j*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                      fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                      fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                      fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                      fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
                       fractions[7*(2*9+j*3+k)+4] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -956,12 +956,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(2*9+j*3+k)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                      fractions[7*(2*9+j*3+k)+6] = temp;
+                      fractions[7*(2*9+j*3+k)+6] = temp;*/
                   }
                   else if (i == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                      //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
                   }
                   }
               }
@@ -974,19 +974,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (j == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                      fractions[7*(i*9+2*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                      fractions[7*(i*9+2*3+k)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                      fractions[7*(i*9+2*3+k)+2] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                      fractions[7*(i*9+2*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                      fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                      fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                      fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                      fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
                       fractions[7*(i*9+2*3+k)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -994,12 +994,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+2*3+k)+5] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                      fractions[7*(i*9+2*3+k)+6] = temp;
+                      fractions[7*(i*9+2*3+k)+6] = temp;*/
                   }
                   else if (j == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                      //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
                   }
                   }
               }
@@ -1016,19 +1016,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (i == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                      fractions[7*(2*9+j*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                      fractions[7*(2*9+j*3+k)+1] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                      fractions[7*(2*9+j*3+k)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                      fractions[7*(2*9+j*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                      fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                      fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                      fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                      fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
                       fractions[7*(2*9+j*3+k)+4] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -1036,12 +1036,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(2*9+j*3+k)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                      fractions[7*(2*9+j*3+k)+6] = temp;
+                      fractions[7*(2*9+j*3+k)+6] = temp;*/
                   }
                   else if (i == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                      //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
                   }
                   }
               }
@@ -1054,19 +1054,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (k == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                      fractions[7*(i*9+j*3+2)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                      fractions[7*(i*9+j*3+2)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                      fractions[7*(i*9+j*3+2)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                      fractions[7*(i*9+j*3+2)+3] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                      fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                      fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                      fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                      fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
                       fractions[7*(i*9+j*3+2)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -1074,12 +1074,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+j*3+2)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                      fractions[7*(i*9+j*3+2)+6] = -temp;
+                      fractions[7*(i*9+j*3+2)+6] = -temp;*/
                   }
                   else if (k == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                      //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
                   }
                   }
               }
@@ -1096,19 +1096,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (j == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                      fractions[7*(i*9+2*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                      fractions[7*(i*9+2*3+k)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                      fractions[7*(i*9+2*3+k)+2] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                      fractions[7*(i*9+2*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                      fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                      fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                      fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                      fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
                       fractions[7*(i*9+2*3+k)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -1116,12 +1116,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+2*3+k)+5] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                      fractions[7*(i*9+2*3+k)+6] = temp;
+                      fractions[7*(i*9+2*3+k)+6] = temp;*/
                   }
                   else if (j == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                      //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
                   }
                   }
               }
@@ -1134,19 +1134,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (k == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                      fractions[7*(i*9+j*3+2)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                      fractions[7*(i*9+j*3+2)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                      fractions[7*(i*9+j*3+2)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                      fractions[7*(i*9+j*3+2)+3] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                      fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                      fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                      fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                      fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
                       fractions[7*(i*9+j*3+2)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -1154,12 +1154,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+j*3+2)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                      fractions[7*(i*9+j*3+2)+6] = -temp;
+                      fractions[7*(i*9+j*3+2)+6] = -temp;*/
                   }
                   else if (k == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                      //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
                   }
                   }
               }
@@ -1176,19 +1176,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (i == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-                      fractions[7*(2*9+j*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-                      fractions[7*(2*9+j*3+k)+1] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-                      fractions[7*(2*9+j*3+k)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-                      fractions[7*(2*9+j*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+                      fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+                      fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+                      fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+                      fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
                       fractions[7*(2*9+j*3+k)+4] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -1196,12 +1196,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(2*9+j*3+k)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-                      fractions[7*(2*9+j*3+k)+6] = temp;
+                      fractions[7*(2*9+j*3+k)+6] = temp;*/
                   }
                   else if (i == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+                      //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
                   }
                   }
               }
@@ -1214,19 +1214,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (j == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-                      fractions[7*(i*9+2*3+k)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-                      fractions[7*(i*9+2*3+k)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-                      fractions[7*(i*9+2*3+k)+2] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-                      fractions[7*(i*9+2*3+k)+3] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+                      fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+                      fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+                      fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+                      fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
                       fractions[7*(i*9+2*3+k)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -1234,12 +1234,12 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+2*3+k)+5] = -temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-                      fractions[7*(i*9+2*3+k)+6] = temp;
+                      fractions[7*(i*9+2*3+k)+6] = temp;*/
                   }
                   else if (j == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+                      //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
                   }
                   }
               }
@@ -1252,19 +1252,19 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                   {
                   if (k == 0)
                   {
-                      double temp = fractions[7*(i*9+j*3+k)+0];
-                      fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-                      fractions[7*(i*9+j*3+2)+0] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+1];
-                      fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-                      fractions[7*(i*9+j*3+2)+1] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+2];
-                      fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-                      fractions[7*(i*9+j*3+2)+2] = temp;
-                      temp = fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-                      fractions[7*(i*9+j*3+2)+3] = -temp;
-                      temp = fractions[7*(i*9+j*3+k)+4];
+                      double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+                      fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+                      fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+                      fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+                      fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+                      fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+                      fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+                      temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+                      fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+                      /*temp = fractions[7*(i*9+j*3+k)+4];
                       fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
                       fractions[7*(i*9+j*3+2)+4] = temp;
                       temp = fractions[7*(i*9+j*3+k)+5];
@@ -1272,18 +1272,18 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
                       fractions[7*(i*9+j*3+2)+5] = temp;
                       temp = fractions[7*(i*9+j*3+k)+6];
                       fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-                      fractions[7*(i*9+j*3+2)+6] = -temp;
+                      fractions[7*(i*9+j*3+2)+6] = -temp;*/
                   }
                   else if (k == 1)
                   {
-                      fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-                      fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                      fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+                      //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
                   }
                   }
               }
               }
           }
-
+          
           n = t.get_normal(fractions);
 
           switch (direction)

@@ -133,9 +133,9 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
           fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
           fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+          //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+          //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+          //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
         }
         else
         {
@@ -143,9 +143,9 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
           fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
           fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+          //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+          //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+          //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
         }
       }
     }
@@ -164,19 +164,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (i == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-              fractions[7*(2*9+j*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-              fractions[7*(2*9+j*3+k)+1] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-              fractions[7*(2*9+j*3+k)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-              fractions[7*(2*9+j*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+              fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+              fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+              fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+              fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
               fractions[7*(2*9+j*3+k)+4] = -temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -184,12 +184,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(2*9+j*3+k)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-              fractions[7*(2*9+j*3+k)+6] = temp;
+              fractions[7*(2*9+j*3+k)+6] = temp;*/
           }
           else if (i == 1)
           {
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+              //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
           }
           }
       }
@@ -206,19 +206,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (j == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-              fractions[7*(i*9+2*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-              fractions[7*(i*9+2*3+k)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-              fractions[7*(i*9+2*3+k)+2] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-              fractions[7*(i*9+2*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+              fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+              fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+              fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+              fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
               fractions[7*(i*9+2*3+k)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -226,12 +226,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+2*3+k)+5] = -temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-              fractions[7*(i*9+2*3+k)+6] = temp;
+              fractions[7*(i*9+2*3+k)+6] = temp;*/
           }
           else if (j == 1)
           {
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+              //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
           }
           }
       }
@@ -248,19 +248,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (k == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-              fractions[7*(i*9+j*3+2)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-              fractions[7*(i*9+j*3+2)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-              fractions[7*(i*9+j*3+2)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-              fractions[7*(i*9+j*3+2)+3] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+              fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+              fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+              fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+              fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
               fractions[7*(i*9+j*3+2)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -268,12 +268,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+j*3+2)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-              fractions[7*(i*9+j*3+2)+6] = -temp;
+              fractions[7*(i*9+j*3+2)+6] = -temp;*/
           }
           else if (k == 1)
           {
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+              //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
           }
           }
       }
@@ -290,19 +290,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (i == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-              fractions[7*(2*9+j*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-              fractions[7*(2*9+j*3+k)+1] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-              fractions[7*(2*9+j*3+k)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-              fractions[7*(2*9+j*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+              fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+              fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+              fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+              fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
               fractions[7*(2*9+j*3+k)+4] = -temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -310,12 +310,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(2*9+j*3+k)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-              fractions[7*(2*9+j*3+k)+6] = temp;
+              fractions[7*(2*9+j*3+k)+6] = temp;*/
           }
           else if (i == 1)
           {
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+              //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
           }
           }
       }
@@ -328,19 +328,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (j == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-              fractions[7*(i*9+2*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-              fractions[7*(i*9+2*3+k)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-              fractions[7*(i*9+2*3+k)+2] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-              fractions[7*(i*9+2*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+              fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+              fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+              fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+              fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
               fractions[7*(i*9+2*3+k)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -348,12 +348,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+2*3+k)+5] = -temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-              fractions[7*(i*9+2*3+k)+6] = temp;
+              fractions[7*(i*9+2*3+k)+6] = temp;*/
           }
           else if (j == 1)
           {
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+              //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
           }
           }
       }
@@ -370,19 +370,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (i == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-              fractions[7*(2*9+j*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-              fractions[7*(2*9+j*3+k)+1] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-              fractions[7*(2*9+j*3+k)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-              fractions[7*(2*9+j*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+              fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+              fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+              fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+              fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
               fractions[7*(2*9+j*3+k)+4] = -temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -390,12 +390,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(2*9+j*3+k)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-              fractions[7*(2*9+j*3+k)+6] = temp;
+              fractions[7*(2*9+j*3+k)+6] = temp;*/
           }
           else if (i == 1)
           {
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+              //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
           }
           }
       }
@@ -408,19 +408,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (k == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-              fractions[7*(i*9+j*3+2)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-              fractions[7*(i*9+j*3+2)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-              fractions[7*(i*9+j*3+2)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-              fractions[7*(i*9+j*3+2)+3] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+              fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+              fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+              fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+              fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
               fractions[7*(i*9+j*3+2)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -428,12 +428,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+j*3+2)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-              fractions[7*(i*9+j*3+2)+6] = -temp;
+              fractions[7*(i*9+j*3+2)+6] = -temp;*/
           }
           else if (k == 1)
           {
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+              //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
           }
           }
       }
@@ -450,19 +450,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (j == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-              fractions[7*(i*9+2*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-              fractions[7*(i*9+2*3+k)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-              fractions[7*(i*9+2*3+k)+2] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-              fractions[7*(i*9+2*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+              fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+              fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+              fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+              fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
               fractions[7*(i*9+2*3+k)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -470,12 +470,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+2*3+k)+5] = -temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-              fractions[7*(i*9+2*3+k)+6] = temp;
+              fractions[7*(i*9+2*3+k)+6] = temp;*/
           }
           else if (j == 1)
           {
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+              //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
           }
           }
       }
@@ -488,19 +488,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (k == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-              fractions[7*(i*9+j*3+2)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-              fractions[7*(i*9+j*3+2)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-              fractions[7*(i*9+j*3+2)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-              fractions[7*(i*9+j*3+2)+3] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+              fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+              fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+              fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+              fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
               fractions[7*(i*9+j*3+2)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -508,12 +508,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+j*3+2)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-              fractions[7*(i*9+j*3+2)+6] = -temp;
+              fractions[7*(i*9+j*3+2)+6] = -temp;*/
           }
           else if (k == 1)
           {
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+              //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
           }
           }
       }
@@ -530,19 +530,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (i == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
-              fractions[7*(2*9+j*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
-              fractions[7*(2*9+j*3+k)+1] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
-              fractions[7*(2*9+j*3+k)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
-              fractions[7*(2*9+j*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(2*9+j*3+k)+0];
+              fractions[/*7*/4*(2*9+j*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(2*9+j*3+k)+1];
+              fractions[/*7*/4*(2*9+j*3+k)+1] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(2*9+j*3+k)+2];
+              fractions[/*7*/4*(2*9+j*3+k)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(2*9+j*3+k)+3];
+              fractions[/*7*/4*(2*9+j*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
               fractions[7*(2*9+j*3+k)+4] = -temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -550,12 +550,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(2*9+j*3+k)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
-              fractions[7*(2*9+j*3+k)+6] = temp;
+              fractions[7*(2*9+j*3+k)+6] = temp;*/
           }
           else if (i == 1)
           {
-              fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = -fractions[/*7*/4*(i*9+j*3+k)+1];
+              //fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
           }
           }
       }
@@ -568,19 +568,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (j == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
-              fractions[7*(i*9+2*3+k)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
-              fractions[7*(i*9+2*3+k)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
-              fractions[7*(i*9+2*3+k)+2] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
-              fractions[7*(i*9+2*3+k)+3] = temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+2*3+k)+0];
+              fractions[/*7*/4*(i*9+2*3+k)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+2*3+k)+1];
+              fractions[/*7*/4*(i*9+2*3+k)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+2*3+k)+2];
+              fractions[/*7*/4*(i*9+2*3+k)+2] = -temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = fractions[/*7*/4*(i*9+2*3+k)+3];
+              fractions[/*7*/4*(i*9+2*3+k)+3] = temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
               fractions[7*(i*9+2*3+k)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -588,12 +588,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+2*3+k)+5] = -temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
-              fractions[7*(i*9+2*3+k)+6] = temp;
+              fractions[7*(i*9+2*3+k)+6] = temp;*/
           }
           else if (j == 1)
           {
-              fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = -fractions[/*7*/4*(i*9+j*3+k)+2];
+              //fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
           }
           }
       }
@@ -606,19 +606,19 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
           {
           if (k == 0)
           {
-              double temp = fractions[7*(i*9+j*3+k)+0];
-              fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
-              fractions[7*(i*9+j*3+2)+0] = temp;
-              temp = fractions[7*(i*9+j*3+k)+1];
-              fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
-              fractions[7*(i*9+j*3+2)+1] = temp;
-              temp = fractions[7*(i*9+j*3+k)+2];
-              fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
-              fractions[7*(i*9+j*3+2)+2] = temp;
-              temp = fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
-              fractions[7*(i*9+j*3+2)+3] = -temp;
-              temp = fractions[7*(i*9+j*3+k)+4];
+              double temp = fractions[/*7*/4*(i*9+j*3+k)+0];
+              fractions[/*7*/4*(i*9+j*3+k)+0] = fractions[/*7*/4*(i*9+j*3+2)+0];
+              fractions[/*7*/4*(i*9+j*3+2)+0] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+1];
+              fractions[/*7*/4*(i*9+j*3+k)+1] = fractions[/*7*/4*(i*9+j*3+2)+1];
+              fractions[/*7*/4*(i*9+j*3+2)+1] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+2];
+              fractions[/*7*/4*(i*9+j*3+k)+2] = fractions[/*7*/4*(i*9+j*3+2)+2];
+              fractions[/*7*/4*(i*9+j*3+2)+2] = temp;
+              temp = fractions[/*7*/4*(i*9+j*3+k)+3];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+2)+3];
+              fractions[/*7*/4*(i*9+j*3+2)+3] = -temp;
+              /*temp = fractions[7*(i*9+j*3+k)+4];
               fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
               fractions[7*(i*9+j*3+2)+4] = temp;
               temp = fractions[7*(i*9+j*3+k)+5];
@@ -626,12 +626,12 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
               fractions[7*(i*9+j*3+2)+5] = temp;
               temp = fractions[7*(i*9+j*3+k)+6];
               fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
-              fractions[7*(i*9+j*3+2)+6] = -temp;
+              fractions[7*(i*9+j*3+2)+6] = -temp;*/
           }
           else if (k == 1)
           {
-              fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
-              fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+              fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
+              //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
           }
           }
       }
