@@ -708,9 +708,9 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
 
 void loadML(std::string name/*, std::string name1*/, std::string name2)
 {
-  t.load_model(name, 1);
+  t.load_model(name, 0);
   //t2.load_model(name1, 1);
-  b.load_model(name2, 1);
+  b.load_model(name2, 0);
 }
 
 template <class CellType>

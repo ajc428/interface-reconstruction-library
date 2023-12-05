@@ -63,7 +63,6 @@ namespace IRL
         string test_out_file;
 
         shared_ptr<IRL::model> nn;
-        shared_ptr<IRL::model> nnn;
         shared_ptr<IRL::binary_model> nn_binary;
         torch::nn::MSELoss critereon_MSE;
         torch::nn::CrossEntropyLoss critereon_BCE;
@@ -77,17 +76,10 @@ namespace IRL
         void load_train_data(string, string);
         void load_test_data(string, string);
         void load_model(string, int);
-        void set_train_data(vector<vector<double>>, vector<vector<double>>);
-        void set_test_data(vector<vector<double>>, vector<vector<double>>);
         void train_model(bool, string, string);
         void test_model(int);
         IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
-        IRL::Paraboloid use_model2(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
         IRL::Normal get_normal(vector<double>/*const DataMesh<double>, const DataMesh<IRL::Pt>*/);
-        double get_normal_loss(vector<double>/*const DataMesh<double>, const DataMesh<IRL::Pt>*/);
-        int getNumberOfInterfaces(const DataMesh<double>, const DataMesh<IRL::Pt>);
-
-        IRL::ReferenceFrame getFrame(int);
     };
 }
 
