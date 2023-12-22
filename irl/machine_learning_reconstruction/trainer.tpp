@@ -50,8 +50,8 @@ namespace IRL
 
     trainer::trainer(int e, int d, double l, int s)
     {
-        rank = MPI::COMM_WORLD.Get_rank();
-        numranks = MPI::COMM_WORLD.Get_size();                      
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &numranks);                    
         epochs = e;
         data_size = d;
         batch_size = data_size / numranks;
@@ -93,6 +93,13 @@ namespace IRL
         train_out_file = out_file;
     }
 
+    void trainer::load_validation_data(string in_file, string out_file, int x)
+    {
+        validation_in_file = in_file;
+        validation_out_file = out_file;
+        data_val_size = x;
+    }
+
     void trainer::load_test_data(string in_file, string out_file)
     {
         test_in_file = in_file;
@@ -111,6 +118,12 @@ namespace IRL
         auto data_sampler = torch::data::samplers::DistributedRandomSampler(data_train.size().value(), numranks, rank, false);
         auto data_loader_train = torch::data::make_data_loader(std::move(data_train), data_sampler, batch_size);
 
+        auto data_val = MyDataset(validation_in_file, validation_out_file, data_val_size, m).map(torch::data::transforms::Stack<>());
+        val_batch_size = data_val.size().value() / numranks;
+        double val_size = data_val.size().value() / numranks;
+        auto data_sampler_val = torch::data::samplers::DistributedRandomSampler(data_val.size().value(), numranks, rank, false);
+        auto data_loader_val = torch::data::make_data_loader(std::move(data_val), data_sampler_val, val_size);
+
         if (load)
         {
             if (m == 3)
@@ -122,9 +135,13 @@ namespace IRL
                 torch::load(nn, in);
             }
         }
+        double epoch_loss_val_check = 0;
         for (int epoch = 0; epoch < epochs; ++epoch)
         {
             double epoch_loss = 0;
+            double epoch_loss_val = 0;
+            double total_epoch_loss = 0;
+            double total_epoch_loss_val = 0;
             int count = 0;
             for (auto& batch : *data_loader_train)
             {
@@ -211,7 +228,7 @@ namespace IRL
                 else
                 {
                     loss = critereon_MSE(check, comp);
-                    epoch_loss = epoch_loss + loss.item().toDouble();
+                    epoch_loss = epoch_loss + loss.item().toDouble()*batch.data.size(0);
                 }
 
                 optimizer->zero_grad();
@@ -233,36 +250,124 @@ namespace IRL
                         {
                             MPI_Allreduce(MPI_IN_PLACE, param.value().grad().data_ptr(), param.value().grad().numel(), mpiDatatype.at(param.value().grad().scalar_type()), MPI_SUM, MPI_COMM_WORLD);
                             param.value().grad().data() = param.value().grad().data()/numranks;
+                            
                         } 
+                        MPI_Allreduce(&epoch_loss, &total_epoch_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                     }
                 }
 
                 optimizer->step();
             }
+            for (auto& batch : *data_loader_val)
+            {
+                val_in = batch.data;
+                val_out = batch.target;
+                torch::Tensor y_pred = torch::zeros({val_batch_size, 8});
+                if (m == 3)
+                {
+                    y_pred = torch::zeros({val_batch_size, 3});
+                    y_pred = nn_binary->forward(val_in);
+                }
+                else
+                {
+                    y_pred = nn->forward(val_in);
+                }
+
+                torch::Tensor check = torch::zeros({val_batch_size, 8});
+                torch::Tensor comp = torch::zeros({val_batch_size, 8});
+                if (m == 1)
+                {
+                    check = torch::zeros({val_batch_size, nn->getSize()});
+                    comp = torch::zeros({val_batch_size, nn->getSize()});
+                    for (int i = 0; i < val_batch_size; ++i)
+                    {
+                        check[i] = functions->VolumeFracsForward(y_pred[i]);
+                    }
+                    comp = val_in;
+                }
+                else if (m == 2)
+                {
+                    check = torch::zeros({val_batch_size, nn->getSize()});
+                    comp = torch::zeros({val_batch_size, nn->getSize()});
+                    for (int i = 0; i < val_batch_size; ++i)
+                    {
+                        check[i] = functions->VolumeFracsForwardFD(y_pred[i]);
+                    }
+                    comp = val_in;
+                }
+                else if (m == 3)
+                {
+                    check = torch::zeros({val_batch_size, 2});
+                    comp = torch::zeros({val_batch_size, 2});
+                    check = y_pred;
+                    comp = val_out;
+                }
+                else
+                {
+                    check = torch::zeros({val_batch_size, nn->getOutput()});
+                    comp = torch::zeros({val_batch_size, nn->getOutput()});
+                    check = y_pred;
+                    comp = val_out;
+                }
+
+                torch::Tensor loss = torch::zeros({val_batch_size, 1});
+                if (m == 3)
+                {
+                    loss = critereon_BCE(check, comp);
+                }
+                else
+                {
+                    loss = critereon_MSE(check, comp);
+                    epoch_loss_val = epoch_loss_val + loss.item().toDouble()*batch.data.size(0);
+                }
+
+                if (numranks > 1)
+                {
+                    MPI_Allreduce(&epoch_loss_val, &total_epoch_loss_val, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                }
+            }
             if (rank == 0)
             {
                 if (m == 3)
                 {
-                    cout << epoch << " " << count << "/" << batch_size << endl;
+                    cout << epoch << " " << count << "/" << val_batch_size << endl;
                 }
                 else
                 {
-                    cout << epoch << " " << epoch_loss << endl;
+                    total_epoch_loss = total_epoch_loss / data_size;
+                    total_epoch_loss_val = total_epoch_loss_val / data_val_size;
+                    cout << epoch << " " << total_epoch_loss << " " << total_epoch_loss_val << endl;
                 }
                 std::cout.flush();
             }
+            if (epoch % 1000 == 0)
+            {
+                if (total_epoch_loss_val < epoch_loss_val_check || epoch == 0)
+                {
+                    epoch_loss_val_check = total_epoch_loss_val;
+                    MPI_Bcast(&epoch_loss_val_check, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                }
+                else
+                {
+                    epoch = epochs;
+                    MPI_Bcast(&epoch, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                }
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
-        if (m == 3)
+        if (rank == 0)
         {
-            torch::save(nn_binary, out);
+            if (m == 3)
+            {
+                torch::save(nn_binary, out);
 
+            }
+            else
+            {
+                torch::save(nn, out);
+            }
         }
-        else
-        {
-            torch::save(nn, out);
-        }
-
-        MPI::Finalize(); 
+        MPI_Finalize(); 
     }
 
     void trainer::test_model(int n)

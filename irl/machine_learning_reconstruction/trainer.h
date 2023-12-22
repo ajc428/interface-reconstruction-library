@@ -41,10 +41,12 @@ namespace IRL
     private:
         int epochs = 100;
         int data_size = 100;
+        int data_val_size = 100;
         double learning_rate = 0.001;
         int rank = 0;
         int numranks = 1;
         int batch_size = data_size / numranks;
+        int val_batch_size = data_val_size / numranks;
         int m = 0;
 
         ofstream results_ex;
@@ -54,6 +56,8 @@ namespace IRL
         torch::Tensor train_in;
         torch::Tensor train_in_rot;
         torch::Tensor train_out;
+        torch::Tensor val_in;
+        torch::Tensor val_out;
         torch::Tensor test_in;
         torch::Tensor test_in_rot;
         torch::Tensor test_out;
@@ -61,6 +65,8 @@ namespace IRL
         string train_out_file;
         string test_in_file;
         string test_out_file;
+        string validation_in_file;
+        string validation_out_file;
 
         shared_ptr<IRL::model> nn;
         shared_ptr<IRL::binary_model> nn_binary;
@@ -74,6 +80,7 @@ namespace IRL
         trainer(int, int, double, int);
         ~trainer();
         void load_train_data(string, string);
+        void load_validation_data(string, string, int);
         void load_test_data(string, string);
         void load_model(string, int);
         void train_model(bool, string, string);

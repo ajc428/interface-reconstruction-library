@@ -54,7 +54,7 @@ namespace IRL
         IRL::Paraboloid new_parabaloid(double, double, double, IRL::ReferenceFrame, double, double);
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_random_parabaloid_not_center(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
-        IRL::Paraboloid new_interface_parabaloid(double, double, double, double, IRL::Paraboloid);
+        IRL::Paraboloid new_interface_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
         IRL::Paraboloid new_interface_parabaloid_in_cell(double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
         torch::Tensor get_fractions_gas(IRL::Paraboloid, bool);
