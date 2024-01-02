@@ -1573,7 +1573,7 @@ namespace IRL
                 }
                 }
             }
-            fractions1 = &fractions;
+            *fractions1 = fractions;
             return direction;
         };
 

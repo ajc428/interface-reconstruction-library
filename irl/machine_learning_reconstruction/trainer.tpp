@@ -143,6 +143,7 @@ namespace IRL
             double total_epoch_loss = 0;
             double total_epoch_loss_val = 0;
             int count = 0;
+            nn->train();
             for (auto& batch : *data_loader_train)
             {
                 train_in = batch.data;
@@ -258,6 +259,7 @@ namespace IRL
 
                 optimizer->step();
             }
+            nn->eval();
             for (auto& batch : *data_loader_val)
             {
                 val_in = batch.data;
@@ -326,6 +328,8 @@ namespace IRL
                     MPI_Allreduce(&epoch_loss_val, &total_epoch_loss_val, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 }
             }
+            total_epoch_loss = total_epoch_loss / data_size;
+            total_epoch_loss_val = total_epoch_loss_val / data_val_size;
             if (rank == 0)
             {
                 if (m == 3)
@@ -334,8 +338,6 @@ namespace IRL
                 }
                 else
                 {
-                    total_epoch_loss = total_epoch_loss / data_size;
-                    total_epoch_loss_val = total_epoch_loss_val / data_val_size;
                     cout << epoch << " " << total_epoch_loss << " " << total_epoch_loss_val << endl;
                 }
                 std::cout.flush();
@@ -347,12 +349,13 @@ namespace IRL
                     epoch_loss_val_check = total_epoch_loss_val;
                     MPI_Bcast(&epoch_loss_val_check, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 }
-                else
+                else if (epoch < epochs-1)
                 {
                     epoch = epochs;
                     MPI_Bcast(&epoch, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 }
             }
+            
             MPI_Barrier(MPI_COMM_WORLD);
         }
         if (rank == 0)
