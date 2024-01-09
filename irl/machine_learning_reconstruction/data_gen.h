@@ -368,34 +368,53 @@ namespace IRL
                     result = gen->get_fractions_gas(paraboloid, true);
                     result1 = gen->get_fractions_gas(interface, true);
                 }
+
                 std::vector<double> fractions;
+
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
-                    fractions.push_back(result[i].item<double>());
+                    if (!flip)
+                    {
+                        if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        {
+                            option = true;
+                        }
+                        else if (i%4 == 0)
+                        {
+                            option = false;
+                        }
+                        if (option)
+                        {
+                            fractions.push_back(result1[i].item<double>());
+                        }
+                        else
+                        {
+                            fractions.push_back(result[i].item<double>());
+                        }
+                    }
+                    else
+                    {
+                        if (i%4 == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                        {
+                            option = true;
+                        }
+                        else if (i%4 == 0)
+                        {
+                            option = false;
+                        }
+                        if (option)
+                        {
+                            fractions.push_back(result1[i].item<double>());
+                        }
+                        else
+                        {
+                            fractions.push_back(result[i].item<double>());
+                        }
+                    }
                 }
 
                 auto sm = IRL::spatial_moments();
                 std::vector<double> center = sm.get_mass_centers(fractions);
-
-                for (int i = 0; i < result.sizes()[0]; ++i)
-                {
-                    if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
-                    {
-                        option = true;
-                    }
-                    else if (i%4 == 0)
-                    {
-                        option = false;
-                    }
-                    if (option)
-                    {
-                        fractions.push_back(result1[i].item<double>());
-                    }
-                    else
-                    {
-                        fractions.push_back(result[i].item<double>());
-                    }
-                }
 
                 int direction = 0;
                 direction = rotateFractions(&fractions,center);
@@ -544,33 +563,51 @@ namespace IRL
                     result1 = gen->get_fractions_gas(interface, true);
                 }
                 std::vector<double> fractions;
+
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
-                    fractions.push_back(result[i].item<double>());
+                    if (!flip)
+                    {
+                        if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        {
+                            option = true;
+                        }
+                        else if (i%4 == 0)
+                        {
+                            option = false;
+                        }
+                        if (option)
+                        {
+                            fractions.push_back(result1[i].item<double>());
+                        }
+                        else
+                        {
+                            fractions.push_back(result[i].item<double>());
+                        }
+                    }
+                    else
+                    {
+                        if (i%4 == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                        {
+                            option = true;
+                        }
+                        else if (i%4 == 0)
+                        {
+                            option = false;
+                        }
+                        if (option)
+                        {
+                            fractions.push_back(result1[i].item<double>());
+                        }
+                        else
+                        {
+                            fractions.push_back(result[i].item<double>());
+                        }
+                    }
                 }
 
                 auto sm = IRL::spatial_moments();
                 std::vector<double> center = sm.get_mass_centers(fractions);
-
-                for (int i = 0; i < result.sizes()[0]; ++i)
-                {
-                    if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
-                    {
-                        option = true;
-                    }
-                    else if (i%4 == 0)
-                    {
-                        option = false;
-                    }
-                    if (option)
-                    {
-                        fractions.push_back(result1[i].item<double>());
-                    }
-                    else
-                    {
-                        fractions.push_back(result[i].item<double>());
-                    }
-                }
 
                 int direction = 0;
                 direction = rotateFractions(&fractions,center);
@@ -694,7 +731,7 @@ namespace IRL
             {
                 std::cout << n << endl;
                 IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-                IRL::Paraboloid interface = gen->new_interface_parabaloid_in_cell(coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, paraboloid);
+                IRL::Paraboloid interface = gen->new_interface_parabaloid_in_cell(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, paraboloid);
                 angles = gen->getAngles();
 
                 std::ofstream coefficients;
@@ -710,16 +747,6 @@ namespace IRL
                 curvatures.open(curv_name, std::ios_base::app);
                 curvatures << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
-
-                std::ofstream normals;
-                std::string normals_name = "normals.txt";
-                normals.open(normals_name, std::ios_base::app);
-                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
-                auto surface = surface_and_moments.getSurface();
-                auto normal = surface.getAverageNormalNonAligned();
-                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
-                normals.close();
 
                 std::ofstream classification;
                 std::string data_name = "type.txt";
@@ -745,53 +772,176 @@ namespace IRL
                 inter.close();
 
                 auto result = gen->get_fractions(paraboloid, true);
-                auto result1 = gen->get_fractions_gas(interface, true);
+                
+                auto result1 = gen->get_fractions(interface, true);
+
+                bool flip = false;
+                if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() + result[((result1.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                {
+                    flip = true;
+                    result = gen->get_fractions_gas(paraboloid, true);
+                    result1 = gen->get_fractions_gas(interface, true);
+                }
+
+                std::vector<double> fractions;
+                int option;
+                int count = 0;
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    if (!flip)
+                    {
+                        if (i%4 == 0 && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        {
+                            double v = result[i].item<double>() + result1[i].item<double>();
+                            fractions.push_back(v);
+                            option = 2;
+                            count = 0;
+                        }
+                        else if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        {
+                            option = 0;
+                        }
+                        else if (i%4 == 0)
+                        {
+                            option = 1;
+                        }
+                        if (option == 0)
+                        {
+                            fractions.push_back(result1[i].item<double>());
+                        }
+                        else if (option == 1)
+                        {
+                            fractions.push_back(result[i].item<double>());
+                        }
+                        else if (option == 2 && i%4 != 0)
+                        {
+                            ++count;
+                            double x = result[i-count].item<double>();
+                            double y = result1[i-count].item<double>();
+                            double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
+                            //std::cout << x << " " << result[i].item<double>() << " " << y << " " << result1[i].item<double>() << " " << c << std::endl;
+                            fractions.push_back(c);
+                        }
+                    }
+                    else
+                    {
+                        if (i%4 == 0 && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        {
+                            double v = result[i].item<double>() + result1[i].item<double>();
+                            fractions.push_back(v);
+                            option = 2;
+                            count = 0;
+                        }
+                        else if (i%4 == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                        {
+                            option = 0;
+                        }
+                        else if (i%4 == 0)
+                        {
+                            option = 1;
+                        }
+                        if (option == 0)
+                        {
+                            fractions.push_back(result1[i].item<double>());
+                        }
+                        else if (option == 1)
+                        {
+                            fractions.push_back(result[i].item<double>());
+                        }
+                        else if (option == 2 && i%4 != 0)
+                        {
+                            ++count;
+                            double x = result[i-count].item<double>();
+                            double y = result1[i-count].item<double>();
+                            double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
+                            //std::cout << x << " " << result[i].item<double>() << " " << y << " " << result1[i].item<double>() << " " << c << std::endl;
+                            fractions.push_back(c);
+                        }
+                    }
+                }
+
+                auto sm = IRL::spatial_moments();
+                std::vector<double> center = sm.get_mass_centers(fractions);
+
+                int direction = 0;
+                direction = rotateFractions(&fractions,center);
+
                 std::ofstream output;
                 data_name = "fractions.txt";
                 output.open(data_name, std::ios_base::app);
-                int option;
-                int count = 0;
 
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
-                    if (i%4 == 0 && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() > IRL::global_constants::VF_LOW)
-                    {
-                        double v = result[i].item<double>() + result1[i].item<double>();
-                        output << v << ",";
-                        result[i] = v;
-                        option = 2;
-                        count = 0;
-                    }
-                    else if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
-                    {
-                        option = 0;
-                    }
-                    else if (i%4 == 0)
-                    {
-                        option = 1;
-                    }
-                    if (option == 0)
-                    {
-                        output << result1[i].item<double>() << ",";
-                        result[i] = result1[i];
-                    }
-                    else if (option == 1)
-                    {
-                        output << result[i].item<double>() << ",";
-                    }
-                    else if (option == 2 && i%4 != 0)
-                    {
-                        ++count;
-                        double x = result[i-count].item<double>() - result1[i-count].item<double>();
-                        double y = result1[i-count].item<double>();
-                        double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
-                        //std::cout << x << " " << result[i].item<double>() << " " << y << " " << result1[i].item<double>() << " " << c << std::endl;
-                        output << c << ",";
-                        result[i] = c;
-                    }
+                    output << fractions[i] << ",";
                 }
                 output << "\n";
-                output.close();      
+                output.close();  
+
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+                auto surface_and_moments2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, interface);
+                auto surface2 = surface_and_moments2.getSurface();
+                auto normal2 = surface2.getAverageNormalNonAligned();
+
+                switch (direction)
+                {
+                    case 1:
+                    normal[0] = -normal[0];
+                    normal2[0] = -normal2[0];
+                    break;
+                    case 2:
+                    normal[1] = -normal[1];
+                    normal2[1] = -normal2[1];
+                    break;
+                    case 3:
+                    normal[2] = -normal[2];
+                    normal2[2] = -normal2[2];
+                    break;
+                    case 4:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal2[0] = -normal2[0];
+                    normal2[1] = -normal2[1];
+                    break;
+                    case 5:
+                    normal[0] = -normal[0];
+                    normal[2] = -normal[2];
+                    normal2[0] = -normal2[0];
+                    normal2[2] = -normal2[2];
+                    break;
+                    case 6:
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    normal2[1] = -normal2[1];
+                    normal2[2] = -normal2[2];
+                    break;
+                    case 7:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    normal2[0] = -normal2[0];
+                    normal2[1] = -normal2[1];
+                    normal2[2] = -normal2[2];
+                    break;
+                }
+                if (!flip)
+                {
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    normal2[0] = -normal2[0];
+                    normal2[1] = -normal2[1];
+                    normal2[2] = -normal2[2];
+                }
+
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal2[0] << "," << normal2[1] << "," << normal2[2] << "\n";
+                normals.close();    
 
                 /*for (int i = 0; i < 3; ++i)
                 {
@@ -816,7 +966,7 @@ namespace IRL
                             triangulated_surface2.write(name2);
                         }
                     }
-                }   */    
+                }*/      
             }       
         };
 
@@ -826,7 +976,7 @@ namespace IRL
             {
                 std::cout << n << endl;
                 IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-                IRL::Paraboloid interface = gen->new_interface_parabaloid_in_cell(coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, paraboloid);
+                IRL::Paraboloid interface = gen->new_interface_parabaloid_in_cell(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, paraboloid);
                 angles = gen->getAngles();
 
                 std::ofstream coefficients;

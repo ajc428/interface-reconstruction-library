@@ -10,6 +10,7 @@
 #ifndef IRL_MACHINE_LEARNING_RECONSTRUCTION_FRACTIONS_H_
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_FRACTIONS_H_
 
+#include <math.h>
 #include <torch/torch.h>
 #include <Eigen/Dense>
 
@@ -46,7 +47,7 @@ namespace IRL
         Mesh initializeMesh(const int); 
         bool isParaboloidInCenterCell(const IRL::Paraboloid&, const DataMesh<double>&);
         bool areParaboloidsInSameCell(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
-        bool doParaboloidsIntersect(IRL::Paraboloid&, IRL::Paraboloid&);
+        bool doParaboloidsIntersect(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
     public:
         fractions(const int);
 
@@ -55,7 +56,7 @@ namespace IRL
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_random_parabaloid_not_center(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_interface_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
-        IRL::Paraboloid new_interface_parabaloid_in_cell(double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
+        IRL::Paraboloid new_interface_parabaloid_in_cell(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
         torch::Tensor get_fractions_gas(IRL::Paraboloid, bool);
         torch::Tensor get_fractions(IRL::Plane, bool);

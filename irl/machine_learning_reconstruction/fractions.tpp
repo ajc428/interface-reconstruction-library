@@ -160,18 +160,32 @@ namespace IRL
         return p;
     }
 
-    IRL::Paraboloid fractions::new_interface_parabaloid_in_cell(double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, IRL::Paraboloid para)
+    IRL::Paraboloid fractions::new_interface_parabaloid_in_cell(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, IRL::Paraboloid para)
     {
         std::random_device rd;  
         std::mt19937_64 a_eng(rd());
         DataMesh<double> liquid_volume_fraction(mesh);
         IRL::Pt datum;
-        IRL::ReferenceFrame frame = para.getReferenceFrame();
+        IRL::ReferenceFrame frame;
+        double z_offset;
         double alpha;
         double beta;
         int attempt = 0;
-        std::uniform_real_distribution<double> random_coeffsa(-coa_h, -coa_l);
-        std::uniform_real_distribution<double> random_coeffsb(-cob_h, -cob_l);
+        std::uniform_real_distribution<double> random_rotationa(rota_l, rota_h);
+        std::uniform_real_distribution<double> random_rotationb(rotb_l, rotb_h);
+        std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
+        std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
+        std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
+        if (para.getAlignedParaboloid().a() < 0 && para.getAlignedParaboloid().b() < 0)
+        {
+            std::uniform_real_distribution<double> random_coeffsa(coa_l, 0);
+            std::uniform_real_distribution<double> random_coeffsb(cob_l, 0);
+        }
+        else
+        {
+            std::uniform_real_distribution<double> random_coeffsa(0, coa_h);
+            std::uniform_real_distribution<double> random_coeffsb(0, cob_h);  
+        }
         std::uniform_real_distribution<double> random_translationx(ox_l, ox_h);
         std::uniform_real_distribution<double> random_translationy(oy_l, oy_h);
         std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
@@ -181,10 +195,16 @@ namespace IRL
         {
             alpha = random_coeffsa(a_eng);
             beta = random_coeffsb(a_eng);
+            frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
             datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
+            std::array<double, 3> angles2 = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
 
+            IRL::UnitQuaternion x_rotation(angles2[0], frame[0]);
+            IRL::UnitQuaternion y_rotation(angles2[1], frame[1]);
+            IRL::UnitQuaternion z_rotation(angles2[2], frame[2]);
+            frame = x_rotation * y_rotation * z_rotation * frame;
             p = IRL::Paraboloid(datum, frame, alpha, beta);
-        } while (doParaboloidsIntersect(p, para));
+        } while (!(isParaboloidInCenterCell(p, liquid_volume_fraction)) || doParaboloidsIntersect(p, para, liquid_volume_fraction));
 
         return p;
     }
@@ -553,24 +573,149 @@ namespace IRL
         return intersect;
     }
 
-    bool fractions::doParaboloidsIntersect(IRL::Paraboloid& p1, IRL::Paraboloid& p2)
+    bool fractions::doParaboloidsIntersect(IRL::Paraboloid& p1, IRL::Paraboloid& p2, const DataMesh<double>& a_liquid_volume_fraction)
     {
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
         bool result = false;
-        double a1 = p1.getReferenceFrame()[2][0];
-        double b1 = p1.getReferenceFrame()[2][1];
-        double c1 = p1.getReferenceFrame()[2][2];
+
+        /*double a1 = p1.getAlignedParaboloid().a();
+        double b1 = p1.getAlignedParaboloid().b();
+        double a2 = p2.getAlignedParaboloid().a();
+        double b2 = p2.getAlignedParaboloid().b();
+
+        double r11 = p1.getReferenceFrame()[2][0];
+        double r21 = p1.getReferenceFrame()[2][1];
+        double r31 = p1.getReferenceFrame()[2][2];
         double x1 = p1.getDatum()[0];
         double y1 = p1.getDatum()[1];
         double z1 = p1.getDatum()[2];
 
-        double a2 = p2.getReferenceFrame()[2][0];
-        double b2 = p2.getReferenceFrame()[2][1];
-        double c2 = p2.getReferenceFrame()[2][2];
+        double r12 = p2.getReferenceFrame()[2][0];
+        double r22 = p2.getReferenceFrame()[2][1];
+        double r32 = p2.getReferenceFrame()[2][2];
         double x2 = p2.getDatum()[0];
         double y2 = p2.getDatum()[1];
-        double z2 = p2.getDatum()[2];
+        double z2 = p2.getDatum()[2];*/
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    auto cell = IRL::RectangularCuboid::fromBoundingPts(
+                        IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+                        IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+                    const auto first_moments_and_surface1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, p1);
+                    const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, p2);
+                    auto surface1 = first_moments_and_surface1.getSurface();
+                    auto surface2 = first_moments_and_surface2.getSurface();
+                    const double length_scale = 0.05;
+                    IRL::TriangulatedSurfaceOutput triangulated_surface1 = first_moments_and_surface1.getSurface().triangulate(length_scale);
+                    IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
+                    auto l1 = triangulated_surface1.getVertexList();
+                    auto l2 = triangulated_surface2.getVertexList();
+                    for (int n = 0; n < l1.size(); ++n)
+                    {
+                        for (int m = 0; m < l2.size(); ++m)
+                        {
+                            if (abs(l1[n][0] - l2[m][0]) < 0.01 && abs(l1[n][1] - l2[m][1]) < 0.01 && abs(l1[n][2] - l2[m][2]) < 0.01)
+                            {
+                                result = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (result)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        /*Eigen::MatrixXd A1(l1.size(),8);
+        Eigen::VectorXd b1(l1.size());
+        Eigen::MatrixXd A2(l2.size(),8);
+        Eigen::VectorXd b2(l2.size());
+        for (int n = 0; n < 10; ++n)
+        {
+            if (n < l1.size())
+            {
+                A1(n,0) = l1[n][0]*l1[n][0];
+                A1(n,1) = l1[n][1]*l1[n][1];
+                A1(n,2) = l1[n][0]*l1[n][1];
+                A1(n,3) = l1[n][1]*l1[n][2];
+                A1(n,4) = l1[n][0]*l1[n][2];
+                A1(n,5) = l1[n][0];
+                A1(n,6) = l1[n][1];
+                A1(n,7) = 1;
+                b1(n) = l1[n][2];
+            }
+            if (n < l2.size())
+            {
+                A2(n,0) = l2[n][0]*l2[n][0];
+                A2(n,1) = l2[n][1]*l2[n][1];
+                A2(n,2) = l2[n][0]*l2[n][1];
+                A2(n,3) = l2[n][1]*l2[n][2];
+                A2(n,4) = l2[n][0]*l2[n][2];
+                A2(n,5) = l2[n][0];
+                A2(n,6) = l2[n][1];
+                A2(n,7) = 1;
+                b2(n) = l2[n][2]; 
+            }
+        }
+        auto sol1 = A1.householderQr().solve(b1);
+        auto sol2 = A2.householderQr().solve(b2);
+        std::cout << sol1[0] << std::endl;
+        std::cout << sol1[1] << std::endl;
+        std::cout << sol1[2] << std::endl;
+        std::cout << sol1[3] << std::endl;
+        std::cout << sol1[4] << std::endl;
+        std::cout << sol1[5] << std::endl;
+        std::cout << sol1[6] << std::endl;
+        std::cout << sol1[7] << std::endl;
+        std::cout << sol2[0] << std::endl;
+        std::cout << sol2[1] << std::endl;
+        std::cout << sol2[2] << std::endl;
+        std::cout << sol2[3] << std::endl;
+        std::cout << sol2[4] << std::endl;
+        std::cout << sol2[5] << std::endl;
+        std::cout << sol2[6] << std::endl;
+        std::cout << sol2[7] << std::endl;
+        double a = sol1[0] - sol2[0];
+        double b = sol1[1] - sol2[1];
+        double c = sol1[2] - sol2[2];
+        double d = sol1[3] - sol2[3];
+        double e = sol1[4] - sol2[4];
+        double f = sol1[5] - sol2[5];
+        double g = sol1[6] - sol2[6];
+        double h = sol1[7] - sol2[7];
+        for (double y = -1.5; y <= 1.5; y=y+0.001)
+        {
+            for (double z = -1.5; z <= 1.5; z=z+0.001)
+            {
+                if (pow((c*y+e*z+f),2.0)-4*a*(b*y*y+d*y*z+g*y+h) < 0)
+                {
+                    result = true;
+                    break;
+                }
+            }
+        }
+        if (!result)
+        {
+            for (double x = -1.5; x <= 1.5; x=x+0.001)
+            {
+                for (double z = -1.5; z <= 1.5; z=z+0.001)
+                {
+                    if (pow((c*x+d*z+g),2.0)-4*b*(a*z*z+e*x*z+f*x+h) < 0)
+                    {
+                        result = true;
+                        break;
+                    }
+                }
+            }    
+        }*/
 
-        if (a1 > 0 && x2 > x1)
+        /*if (a1 > 0 && x2 > x1)
         {
             result = true;
         }
@@ -593,7 +738,7 @@ namespace IRL
         else if (c1 < 0 && z2 < z1)
         {
             result = true;
-        }
+        }*/
 
         return result;
     }

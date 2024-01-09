@@ -328,6 +328,11 @@ namespace IRL
                     MPI_Allreduce(&epoch_loss_val, &total_epoch_loss_val, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 }
             }
+            if (numranks == 1)
+            {
+                total_epoch_loss = epoch_loss;
+                total_epoch_loss_val = epoch_loss_val;
+            }
             total_epoch_loss = total_epoch_loss / data_size;
             total_epoch_loss_val = total_epoch_loss_val / data_val_size;
             if (rank == 0)
