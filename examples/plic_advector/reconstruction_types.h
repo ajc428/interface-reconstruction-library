@@ -18,6 +18,7 @@
 #include "examples/plic_advector/data.h"
 
 void load();
+void load2();
 
 void getReconstruction(
     const std::string& a_reconstruction_method,
@@ -28,6 +29,14 @@ void getReconstruction(
     const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface);
 
 struct ML_PLIC {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::PlanarSeparator>* a_interface);
+};
+
+struct ML_PLIC2 {
   static void getReconstruction(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
                                 const double a_dt, const Data<double>& a_U,
                                 const Data<double>& a_V,

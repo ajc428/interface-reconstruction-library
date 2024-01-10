@@ -28,8 +28,9 @@
 namespace IRL {
 
 IRL::trainer t = IRL::trainer(4);
-IRL::trainer t2 = IRL::trainer(4);
-IRL::trainer b = IRL::trainer(6);
+IRL::trainer t2 = IRL::trainer(5);
+//IRL::trainer t2 = IRL::trainer(4);
+//IRL::trainer b = IRL::trainer(6);
 /*IRL::trainer_cuda tc = IRL::trainer_cuda(4);
 IRL::trainer_cuda tc2 = IRL::trainer_cuda(4);
 IRL::trainer_cuda bc = IRL::trainer_cuda(6);*/
@@ -78,7 +79,13 @@ template <class CellType>
 inline PlanarSeparator reconstructionWithML(
     /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
 
-void loadML(std::string name/*, std::string name1*/, std::string name2);
+/// \brief Perform ML Reconstruction for 3D.
+template <class CellType>
+inline PlanarSeparator reconstructionWithML2(
+    /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
+
+void loadML(std::string name/*, std::string name1, std::string name2*/);
+void loadML2(std::string name/*, std::string name1, std::string name2*/);
 
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>

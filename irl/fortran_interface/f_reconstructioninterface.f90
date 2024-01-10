@@ -155,15 +155,39 @@ module f_ReconstructionInterface
   end interface
 
   interface
-  subroutine F_loadML(file, file2) &
-  bind(C, name="c_loadML")
-    use, intrinsic :: iso_c_binding
-    import
-    implicit none
-    character(kind=c_char) :: file(*)
-    character(kind=c_char) :: file2(*)
-  end subroutine F_loadML
-end interface
+    subroutine F_reconstructML2(a_LVIRANeigh, a_liquid_centroids, a_gas_centroids, a_planar_separator, flag) &
+    bind(C, name="c_reconstructML2")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      integer(C_INT), dimension(0:0), intent(in) :: flag
+      !type(c_ELVIRANeigh) :: a_ELVIRANeigh
+      type(c_LVIRANeigh_RectCub) :: a_LVIRANeigh ! Pointer to a ELVIRANeigh object
+      real(C_DOUBLE), dimension(0:2,0:26), intent(in) :: a_liquid_centroids
+      real(C_DOUBLE), dimension(0:2,0:26), intent(in) :: a_gas_centroids
+      type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
+    end subroutine F_reconstructML2
+  end interface
+
+  interface
+    subroutine F_loadML(file) &
+    bind(C, name="c_loadML")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      character(kind=c_char) :: file(*)
+    end subroutine F_loadML
+  end interface
+
+  interface
+    subroutine F_loadML2(file) &
+    bind(C, name="c_loadML2")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      character(kind=c_char) :: file(*)
+    end subroutine F_loadML2
+  end interface
 
   interface
     subroutine F_reconstructMOF2D_RectCub(a_rectangular_cuboid, a_separated_volume_moments, a_planar_separator) &
@@ -489,14 +513,34 @@ end interface
 
   end subroutine reconstructML
 
-  subroutine loadML(name, name2)
+  subroutine reconstructML2(a_lvira, a_centroids, a_g_centroids, a_separator, flag)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      integer(c_int), dimension(0:0), intent(in) :: flag
+      !type(ELVIRANeigh_type), intent(in) :: a_neighborhood
+      type(LVIRANeigh_RectCub_type), intent(in) :: a_lvira
+      real(IRL_double), dimension(0:2,0:26), intent(in) :: a_centroids
+      real(IRL_double), dimension(0:2,0:26), intent(in) :: a_g_centroids
+      type(PlanarSep_type), intent(inout) :: a_separator
+      call F_reconstructML2(a_lvira%c_object, a_centroids, a_g_centroids, a_separator%c_object, flag)
+
+  end subroutine reconstructML2
+
+  subroutine loadML(name)
     use, intrinsic :: iso_c_binding
     implicit none
       character(kind=c_char), intent(in) :: name(*)
-      character(kind=c_char), intent(in) :: name2(*)
-      call F_loadML(name, name2)
+      call F_loadML(name)
 
   end subroutine loadML
+
+  subroutine loadML2(name)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      character(kind=c_char), intent(in) :: name(*)
+      call F_loadML2(name)
+
+  end subroutine loadML2
 
   subroutine reconstructMOF2D_RectCub(a_rectangular_cuboid, a_separated_volume_moments, a_planar_separator)
     use, intrinsic :: iso_c_binding

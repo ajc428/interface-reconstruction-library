@@ -59,6 +59,8 @@ namespace IRL
         IRL::Paraboloid new_interface_parabaloid_in_cell(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
         torch::Tensor get_fractions_gas(IRL::Paraboloid, bool);
+        torch::Tensor get_fractions_all(IRL::Paraboloid);
+        torch::Tensor get_fractions_gas_all(IRL::Paraboloid);
         torch::Tensor get_fractions(IRL::Plane, bool);
         torch::Tensor get_fractions_with_gradients(IRL::Paraboloid, bool);
         torch::Tensor get_gradients(int);

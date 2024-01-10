@@ -39,6 +39,13 @@ namespace IRL
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
         }
+        else if (m == 5)
+        {
+            nn = make_shared<model>(189,3,3);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(4, m);
+        }
         else
         {
             nn = make_shared<model>(108,8,2);
@@ -68,6 +75,13 @@ namespace IRL
         else if (m == 4)
         {
             nn = make_shared<model>(108,3,3);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(4, m);
+        }
+        else if (m == 5)
+        {
+            nn = make_shared<model>(189,3,3);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);

@@ -41,7 +41,7 @@ namespace IRL
             delete sm;
         };
 
-        void generate(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        void generate(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
         {
             for (int n = 0; n < Ntests; ++n) 
             {
@@ -80,13 +80,27 @@ namespace IRL
                 }
                 classification.close();
 
-                auto result = gen->get_fractions(paraboloid, true);
+                torch::Tensor result;
                 bool flip = false;
-                if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                if (!all)
                 {
-                    flip = true;
-                    result = gen->get_fractions_gas(paraboloid, true);
+                    result = gen->get_fractions(paraboloid, true);
+                    if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas(paraboloid, true);
+                    }
                 }
+                else
+                {
+                    result = gen->get_fractions_all(paraboloid);
+                    if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas_all(paraboloid);
+                    }                    
+                }
+
                 std::vector<double> fractions;
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
@@ -94,10 +108,19 @@ namespace IRL
                 }
                 
 
-                auto sm = IRL::spatial_moments();
-                std::vector<double> center = sm.get_mass_centers(fractions);
                 int direction = 0;
-                direction = rotateFractions(&fractions,center);
+                std::vector<double> center;
+                auto sm = IRL::spatial_moments();
+                if (!all)
+                {
+                    center = sm.get_mass_centers(fractions);
+                    direction = rotateFractions(&fractions,center);
+                }
+                else
+                {
+                    center = sm.get_mass_centers_all(fractions);
+                    direction = rotateFractions_all(&fractions,center);
+                }
                 
                 std::ofstream output;
                 data_name = "fractions.txt";
@@ -159,7 +182,7 @@ namespace IRL
             }  
         }; 
 
-        void generate_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        void generate_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
         {
             srand((unsigned) time(NULL));
             for (int n = 0; n < Ntests; ++n) 
@@ -205,29 +228,58 @@ namespace IRL
                 inter << "1,0" << " \n";
                 inter.close();
 
-                auto result = gen->get_fractions(paraboloid, true);
+                torch::Tensor result;
                 bool flip = false;
-                if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                if (!all)
                 {
-                    flip = true;
-                    result = gen->get_fractions_gas(paraboloid, true);
+                    result = gen->get_fractions(paraboloid, true);
+                    if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas(paraboloid, true);
+                    }
                 }
+                else
+                {
+                    result = gen->get_fractions_all(paraboloid);
+                    if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas_all(paraboloid);
+                    }                    
+                }
+
                 std::vector<double> fractions;
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
                     fractions.push_back(result[i].item<double>());
                 }
                 
-                auto sm = IRL::spatial_moments();
-                std::vector<double> center = sm.get_mass_centers(fractions);
+
                 int direction = 0;
-                direction = rotateFractions(&fractions,center);
+                std::vector<double> center;
+                auto sm = IRL::spatial_moments();
+                if (!all)
+                {
+                    center = sm.get_mass_centers(fractions);
+                    direction = rotateFractions(&fractions,center);
+                }
+                else
+                {
+                    center = sm.get_mass_centers_all(fractions);
+                    direction = rotateFractions_all(&fractions,center);
+                }
 
                 std::ofstream output;
                 data_name = "fractions.txt";
                 output.open(data_name, std::ios_base::app);
 
                 int p = rand() % 8;
+                int mod = 4;
+                if (all)
+                {
+                    mod = 7;
+                }
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
                     if (p == 0)
@@ -238,7 +290,7 @@ namespace IRL
                     {
                         //int r = rand() % 3 - 1;
                         double c = (rand() % 401 - 200) / 1000.0;
-                        if (i % 4 != 0)
+                        if (i % mod != 0)
                         {
                             if (fractions[i] + fractions[i]*c > 0.5)
                             {
@@ -311,7 +363,7 @@ namespace IRL
             }           
         };
 
-        void generate_two_paraboloids(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        void generate_two_paraboloids(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
         {
             for (int n = 0; n < Ntests; ++n) 
             {
@@ -357,29 +409,48 @@ namespace IRL
                 inter << "0,1" << " \n";
                 inter.close();
 
-                auto result = gen->get_fractions(paraboloid, true);
-                auto result1 = gen->get_fractions(interface, true);
-                bool option;
-
+                torch::Tensor result;
+                torch::Tensor result1;
                 bool flip = false;
-                if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                bool option;
+                if (!all)
                 {
-                    flip = true;
-                    result = gen->get_fractions_gas(paraboloid, true);
-                    result1 = gen->get_fractions_gas(interface, true);
+                    result = gen->get_fractions(paraboloid, true);
+                    result1 = gen->get_fractions(interface, true);
+                    if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas(paraboloid, true);
+                        result1 = gen->get_fractions_gas(interface, true);
+                    }
+                }
+                else
+                {
+                    result = gen->get_fractions_all(paraboloid);
+                    result1 = gen->get_fractions_all(interface);
+                    if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas_all(paraboloid);
+                        result1 = gen->get_fractions_gas_all(interface);
+                    }                    
                 }
 
                 std::vector<double> fractions;
-
+                int mod = 4;
+                if (all)
+                {
+                    mod = 7;
+                }
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
                     if (!flip)
                     {
-                        if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        if (i%mod == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
                         {
                             option = true;
                         }
-                        else if (i%4 == 0)
+                        else if (i%mod == 0)
                         {
                             option = false;
                         }
@@ -394,11 +465,11 @@ namespace IRL
                     }
                     else
                     {
-                        if (i%4 == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                        if (i%mod == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
                         {
                             option = true;
                         }
-                        else if (i%4 == 0)
+                        else if (i%mod == 0)
                         {
                             option = false;
                         }
@@ -413,11 +484,19 @@ namespace IRL
                     }
                 }
 
-                auto sm = IRL::spatial_moments();
-                std::vector<double> center = sm.get_mass_centers(fractions);
-
                 int direction = 0;
-                direction = rotateFractions(&fractions,center);
+                std::vector<double> center;
+                auto sm = IRL::spatial_moments();
+                if (!all)
+                {
+                    center = sm.get_mass_centers(fractions);
+                    direction = rotateFractions(&fractions,center);
+                }
+                else
+                {
+                    center = sm.get_mass_centers_all(fractions);
+                    direction = rotateFractions_all(&fractions,center);
+                }
 
                 std::ofstream output;
                 data_name = "fractions.txt";
@@ -504,7 +583,7 @@ namespace IRL
             }       
         };
 
-        void generate_two_paraboloids_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
+        void generate_two_paraboloids_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
         {
             srand((unsigned) time(NULL));
             for (int n = 0; n < Ntests; ++n) 
@@ -551,28 +630,48 @@ namespace IRL
                 inter << "0,1" << " \n";
                 inter.close();
 
-                auto result = gen->get_fractions(paraboloid, true);
-                auto result1 = gen->get_fractions(interface, true);
-                bool option;
-
+                torch::Tensor result;
+                torch::Tensor result1;
                 bool flip = false;
-                if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                bool option;
+                if (!all)
                 {
-                    flip = true;
-                    result = gen->get_fractions_gas(paraboloid, true);
-                    result1 = gen->get_fractions_gas(interface, true);
+                    result = gen->get_fractions(paraboloid, true);
+                    result1 = gen->get_fractions(interface, true);
+                    if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas(paraboloid, true);
+                        result1 = gen->get_fractions_gas(interface, true);
+                    }
                 }
-                std::vector<double> fractions;
+                else
+                {
+                    result = gen->get_fractions_all(paraboloid);
+                    result1 = gen->get_fractions_all(interface);
+                    if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas_all(paraboloid);
+                        result1 = gen->get_fractions_gas_all(interface);
+                    }                    
+                }
 
+                std::vector<double> fractions;
+                int mod = 4;
+                if (all)
+                {
+                    mod = 7;
+                }
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
                     if (!flip)
                     {
-                        if (i%4 == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        if (i%mod == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
                         {
                             option = true;
                         }
-                        else if (i%4 == 0)
+                        else if (i%mod == 0)
                         {
                             option = false;
                         }
@@ -587,11 +686,11 @@ namespace IRL
                     }
                     else
                     {
-                        if (i%4 == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                        if (i%mod == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
                         {
                             option = true;
                         }
-                        else if (i%4 == 0)
+                        else if (i%mod == 0)
                         {
                             option = false;
                         }
@@ -606,11 +705,19 @@ namespace IRL
                     }
                 }
 
-                auto sm = IRL::spatial_moments();
-                std::vector<double> center = sm.get_mass_centers(fractions);
-
                 int direction = 0;
-                direction = rotateFractions(&fractions,center);
+                std::vector<double> center;
+                auto sm = IRL::spatial_moments();
+                if (!all)
+                {
+                    center = sm.get_mass_centers(fractions);
+                    direction = rotateFractions(&fractions,center);
+                }
+                else
+                {
+                    center = sm.get_mass_centers_all(fractions);
+                    direction = rotateFractions_all(&fractions,center);
+                }
 
                 std::ofstream output;
                 data_name = "fractions.txt";
@@ -1718,6 +1825,498 @@ namespace IRL
                     {
                         fractions[/*7*/4*(i*9+j*3+k)+3] = -fractions[/*7*/4*(i*9+j*3+k)+3];
                         //fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            *fractions1 = fractions;
+            return direction;
+        };
+
+        int rotateFractions_all(std::vector<double>* fractions1, std::vector<double> center)
+        {
+            std::vector<double> fractions = *fractions1;
+            int direction = 0;
+            if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
+            {
+                direction = 1;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 2;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 3;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 4;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 5;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 6;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 7;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
                     }
                     }
                 }

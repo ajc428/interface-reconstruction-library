@@ -255,6 +255,49 @@ namespace IRL
         return torch::tensor(f);  
     }
 
+    torch::Tensor fractions::get_fractions_all(IRL::Paraboloid p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    auto& volume = volumes.volume();      
+                    auto& centroid = volumes.centroid();  
+                    auto& volume_gas = volumes_gas.volume();      
+                    auto& centroid_gas = volumes_gas.centroid();   
+                   
+                    f.push_back(volume);
+                    if (volume < 10e-15 || volume > 1-10e-15)
+                    {
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                    }
+                    else
+                    {
+                        f.push_back(centroid[0] - mesh.xm(i));
+                        f.push_back(centroid[1] - mesh.ym(j));
+                        f.push_back(centroid[2] - mesh.zm(k));   
+                        f.push_back(centroid_gas[0] - mesh.xm(i));
+                        f.push_back(centroid_gas[1] - mesh.ym(j));
+                        f.push_back(centroid_gas[2] - mesh.zm(k));    
+                    }
+                }
+            }
+        }
+        return torch::tensor(f);  
+    }
+
     torch::Tensor fractions::get_fractions_gas(IRL::Paraboloid p, bool centroids)
     {
         DataMesh<double> liquid_volume_fraction(mesh);
@@ -294,6 +337,49 @@ namespace IRL
                             //f.push_back(centroid[1] - mesh.ym(j));
                             //f.push_back(centroid[2] - mesh.zm(k));   
                         }
+                    }
+                }
+            }
+        }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_fractions_gas_all(IRL::Paraboloid p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    auto& volume = volumes.volume();      
+                    auto& centroid = volumes.centroid();  
+                    auto& volume_gas = volumes_gas.volume();      
+                    auto& centroid_gas = volumes_gas.centroid();   
+                   
+                    f.push_back(volume_gas);
+                    if (volume_gas < 10e-15 || volume_gas > 1-10e-15)
+                    {
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                    }
+                    else
+                    {
+                        f.push_back(centroid_gas[0] - mesh.xm(i));
+                        f.push_back(centroid_gas[1] - mesh.ym(j));
+                        f.push_back(centroid_gas[2] - mesh.zm(k));    
+                        f.push_back(centroid[0] - mesh.xm(i));
+                        f.push_back(centroid[1] - mesh.ym(j));
+                        f.push_back(centroid[2] - mesh.zm(k));   
                     }
                 }
             }
