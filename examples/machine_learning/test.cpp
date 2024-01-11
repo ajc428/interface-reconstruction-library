@@ -37,11 +37,11 @@ void create_surface(string name, double x, double y, double z, double alpha, dou
 void data_generate(int num, double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
 {
     IRL::data_gen gen(3,num);
-    //gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+    //gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_with_disturbance2(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-    gen.generate_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-    //gen.generate_two_paraboloids(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-    //gen.generate_two_paraboloids_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+    gen.generate_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
+    //gen.generate_two_paraboloids(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
+    //gen.generate_two_paraboloids_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_two_paraboloids_in_cell(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
     //gen.generate_noise(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h);
     //gen.generate_paraboloid_with_plane(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     //create_surface("test_surface2_", 0, 0, 0, M_PI/2, M_PI/2, 0, 1, 1);
     //create_surface("test_surface",-0.320446,-0.496939,0.262045,2.33306,3.61892,6.03591,0.27547,0.245008);
     
-    data_generate(100000,0,2*M_PI,0,2*M_PI,0,2*M_PI,-2,2,-2,2,-0.5,0.5,-0.5,0.5,-0.5,0.5);
+    data_generate(400000,0,2*M_PI,0,2*M_PI,0,2*M_PI,-5,5,-5,5,-0.5,0.5,-0.5,0.5,-0.5,0.5);
 
     /*auto t = IRL::trainer(10000, 10000, 0.0001, 4);
     t.load_train_data("fractions.txt", "normals.txt");

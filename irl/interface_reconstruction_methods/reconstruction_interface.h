@@ -23,6 +23,7 @@
 #include "irl/interface_reconstruction_methods/reconstruction_cleaning.h"
 #include "irl/planar_reconstruction/planar_separator.h"
 #include "irl/machine_learning_reconstruction/trainer.h"
+#include "irl/machine_learning_reconstruction/data_gen.h"
 //#include "irl/machine_learning_reconstruction/trainer_cuda.h"
 
 namespace IRL {

@@ -446,13 +446,20 @@ namespace IRL
                 {
                     if (!flip)
                     {
-                        if (i%mod == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        if (i%mod == 0)
                         {
-                            option = true;
-                        }
-                        else if (i%mod == 0)
-                        {
-                            option = false;
+                            if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = true;
+                            }
+                            else if (result[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = false;
+                            }
+                            else if (result1[i].item<double>() >= IRL::global_constants::VF_HIGH)
+                            {
+                                option = true;
+                            }
                         }
                         if (option)
                         {
@@ -465,13 +472,20 @@ namespace IRL
                     }
                     else
                     {
-                        if (i%mod == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                        if (i%mod == 0)
                         {
-                            option = true;
-                        }
-                        else if (i%mod == 0)
-                        {
-                            option = false;
+                            if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = true;
+                            }
+                            else if (result[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = false;
+                            }
+                            else if (result1[i].item<double>() <= IRL::global_constants::VF_LOW)
+                            {
+                                option = true;
+                            }
                         }
                         if (option)
                         {
@@ -579,7 +593,7 @@ namespace IRL
                             triangulated_surface2.write(name2);
                         }
                     }
-                }*/              
+                }*/         
             }       
         };
 
@@ -667,13 +681,20 @@ namespace IRL
                 {
                     if (!flip)
                     {
-                        if (i%mod == 0 && result1[i].item<double>() > IRL::global_constants::VF_LOW)
+                        if (i%mod == 0)
                         {
-                            option = true;
-                        }
-                        else if (i%mod == 0)
-                        {
-                            option = false;
+                            if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = true;
+                            }
+                            else if (result[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = false;
+                            }
+                            else if (result1[i].item<double>() >= IRL::global_constants::VF_HIGH)
+                            {
+                                option = true;
+                            }
                         }
                         if (option)
                         {
@@ -686,13 +707,20 @@ namespace IRL
                     }
                     else
                     {
-                        if (i%mod == 0 && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                        if (i%mod == 0)
                         {
-                            option = true;
-                        }
-                        else if (i%mod == 0)
-                        {
-                            option = false;
+                            if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = true;
+                            }
+                            else if (result[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            {
+                                option = false;
+                            }
+                            else if (result1[i].item<double>() <= IRL::global_constants::VF_LOW)
+                            {
+                                option = true;
+                            }
                         }
                         if (option)
                         {
@@ -734,7 +762,7 @@ namespace IRL
                     {
                         //int r = rand() % 3 - 1;
                         double c = (rand() % 401 - 200) / 1000.0;
-                        if (i % 4 != 0)
+                        if (i % mod != 0)
                         {
                             if (fractions[i] + fractions[i]*c > 0.5)
                             {

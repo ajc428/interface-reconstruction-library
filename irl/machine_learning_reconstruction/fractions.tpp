@@ -132,11 +132,11 @@ namespace IRL
         double alpha;
         double beta;
         int attempt = 0;
-        std::uniform_real_distribution<double> random_rotationa(rota_l, rota_h);
-        std::uniform_real_distribution<double> random_rotationb(rotb_l, rotb_h);
-        std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
-        std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
-        std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
+        //std::uniform_real_distribution<double> random_rotationa(rota_l, rota_h);
+        //std::uniform_real_distribution<double> random_rotationb(rotb_l, rotb_h);
+        //std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
+        //std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
+        //std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
         std::uniform_real_distribution<double> random_translationx(-1.5, 1.5);
         std::uniform_real_distribution<double> random_translationy(-1.5, 1.5);
         std::uniform_real_distribution<double> random_translationz(-1.5, 1.5);
@@ -144,16 +144,16 @@ namespace IRL
 
         do
         {
-            alpha = random_coeffsa(a_eng);
-            beta = random_coeffsb(a_eng);
-            frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
+            alpha = -para.getAlignedParaboloid().a();//random_coeffsa(a_eng);
+            beta = -para.getAlignedParaboloid().b();//random_coeffsb(a_eng);
+            frame = para.getReferenceFrame();// IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
             datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
-            std::array<double, 3> angles2 = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
+            //std::array<double, 3> angles2 = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
 
-            IRL::UnitQuaternion x_rotation(angles2[0], frame[0]);
-            IRL::UnitQuaternion y_rotation(angles2[1], frame[1]);
-            IRL::UnitQuaternion z_rotation(angles2[2], frame[2]);
-            frame = x_rotation * y_rotation * z_rotation * frame;
+            //IRL::UnitQuaternion x_rotation(angles2[0], frame[0]);
+            //IRL::UnitQuaternion y_rotation(angles2[1], frame[1]);
+            //IRL::UnitQuaternion z_rotation(angles2[2], frame[2]);
+            //frame = x_rotation * y_rotation * z_rotation * frame;
             p = IRL::Paraboloid(datum, frame, alpha, beta);
         } while ((isParaboloidInCenterCell(p, liquid_volume_fraction)) || areParaboloidsInSameCell(p, para, liquid_volume_fraction));
 
