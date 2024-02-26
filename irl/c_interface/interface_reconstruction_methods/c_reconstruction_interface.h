@@ -46,11 +46,13 @@ void c_reconstructELVIRA2D(const c_ELVIRANeigh* a_elvira_neighborhood,
 void c_reconstructELVIRA3D(const c_ELVIRANeigh* a_elvira_neighborhood,
                            c_PlanarSep* a_separator);
 
-void c_reconstructML(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const c_R2PNeigh_RectCub* a_r2p_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
+void c_reconstructML3(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const c_R2PNeigh_RectCub* a_r2p_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
                            c_PlanarSep* a_separator, int* flag);
 
 void c_reconstructML2(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
                            c_PlanarSep* a_separator, int* flag);
+
+void c_reconstructML(const double* normal, const double* vf_center, const double* cell_bound, c_PlanarSep* a_separator); 
 
 void c_loadML(const char* name/*, const char* name1, const char* name2*/);
 void c_loadML2(const char* name/*, const char* name1, const char* name2*/);

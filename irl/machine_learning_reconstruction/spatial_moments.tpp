@@ -245,7 +245,7 @@ namespace IRL
         return centers;
     }
 
-    vector<double> spatial_moments::get_mass_centers_all(vector<double> fractions)
+    vector<double> spatial_moments::get_mass_centers_all(vector<double>* fractions)
     {
         m000 = 0;
         m100 = 0;
@@ -257,10 +257,10 @@ namespace IRL
             {
                 for(int k = 0; k < 3; ++k)
                 {
-                    m000 = m000 + fractions[7*(i*9+j*3+k)+0];
-                    m100 = m100 + (fractions[7*(i*9+j*3+k)+1]+(i-1))*fractions[7*(i*9+j*3+k)+0];
-                    m010 = m010 + (fractions[7*(i*9+j*3+k)+2]+(j-1))*fractions[7*(i*9+j*3+k)+0];
-                    m001 = m001 + (fractions[7*(i*9+j*3+k)+3]+(k-1))*fractions[7*(i*9+j*3+k)+0];
+                    m000 = m000 + fractions[0][7*(i*9+j*3+k)+0];
+                    m100 = m100 + (fractions[0][7*(i*9+j*3+k)+1]+(i-1))*fractions[0][7*(i*9+j*3+k)+0];
+                    m010 = m010 + (fractions[0][7*(i*9+j*3+k)+2]+(j-1))*fractions[0][7*(i*9+j*3+k)+0];
+                    m001 = m001 + (fractions[0][7*(i*9+j*3+k)+3]+(k-1))*fractions[0][7*(i*9+j*3+k)+0];
                 }
             }
         }

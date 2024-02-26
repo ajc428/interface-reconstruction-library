@@ -580,7 +580,7 @@ namespace IRL
         }
     }
 
-    IRL::Normal trainer::get_normal(vector<double> fractions/*const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid*/)
+    IRL::Normal trainer::get_normal(vector<double>* fractions/*const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid*/)
     {
         //vector<double> fractions;
         /*for (int i = 0; i < 3; ++i)
@@ -596,7 +596,7 @@ namespace IRL
                 }
             }
         }*/
-        auto y_pred = nn->forward(torch::tensor(fractions));
+        auto y_pred = nn->forward(torch::tensor(*fractions));
         auto n = IRL::Normal();
         n[0] = y_pred[0].item<double>();
         n[1] = y_pred[1].item<double>();

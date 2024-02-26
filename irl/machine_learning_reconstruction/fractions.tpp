@@ -20,6 +20,8 @@ namespace IRL
         mesh = initializeMesh(a_number_of_cells);
         IRL::setVolumeFractionBounds(1.0e-14);
         std::cout.precision(15);
+        distribution1 = std::normal_distribution<double>(0.0,0.3);
+        distribution2 = std::normal_distribution<double>(0.0,0.3);
     }
 
     IRL::Paraboloid fractions::new_parabaloid(double x, double y, double z, double a, double b, double c, double alpha, double beta)
@@ -69,8 +71,8 @@ namespace IRL
 
         do
         {
-            alpha = random_coeffsa(a_eng);
-            beta = random_coeffsb(a_eng);
+            alpha = /*distribution1(generator);//*/random_coeffsa(a_eng);
+            beta = /*distribution2(generator);//*/random_coeffsb(a_eng);
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
             datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
             angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};

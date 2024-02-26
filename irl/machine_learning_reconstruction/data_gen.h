@@ -118,7 +118,7 @@ namespace IRL
                 }
                 else
                 {
-                    center = sm.get_mass_centers_all(fractions);
+                    center = sm.get_mass_centers_all(&fractions);
                     direction = rotateFractions_all(&fractions,center);
                 }
                 
@@ -266,7 +266,7 @@ namespace IRL
                 }
                 else
                 {
-                    center = sm.get_mass_centers_all(fractions);
+                    center = sm.get_mass_centers_all(&fractions);
                     direction = rotateFractions_all(&fractions,center);
                 }
 
@@ -508,7 +508,7 @@ namespace IRL
                 }
                 else
                 {
-                    center = sm.get_mass_centers_all(fractions);
+                    center = sm.get_mass_centers_all(&fractions);
                     direction = rotateFractions_all(&fractions,center);
                 }
 
@@ -743,7 +743,7 @@ namespace IRL
                 }
                 else
                 {
-                    center = sm.get_mass_centers_all(fractions);
+                    center = sm.get_mass_centers_all(&fractions);
                     direction = rotateFractions_all(&fractions,center);
                 }
 

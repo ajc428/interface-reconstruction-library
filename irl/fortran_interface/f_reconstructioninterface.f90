@@ -139,7 +139,7 @@ module f_ReconstructionInterface
   end interface
 
   interface
-    subroutine F_reconstructML(a_LVIRANeigh, a_r2p, a_liquid_centroids, a_gas_centroids, a_planar_separator, flag) &
+    subroutine F_reconstructML3(a_LVIRANeigh, a_r2p, a_liquid_centroids, a_gas_centroids, a_planar_separator, flag) &
     bind(C, name="c_reconstructML")
       use, intrinsic :: iso_c_binding
       import
@@ -151,7 +151,7 @@ module f_ReconstructionInterface
       real(C_DOUBLE), dimension(0:2,0:26), intent(in) :: a_liquid_centroids
       real(C_DOUBLE), dimension(0:2,0:26), intent(in) :: a_gas_centroids
       type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
-    end subroutine F_reconstructML
+    end subroutine F_reconstructML3
   end interface
 
   interface
@@ -167,6 +167,19 @@ module f_ReconstructionInterface
       real(C_DOUBLE), dimension(0:2,0:26), intent(in) :: a_gas_centroids
       type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
     end subroutine F_reconstructML2
+  end interface
+
+  interface
+    subroutine F_reconstructML(normal, vf_center, cell_bound, a_planar_separator) &
+    bind(C, name="c_reconstructML")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      real(C_DOUBLE), dimension(0:2), intent(in) :: normal
+      real(C_DOUBLE), dimension(0:0), intent(in) :: vf_center
+      real(C_DOUBLE), dimension(0:5) :: cell_bound
+      type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
+    end subroutine F_reconstructML
   end interface
 
   interface
@@ -499,7 +512,7 @@ module f_ReconstructionInterface
 
   end subroutine reconstructELVIRA3D
 
-  subroutine reconstructML(a_lvira, a_r2p, a_centroids, a_g_centroids, a_separator, flag)
+  subroutine reconstructML3(a_lvira, a_r2p, a_centroids, a_g_centroids, a_separator, flag)
     use, intrinsic :: iso_c_binding
     implicit none
       integer(c_int), dimension(0:0), intent(in) :: flag
@@ -509,9 +522,9 @@ module f_ReconstructionInterface
       real(IRL_double), dimension(0:2,0:26), intent(in) :: a_centroids
       real(IRL_double), dimension(0:2,0:26), intent(in) :: a_g_centroids
       type(PlanarSep_type), intent(inout) :: a_separator
-      call F_reconstructML(a_lvira%c_object, a_r2p%c_object, a_centroids, a_g_centroids, a_separator%c_object, flag)
+      call F_reconstructML3(a_lvira%c_object, a_r2p%c_object, a_centroids, a_g_centroids, a_separator%c_object, flag)
 
-  end subroutine reconstructML
+  end subroutine reconstructML3
 
   subroutine reconstructML2(a_lvira, a_centroids, a_g_centroids, a_separator, flag)
     use, intrinsic :: iso_c_binding
@@ -525,6 +538,17 @@ module f_ReconstructionInterface
       call F_reconstructML2(a_lvira%c_object, a_centroids, a_g_centroids, a_separator%c_object, flag)
 
   end subroutine reconstructML2
+
+  subroutine reconstructML(normal, vf_center, cell_bound, a_separator)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      real(IRL_DOUBLE), dimension(0:2), intent(in) :: normal
+      real(IRL_DOUBLE), dimension(0:0), intent(in) :: vf_center
+      real(IRL_DOUBLE), dimension(0:5), intent(in) :: cell_bound
+      type(PlanarSep_type), intent(inout) :: a_separator
+      call F_reconstructML(normal, vf_center, cell_bound, a_separator%c_object)
+
+  end subroutine reconstructML
 
   subroutine loadML(name)
     use, intrinsic :: iso_c_binding

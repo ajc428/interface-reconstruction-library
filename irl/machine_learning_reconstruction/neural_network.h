@@ -22,24 +22,24 @@ namespace IRL
             out = o;
             depth = d;
             l1 = register_module("l1", torch::nn::Linear(size, 100));
-            for (int i = 0; i < d; ++i)
+            for (int i = 0; i < d-1; ++i)
             {
                 layers.push_back(register_module("l" + std::to_string(i+2), torch::nn::Linear(100, 100)));
             }
-            l4 = register_module("l" + std::to_string(d+2), torch::nn::Linear(100, out));
+            lo = register_module("l" + std::to_string(d+1), torch::nn::Linear(100, out));
         }
         torch::Tensor forward(torch::Tensor x) 
         {
             x = torch::nn::functional::relu(l1(x));
-            for (int i = 0; i < depth; ++i)
+            for (int i = 0; i < depth-1; ++i)
             {
                 x = torch::nn::functional::relu(layers[i](x));
             }
-            x = l4(x);
+            x = lo(x);
             return x;
         }
         std::vector<torch::nn::Linear> layers;
-        torch::nn::Linear l1{nullptr}, l4{nullptr};
+        torch::nn::Linear l1{nullptr}, lo{nullptr};
 
         int getSize()
         {

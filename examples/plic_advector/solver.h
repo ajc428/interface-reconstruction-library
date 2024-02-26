@@ -132,6 +132,11 @@ int runSimulation(const std::string& a_advection_method,
   {
     load2();
   }
+
+      writeOutVisualization(iteration, a_visualization_frequency,
+                            simulation_time, liquid_volume_fraction);
+      writeOutInterface(iteration, a_visualization_frequency, simulation_time, interface);
+
   while (simulation_time < a_end_time) {
     const double time_step_to_use =
         std::fmin(a_dt, a_end_time - simulation_time);

@@ -10,6 +10,8 @@
 #ifndef IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_TPP_
 #define IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_TPP_
 
+#include <chrono>
+
 namespace IRL {
 
 template <class CellType>
@@ -106,7 +108,7 @@ PlanarSeparator reconstructionWithELVIRA3D(
 }
 
 template <class CellType>
-PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag) 
+PlanarSeparator reconstructionWithML3(/*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag) 
 {
   auto n = IRL::Normal();
   auto n2 = IRL::Normal();
@@ -164,7 +166,7 @@ PlanarSeparator reconstructionWithML(/*const ELVIRANeighborhood& a_neighborhood_
   }
 
   flag[0] = 0;
-  n = t.get_normal(fractions);
+  n = t.get_normal(&fractions);
   n.normalize();
   /*if (n[1] > 0.9995)
   {
@@ -270,11 +272,15 @@ PlanarSeparator reconstructionWithML2(/*const ELVIRANeighborhood& a_neighborhood
   }
 
   IRL::data_gen gen(3,1);
-  std::vector<double> center = sm.get_mass_centers_all(fractions);
+  std::vector<double> center = sm.get_mass_centers_all(&fractions);
   int direction = gen.rotateFractions_all(&fractions,center);
 
   flag[0] = 0;
-  n = t2.get_normal(fractions);
+  auto start = std::chrono::system_clock::now();
+  n = t2.get_normal(&fractions);
+  auto stop = std::chrono::system_clock::now();
+  std::chrono::duration<double> runtime = stop - start;
+  //printf("Total run time: %20f \n\n", runtime.count());
   n.normalize();
 
   switch (direction)
@@ -322,6 +328,17 @@ PlanarSeparator reconstructionWithML2(/*const ELVIRANeighborhood& a_neighborhood
   return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
 }
 
+PlanarSeparator reconstructionWithML(const double* normal, const double* vf_center, const double* cell_bound, PlanarSeparator p) 
+{
+  auto n = IRL::Normal(normal[0],normal[1],normal[2]);
+  const IRL::Normal& n1 = n;
+  auto cell = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(cell_bound[0], cell_bound[1], cell_bound[2]),
+            IRL::Pt(cell_bound[3], cell_bound[4], cell_bound[5]));
+  const IRL::RectangularCuboid& cell1 = cell;
+  double distance = IRL::findDistanceOnePlane(cell1, *vf_center, n1);
+  return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
+}
+
 void loadML(std::string name/*, std::string name1, std::string name2*/)
 {
   t.load_model(name, 0);
@@ -348,8 +365,13 @@ template <class CellType>
 PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction) {
-  LVIRA_3D<CellType> lvira_system;
-  return lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
+  LVIRA_3D<CellType> lvira_system;  
+  auto start = std::chrono::system_clock::now();
+  auto temp = lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
+  auto stop = std::chrono::system_clock::now();
+  std::chrono::duration<double> runtime = stop - start;
+  //printf("Total run time: %20f \n\n", runtime.count());
+  return temp;
 }
 
 template <class CellType>

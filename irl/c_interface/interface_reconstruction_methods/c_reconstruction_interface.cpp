@@ -33,7 +33,7 @@ void c_reconstructELVIRA3D(const c_ELVIRANeigh* a_elvira_neighborhood,
       reconstructionWithELVIRA3D(*a_elvira_neighborhood->obj_ptr);
 }
 
-void c_reconstructML(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const c_R2PNeigh_RectCub* a_r2p_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
+void c_reconstructML3(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const c_R2PNeigh_RectCub* a_r2p_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
                            c_PlanarSep* a_separator, int* flag) {
   //assert(a_elvira_neighborhood != nullptr);
   //assert(a_elvira_neighborhood->obj_ptr != nullptr);
@@ -44,7 +44,7 @@ void c_reconstructML(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVI
   assert(a_separator->obj_ptr != nullptr);
   assert(flag != nullptr);
   *a_separator->obj_ptr =
-      reconstructionWithML(/**a_elvira_neighborhood->obj_ptr, */*a_lvira_neighborhood->obj_ptr, *a_r2p_neighborhood->obj_ptr, a_liquid_centroids, a_gas_centroids, *a_separator->obj_ptr, flag);
+      reconstructionWithML3(/**a_elvira_neighborhood->obj_ptr, */*a_lvira_neighborhood->obj_ptr, *a_r2p_neighborhood->obj_ptr, a_liquid_centroids, a_gas_centroids, *a_separator->obj_ptr, flag);
 }
 
 void c_reconstructML2(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
@@ -58,6 +58,17 @@ void c_reconstructML2(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LV
   assert(flag != nullptr);
   *a_separator->obj_ptr =
       reconstructionWithML2(/**a_elvira_neighborhood->obj_ptr, */*a_lvira_neighborhood->obj_ptr, a_liquid_centroids, a_gas_centroids, *a_separator->obj_ptr, flag);
+}
+
+void c_reconstructML(const double* normal, const double* vf_center, const double* cell_bound, c_PlanarSep* a_separator)
+{
+  assert(normal != nullptr);
+  assert(vf_center != nullptr);
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  assert(cell_bound != nullptr);
+  *a_separator->obj_ptr =
+      reconstructionWithML(normal, vf_center, cell_bound, *a_separator->obj_ptr);
 }
 
 void c_loadML(const char* name/*, const char* name1, const char* name2*/) {

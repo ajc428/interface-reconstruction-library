@@ -185,6 +185,7 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
   const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
   // Loop over cells in domain. Skip if cell is not mixed phase.
   int count = 0;
+  vector<double> fractions;
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
@@ -214,7 +215,7 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
           }
           // Build surrounding stencil information.
           auto n = IRL::Normal();
-          vector<double> fractions;
+          fractions.clear();
 
           bool flip = false;
           if (a_liquid_volume_fraction(i,j,k) > 0.5)
@@ -1293,7 +1294,7 @@ void ML_PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
               }
           }
           
-          n = t.get_normal(fractions);
+          n = t.get_normal(&fractions);
 
           switch (direction)
           {
@@ -1357,6 +1358,7 @@ void ML_PLIC2::getReconstruction(const Data<double>& a_liquid_volume_fraction, c
   const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
   // Loop over cells in domain. Skip if cell is not mixed phase.
   int count = 0;
+  vector<double> fractions;
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
@@ -1386,7 +1388,7 @@ void ML_PLIC2::getReconstruction(const Data<double>& a_liquid_volume_fraction, c
           }
           // Build surrounding stencil information.
           auto n = IRL::Normal();
-          vector<double> fractions;
+          fractions.clear();
 
           bool flip = false;
           if (a_liquid_volume_fraction(i,j,k) > 0.5)
@@ -1978,7 +1980,7 @@ void ML_PLIC2::getReconstruction(const Data<double>& a_liquid_volume_fraction, c
           }
 
           auto sm = IRL::spatial_moments();
-          std::vector<double> center = sm.get_mass_centers_all(fractions);
+          std::vector<double> center = sm.get_mass_centers_all(&fractions);
           int direction = 0;
             if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
             {
@@ -2465,7 +2467,7 @@ void ML_PLIC2::getReconstruction(const Data<double>& a_liquid_volume_fraction, c
                 }
             }
           
-          n = t.get_normal(fractions);
+          n = t.get_normal(&fractions);
 
           switch (direction)
           {

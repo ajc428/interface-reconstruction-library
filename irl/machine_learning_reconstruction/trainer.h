@@ -86,7 +86,7 @@ namespace IRL
         void train_model(bool, string, string);
         void test_model(int);
         IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
-        IRL::Normal get_normal(vector<double>/*const DataMesh<double>, const DataMesh<IRL::Pt>*/);
+        IRL::Normal get_normal(vector<double>*);
     };
 }
 

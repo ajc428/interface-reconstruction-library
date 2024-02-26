@@ -11,6 +11,7 @@
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_FRACTIONS_H_
 
 #include <math.h>
+#include <random>
 #include <torch/torch.h>
 #include <Eigen/Dense>
 
@@ -43,6 +44,9 @@ namespace IRL
         int a_number_of_cells;
         std::array<double, 3> angles;
         std::array<vector<double>, 8> gradients;
+        std::default_random_engine generator;
+        std::normal_distribution<double> distribution1;
+        std::normal_distribution<double> distribution2;
 
         Mesh initializeMesh(const int); 
         bool isParaboloidInCenterCell(const IRL::Paraboloid&, const DataMesh<double>&);
