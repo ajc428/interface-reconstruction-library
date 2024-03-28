@@ -8,7 +8,6 @@ add_custom_target(examples_machine_learning)
 add_custom_target(examples_interface_reconstruction)
 add_custom_target(examples_plic_advector)
 add_custom_target(examples_SPH_gen)
-add_custom_target(examples_shape_error)
 
 include(${PROJECT_SOURCE_DIR}/cmake/Utils/IRLAddExample.cmake)
 
@@ -22,4 +21,3 @@ add_subdirectory("./machine_learning")
 add_subdirectory("./interface_reconstruction")
 add_subdirectory("./plic_advector")
 add_subdirectory("./SPH_gen")
-add_subdirectory("./shape_error")
