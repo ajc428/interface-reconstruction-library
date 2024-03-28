@@ -46,6 +46,13 @@ namespace IRL
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
         }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(189,6,3);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(4, m);
+        }
         else
         {
             nn = make_shared<model>(108,8,2);
@@ -82,6 +89,13 @@ namespace IRL
         else if (m == 5)
         {
             nn = make_shared<model>(189,3,3);
+            optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            critereon_MSE = torch::nn::MSELoss();
+            functions = new IRL::grad_functions(4, m);
+        }
+        else if (m == 6)
+        {
+            nn = make_shared<model>(189,6,3);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
@@ -535,6 +549,30 @@ namespace IRL
                 }
                 loss_out.close();
             }
+            else if (n == 6)
+            {
+                nn->eval();
+                loss_out.open("loss.txt");
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    auto prediction = nn->forward(test_in);
+                    auto loss = critereon_MSE(prediction, test_out);
+                    for (int j = 0; j < 6; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < 6; ++j)
+                    {
+                        results_ex << test_out[j].item<double>() << " ";
+                    }
+                    loss_out << loss.item<double>() << "\n";
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+                loss_out.close();
+            }
 
             results_ex.close();
             results_pr.close();
@@ -602,6 +640,33 @@ namespace IRL
         n[1] = y_pred[1].item<double>();
         n[2] = y_pred[2].item<double>();
         return n;
+    }
+
+    vector<double> trainer::get_2normals(vector<double>* fractions)
+    {
+        //vector<double> fractions;
+        /*for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                for (int k = 0; k < 3; ++k)
+                {
+                    fractions.push_back(liquid_volume_fraction(i, j, k));
+                    fractions.push_back(liquid_centroid(i,j,k)[0]);
+                    fractions.push_back(liquid_centroid(i,j,k)[1]);
+                    fractions.push_back(liquid_centroid(i,j,k)[2]);
+                }
+            }
+        }*/
+        auto y_pred = nn->forward(torch::tensor(*fractions));
+        vector<double> normals;
+        normals.push_back(y_pred[0].item<double>());
+        normals.push_back(y_pred[1].item<double>());
+        normals.push_back(y_pred[2].item<double>());
+        normals.push_back(y_pred[3].item<double>());
+        normals.push_back(y_pred[4].item<double>());
+        normals.push_back(y_pred[5].item<double>());
+        return normals;
     }
 }
 

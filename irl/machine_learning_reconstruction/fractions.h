@@ -50,24 +50,32 @@ namespace IRL
 
         Mesh initializeMesh(const int); 
         bool isParaboloidInCenterCell(const IRL::Paraboloid&, const DataMesh<double>&);
+        bool isPlaneInCenterCell(const IRL::Plane&, const DataMesh<double>&);
+        bool arePlanesInCenterCell(const IRL::PlanarSeparator&, const DataMesh<double>&);
         bool areParaboloidsInSameCell(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
         bool doParaboloidsIntersect(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
+        bool doPlanesIntersect(IRL::PlanarSeparator& p, const DataMesh<double>& a_liquid_volume_fraction);
     public:
         fractions(const int);
 
         IRL::Paraboloid new_parabaloid(double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_parabaloid(double, double, double, IRL::ReferenceFrame, double, double);
+        IRL::PlanarSeparator new_random_plane(double, double, double, double, double, double);
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
+        IRL::PlanarSeparator new_random_R2P(double, double, double, double, double, double, double, double, double, double, double, double, bool, bool);
         IRL::Paraboloid new_random_parabaloid_not_center(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_interface_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
         IRL::Paraboloid new_interface_parabaloid_in_cell(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);
         torch::Tensor get_fractions(IRL::Paraboloid, bool);
         torch::Tensor get_fractions_gas(IRL::Paraboloid, bool);
+        torch::Tensor get_fractions(IRL::Plane, bool);
         torch::Tensor get_fractions_all(IRL::Paraboloid);
         torch::Tensor get_fractions_gas_all(IRL::Paraboloid);
-        torch::Tensor get_fractions(IRL::Plane, bool);
+        torch::Tensor get_fractions_all(IRL::PlanarSeparator);
+        torch::Tensor get_fractions_gas_all(IRL::PlanarSeparator);
         torch::Tensor get_fractions_with_gradients(IRL::Paraboloid, bool);
         torch::Tensor get_gradients(int);
+        bool arePlanesInSameCenterCell(IRL::PlanarSeparator&);
 
         template <class MomentType, class SurfaceType>
         IRL::AddSurfaceOutput<MomentType, SurfaceType> getCellMomentsAndSurface(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int); 
@@ -79,7 +87,10 @@ namespace IRL
         MomentType getCellMomentsGas(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int);
 
         template <class MomentType>
-        MomentType getCellMoments(const IRL::Plane&,const DataMesh<double>&, int, int, int); 
+        MomentType getCellMoments(const IRL::PlanarSeparator&,const DataMesh<double>&, int, int, int); 
+
+        template <class MomentType>
+        MomentType getCellMomentsGas(const IRL::PlanarSeparator&,const DataMesh<double>&, int, int, int); 
 
         template <class MomentType, class SurfaceType>
         IRL::AddSurfaceOutput<MomentType, SurfaceType> getCellMomentsAndSurfaceWithGradients(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int); 

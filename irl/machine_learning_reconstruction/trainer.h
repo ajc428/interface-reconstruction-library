@@ -87,6 +87,7 @@ namespace IRL
         void test_model(int);
         IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
         IRL::Normal get_normal(vector<double>*);
+        vector<double> get_2normals(vector<double>*);
     };
 }
 
