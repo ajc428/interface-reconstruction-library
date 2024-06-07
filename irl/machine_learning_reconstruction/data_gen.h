@@ -293,7 +293,7 @@ namespace IRL
                                 output << fractions[i] + fractions[i]*c << ",";
                             }
                         }*/
-                        double c = (rand() % 101 - 200) / 1000.0;
+                        double c = (rand() % 201 - 100) / 1000.0;
                         if (i % mod != 0)
                         {
                             if (fractions[i] + c > 0.5)
@@ -778,7 +778,7 @@ namespace IRL
                     else
                     {
                         //int r = rand() % 3 - 1;
-                        double c = (rand() % 101 - 200) / 1000.0;
+                        double c = (rand() % 201 - 100) / 1000.0;
                         if (i % mod != 0)
                         {
                             if (fractions[i] + c > 0.5)
@@ -1468,7 +1468,7 @@ namespace IRL
                     else
                     {
                         //int r = rand() % 3 - 1;
-                        double c = (rand() % 101 - 200) / 1000.0;
+                        double c = (rand() % 201 - 100) / 1000.0;
                         if (i % mod != 0)
                         {
                             if (fractions[i] + c > 0.5)
@@ -1911,7 +1911,7 @@ namespace IRL
                     }
                     else
                     {
-                        double c = (rand() % 101 - 200) / 1000.0;
+                        double c = (rand() % 201 - 100) / 1000.0;
                         if (i % mod != 0)
                         {
                             if (fractions[i] + c > 0.5)
@@ -1991,11 +1991,19 @@ namespace IRL
 
         void generate_R2P(double rota1_l, double rota1_h, double rotb1_l, double rotb1_h, double rota2_l, double rota2_h, double rotb2_l, double rotb2_h, double d1_l, double d1_h, double d2_l, double d2_h, bool inter, bool same)
         {
+            torch::Tensor result_all = torch::zeros({162, Ntests});
             for (int n = 0; n < Ntests; ++n) 
             {
                 std::cout << n << endl;
                 IRL::PlanarSeparator plane = gen->new_random_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
-
+                //torch::Tensor result;
+                //result = gen->get_fractions_all(plane);
+                //while (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                {
+                    //plane = gen->new_random_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
+                    //result = gen->get_fractions_all(plane);
+                }
+                //result_all.index_put_({torch::indexing::Slice(), n}, result);
                 std::ofstream coefficients;
                 std::string name = "coefficients.txt";
                 coefficients.open(name, std::ios_base::app);
@@ -2004,37 +2012,62 @@ namespace IRL
                 coefficients.close();
 
                 torch::Tensor result;
-                bool flip = false;
-                result = gen->get_fractions_all(plane);
+                bool flip = true;//false;
+                //result = gen->get_fractions_all(plane);
+                result = gen->get_barycenters(plane);
+                result_all.index_put_({torch::indexing::Slice(), n}, result);
+                torch::Tensor result1;
+                IRL::PlanarSeparator p = IRL::PlanarSeparator::fromOnePlane(plane[0]);
+                //result1 = gen->get_fractions_all(p);
                 if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
                 {
-                    flip = true;
-                    result = gen->get_fractions_gas_all(plane);
+                    //flip = true;
+                    //result = gen->get_fractions_gas_all(plane);
+                    //result1 = gen->get_fractions_gas_all(p);
                 }                    
 
                 std::vector<double> fractions;
+                //std::vector<double> fractions1;
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
                     fractions.push_back(result[i].item<double>());
+                    //fractions1.push_back(result1[i].item<double>());
                 }
-                
 
                 int direction = 0;
                 std::vector<double> center;
+                std::vector<double> eigenvectors;
                 auto sm = IRL::spatial_moments();
-                center = sm.get_mass_centers_all(&fractions);
-                direction = rotateFractions_all(&fractions,center);
-                
-                std::ofstream output;
-                std::string data_name = "fractions.txt";
-                output.open(data_name, std::ios_base::app);
-
-                for (int i = 0; i < result.sizes()[0]; ++i)
+                //center = sm.get_mass_centers_all(&fractions);
+                //eigenvectors = sm.get_moment_of_intertia(&fractions);
+                int min = 0;
+                //if (eigenvectors[0] < eigenvectors[4] && eigenvectors[0] < eigenvectors[8])
                 {
-                    output << fractions[i] << ",";
+                    //min = 0;
                 }
-                output << "\n";
-                output.close();  
+                //else if (eigenvectors[4] < eigenvectors[0] && eigenvectors[4] < eigenvectors[8])
+                {
+                    //min = 4;
+                }
+                //else
+                {
+                    //min = 8;
+                }
+                //center.push_back(eigenvectors[min+1]);
+                //center.push_back(eigenvectors[min+2]);
+                //center.push_back(eigenvectors[min+3]);
+                //direction = rotateFractions_all(&fractions,center);
+                
+                //std::ofstream output;
+                //std::string data_name = "fractions.txt";
+                //output.open(data_name, std::ios_base::app);
+
+                //for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    //output << fractions[i] << ",";
+                }
+                //output << "\n";
+                //output.close();  
 
                 std::ofstream normals;
                 std::string normals_name = "normals.txt";
@@ -2102,125 +2135,171 @@ namespace IRL
                     normal1[1] = -normal1[1];
                     normal1[2] = -normal1[2];
                 }
+                
+                vector<double> angles = gen->getR2PAngles();
+                double theta1 = angles[0]/M_PI-1;
+                double phi1 = angles[1]/M_PI-1;
+                double theta2 = angles[2]/M_PI-1;
+                double phi2 = angles[3]/M_PI-1;
+                //double theta1 = atan2(normal[1],normal[0]);
+                //double phi1 = acos(normal[2]/normal.calculateMagnitude());
+                //double theta2 = atan2(normal1[1],normal1[0]);
+                //double phi2 = acos(normal1[2]/normal1.calculateMagnitude());
+                //std::cout << theta1 << "," << phi1 << "," << theta2 << "," << phi2 << std::endl << std::endl;
+                //theta1 = sin(theta1);
+                //phi1 = sin(phi1);
+                //theta2 = sin(theta2);
+                //phi2 = sin(phi2);
+                //normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "," << plane[0].distance() << "," << plane[1].distance() << "\n";
+                normals << theta1 << "," << phi1 << "," << theta2 << "," << phi2 /*<< "," << plane[0].distance() << "," << plane[1].distance()*/ << "\n";
+                normals.close();     
 
-                normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "\n";
-                normals.close();    
+            //     const Mesh& mesh = gen->getMesh();
+            //     FILE* viz_file;
+            //     std::string file_name = "interface_0.vtu";
+            //     viz_file = fopen(file_name.c_str(), "w");
 
-                // const Mesh& mesh = gen->getMesh();
-                // FILE* viz_file;
-                // std::string file_name = "interface_0.vtu";
-                // viz_file = fopen(file_name.c_str(), "w");
+            //     // Build vectors of vertex locations and connectivities
+            //     std::size_t n_vert = 0;
+            //     std::size_t n_faces = 0;
+            //     std::size_t current_face_size = 0;
+            //     std::string vert_loc;
+            //     std::string connectivity;
+            //     std::string offsets;
 
-                // // Build vectors of vertex locations and connectivities
-                // std::size_t n_vert = 0;
-                // std::size_t n_faces = 0;
-                // std::size_t current_face_size = 0;
-                // std::string vert_loc;
-                // std::string connectivity;
-                // std::string offsets;
+            //     auto add_polyhedron = [&](const auto& a_poly) {
+            //         using T = std::decay_t<decltype(a_poly)>;
+            //         std::unordered_map<const typename T::vertex_type*, IRL::UnsignedIndex_t>
+            //             unique_vertices;
+            //         for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfVertices(); ++n) {
+            //         unique_vertices[a_poly.getVertex(n)] = n + n_vert;
+            //         const auto& vert_pt = a_poly.getVertex(n)->getLocation();
+            //         vert_loc += std::to_string(vert_pt[0]) + " " +
+            //                     std::to_string(vert_pt[1]) + " " +
+            //                     std::to_string(vert_pt[2]) + "\n";
+            //         }
+            //         assert(unique_vertices.size() == a_poly.getNumberOfVertices());
 
-                // auto add_polyhedron = [&](const auto& a_poly) {
-                //     using T = std::decay_t<decltype(a_poly)>;
-                //     std::unordered_map<const typename T::vertex_type*, IRL::UnsignedIndex_t>
-                //         unique_vertices;
-                //     for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfVertices(); ++n) {
-                //     unique_vertices[a_poly.getVertex(n)] = n + n_vert;
-                //     const auto& vert_pt = a_poly.getVertex(n)->getLocation();
-                //     vert_loc += std::to_string(vert_pt[0]) + " " +
-                //                 std::to_string(vert_pt[1]) + " " +
-                //                 std::to_string(vert_pt[2]) + "\n";
-                //     }
-                //     assert(unique_vertices.size() == a_poly.getNumberOfVertices());
+            //         for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfFaces(); ++n) {
+            //         const auto& face = a_poly[n];
+            //         auto current_half_edge = face->getStartingHalfEdge();
+            //         do {
+            //             ++current_face_size;
+            //             connectivity +=
+            //                 std::to_string(unique_vertices[current_half_edge->getVertex()]) +
+            //                 " ";
+            //             current_half_edge = current_half_edge->getNextHalfEdge();
+            //         } while (current_half_edge != face->getStartingHalfEdge());
+            //         offsets += std::to_string(current_face_size) + " ";
+            //         connectivity += "\n";
+            //         }
 
-                //     for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfFaces(); ++n) {
-                //     const auto& face = a_poly[n];
-                //     auto current_half_edge = face->getStartingHalfEdge();
-                //     do {
-                //         ++current_face_size;
-                //         connectivity +=
-                //             std::to_string(unique_vertices[current_half_edge->getVertex()]) +
-                //             " ";
-                //         current_half_edge = current_half_edge->getNextHalfEdge();
-                //     } while (current_half_edge != face->getStartingHalfEdge());
-                //     offsets += std::to_string(current_face_size) + " ";
-                //     connectivity += "\n";
-                //     }
+            //         n_vert += a_poly.getNumberOfVertices();
+            //         n_faces += a_poly.getNumberOfFaces();
+            //     };
 
-                //     n_vert += a_poly.getNumberOfVertices();
-                //     n_faces += a_poly.getNumberOfFaces();
-                // };
+            //     for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+            //         for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+            //             for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+            //                 const auto& recon = plane;
+            //                 auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            //                     IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            //                     IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
 
-                // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-                //     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-                //         for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-                //             const auto& recon = plane;
-                //             auto cell = IRL::RectangularCuboid::fromBoundingPts(
-                //                 IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
-                //                 IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+            //                 if (recon.isFlipped()) {
+            //                 auto he_poly = cell.generateHalfEdgeVersion();
+            //                 auto seg = he_poly.generateSegmentedPolyhedron();
+            //                 for (const auto& plane : recon) {
+            //                     decltype(seg) clipped;
+            //                     auto new_plane = plane.generateFlippedPlane();
+            //                     IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, new_plane);
+            //                     add_polyhedron(clipped);
+            //                 }
+            //                 } else {
+            //                 auto he_poly = cell.generateHalfEdgeVersion();
+            //                 auto seg = he_poly.generateSegmentedPolyhedron();
+            //                 for (const auto& plane : recon) {
+            //                     decltype(seg) clipped;
+            //                     IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, plane);
+            //                 }
+            //                 add_polyhedron(seg);
+            //                 }
+            //             }
+            //         }
+            //     }
 
-                //             if (recon.isFlipped()) {
-                //             auto he_poly = cell.generateHalfEdgeVersion();
-                //             auto seg = he_poly.generateSegmentedPolyhedron();
-                //             for (const auto& plane : recon) {
-                //                 decltype(seg) clipped;
-                //                 auto new_plane = plane.generateFlippedPlane();
-                //                 IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, new_plane);
-                //                 add_polyhedron(clipped);
-                //             }
-                //             } else {
-                //             auto he_poly = cell.generateHalfEdgeVersion();
-                //             auto seg = he_poly.generateSegmentedPolyhedron();
-                //             for (const auto& plane : recon) {
-                //                 decltype(seg) clipped;
-                //                 IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, plane);
-                //             }
-                //             add_polyhedron(seg);
-                //             }
-                //         }
-                //     }
-                // }
+            //     // Write header
+            //     {
+            //         fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
+            //         fprintf(viz_file,
+            //                 "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
+            //                 "byte_order=\"LittleEndian\">\n");
+            //         fprintf(viz_file, "<UnstructuredGrid>\n");
+            //         fprintf(viz_file, "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
+            //                 n_vert, n_faces);
 
-                // // Write header
-                // {
-                //     fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
-                //     fprintf(viz_file,
-                //             "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
-                //             "byte_order=\"LittleEndian\">\n");
-                //     fprintf(viz_file, "<UnstructuredGrid>\n");
-                //     fprintf(viz_file, "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
-                //             n_vert, n_faces);
+            //         fprintf(viz_file, "<Points>\n");
+            //         fprintf(viz_file,
+            //                 "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
+            //         fprintf(viz_file, "%s", vert_loc.c_str());
+            //         fprintf(viz_file, "</DataArray>\n");
+            //         fprintf(viz_file, "</Points>\n");
 
-                //     fprintf(viz_file, "<Points>\n");
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
-                //     fprintf(viz_file, "%s", vert_loc.c_str());
-                //     fprintf(viz_file, "</DataArray>\n");
-                //     fprintf(viz_file, "</Points>\n");
+            //         fprintf(viz_file, "<Cells>\n");
+            //         fprintf(viz_file,
+            //                 "<DataArray type=\"Int32\" Name=\"connectivity\" "
+            //                 "format=\"ascii\">\n");
+            //         fprintf(viz_file, "%s", connectivity.c_str());
+            //         fprintf(viz_file, "</DataArray>\n");
 
-                //     fprintf(viz_file, "<Cells>\n");
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"Int32\" Name=\"connectivity\" "
-                //             "format=\"ascii\">\n");
-                //     fprintf(viz_file, "%s", connectivity.c_str());
-                //     fprintf(viz_file, "</DataArray>\n");
+            //         fprintf(viz_file,
+            //                 "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
+            //         fprintf(viz_file, "%s", offsets.c_str());
+            //         fprintf(viz_file, "\n</DataArray>\n");
 
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-                //     fprintf(viz_file, "%s", offsets.c_str());
-                //     fprintf(viz_file, "\n</DataArray>\n");
-
-                //     // Cell type - General Polygon type
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-                //     for (std::size_t n = 0; n < n_faces; ++n) {
-                //     fprintf(viz_file, "7 ");  // General polygon type
-                //     }
-                //     fprintf(viz_file,
-                //             "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
-                //             "VTKFile>\n");
-                // }
-                // fclose(viz_file);        
+            //         // Cell type - General Polygon type
+            //         fprintf(viz_file,
+            //                 "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
+            //         for (std::size_t n = 0; n < n_faces; ++n) {
+            //         fprintf(viz_file, "7 ");  // General polygon type
+            //         }
+            //         fprintf(viz_file,
+            //                 "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
+            //                 "VTKFile>\n");
+            //     }
+            //     fclose(viz_file);        
             }  
+            
+            //result_all = torch::div((result_all - result_all.mean(1).unsqueeze(0).transpose(0,1)), result_all.std(1).unsqueeze(0).transpose(0,1));
+            //std::cout << result_all.index({torch::indexing::Slice(),0}) << std::endl;
+            torch::Tensor Cov = torch::zeros({162, 162});
+            std::tuple<torch::Tensor, torch::Tensor> x;
+            std::tuple<torch::Tensor, torch::Tensor> s;
+            Cov = torch::matmul(result_all, result_all.transpose(0, 1))/Ntests;
+            x = torch::linalg::eig(Cov);
+            torch::Tensor lam = torch::real(get<0>(x));
+            torch::Tensor u = torch::real(get<1>(x));
+            s = torch::sort(lam,0,true);
+            lam = get<0>(s);
+            int r = 80;
+            double percent = torch::sum(lam.index({torch::indexing::Slice(0,r)})).item<double>()/torch::sum(lam).item<double>();
+            u = u.index({get<1>(s),torch::indexing::Slice()});
+            u = u.index({torch::indexing::Slice(0,r),torch::indexing::Slice()});
+            result_all = torch::matmul(u, result_all);
+            std::cout << percent << std::endl;
+            std::ofstream output;
+            std::string data_name = "fractions.txt";
+            output.open(data_name, std::ios_base::app);
+
+            for (int i = 0; i < Ntests; ++i)
+            {
+                for (int j = 0; j < 80; ++j)
+                {
+                    output << result_all[j][i].item<double>() << ",";
+                }
+                output << "\n";
+            }
+            output.close();  
         }; 
 
         void generate_R2P_with_disturbance(double rota1_l, double rota1_h, double rotb1_l, double rotb1_h, double rota2_l, double rota2_h, double rotb2_l, double rotb2_h, double d1_l, double d1_h, double d2_l, double d2_h, bool inter, bool same)
@@ -2235,7 +2314,7 @@ namespace IRL
                 std::string name = "coefficients.txt";
                 coefficients.open(name, std::ios_base::app);
                 coefficients << plane[0].normal()[0] << "," << plane[0].normal()[1] << "," << plane[0].normal()[2] << "," << plane[0].distance() 
-                << plane[1].normal()[0] << "," << plane[1].normal()[1] << "," << plane[1].normal()[2] << "," << plane[1].distance() << "\n";
+                << "," << plane[1].normal()[0] << "," << plane[1].normal()[1] << "," << plane[1].normal()[2] << "," << plane[1].distance() << "\n";
                 coefficients.close();
 
                 torch::Tensor result;
@@ -2274,7 +2353,7 @@ namespace IRL
                     }
                     else
                     {
-                        double c = (rand() % 101 - 200) / 1000.0;
+                        double c = (rand() % 201 - 100) / 1000.0;
                         if (i % mod != 0)
                         {
                             if (fractions[i] + c > 0.5)
@@ -2366,8 +2445,23 @@ namespace IRL
                     normal1[2] = -normal1[2];
                 }
 
-                normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "\n";
-                normals.close();                  
+                vector<double> angles = gen->getR2PAngles();
+                double theta1 = angles[0]/M_PI-1;
+                double phi1 = angles[1]/M_PI-1;
+                double theta2 = angles[2]/M_PI-1;
+                double phi2 = angles[3]/M_PI-1;
+                //double theta1 = atan2(normal[1],normal[0]);
+                //double phi1 = acos(normal[2]/normal.calculateMagnitude());
+                //double theta2 = atan2(normal1[1],normal1[0]);
+                //double phi2 = acos(normal1[2]/normal1.calculateMagnitude());
+                //std::cout << theta1 << "," << phi1 << "," << theta2 << "," << phi2 << std::endl << std::endl;
+                //theta1 = sin(theta1);
+                //phi1 = sin(phi1);
+                //theta2 = sin(theta2);
+                //phi2 = sin(phi2);
+                //normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "," << plane[0].distance() << "," << plane[1].distance() << "\n";
+                normals << theta1 << "," << phi1 << "," << theta2 << "," << phi2 /*<< "," << plane[0].distance() << "," << plane[1].distance()*/ << "\n";
+                normals.close();     
             }  
         };
 

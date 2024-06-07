@@ -51,15 +51,11 @@ namespace IRL
 
         ofstream results_ex;
         ofstream results_pr;
-        ofstream invariants;
-        ofstream loss_out;
         torch::Tensor train_in;
-        torch::Tensor train_in_rot;
         torch::Tensor train_out;
         torch::Tensor val_in;
         torch::Tensor val_out;
         torch::Tensor test_in;
-        torch::Tensor test_in_rot;
         torch::Tensor test_out;
         string train_in_file;
         string train_out_file;
@@ -85,9 +81,8 @@ namespace IRL
         void load_model(string, int);
         void train_model(bool, string, string);
         void test_model(int);
-        IRL::Paraboloid use_model(string, const DataMesh<double>, const DataMesh<IRL::Pt>);
         IRL::Normal get_normal(vector<double>*);
-        vector<double> get_2normals(vector<double>*);
+        //vector<double> get_2normals(vector<double>*);
     };
 }
 

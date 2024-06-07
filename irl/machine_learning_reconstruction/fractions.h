@@ -40,6 +40,10 @@ namespace IRL
     class fractions
     {
     private:
+        double a1;
+        double b1;
+        double a2;
+        double b2;
         Mesh mesh;
         int a_number_of_cells;
         std::array<double, 3> angles;
@@ -73,6 +77,8 @@ namespace IRL
         torch::Tensor get_fractions_gas_all(IRL::Paraboloid);
         torch::Tensor get_fractions_all(IRL::PlanarSeparator);
         torch::Tensor get_fractions_gas_all(IRL::PlanarSeparator);
+        torch::Tensor get_barycenters(IRL::PlanarSeparator);
+        torch::Tensor get_barycenters_gas(IRL::PlanarSeparator);
         torch::Tensor get_fractions_with_gradients(IRL::Paraboloid, bool);
         torch::Tensor get_gradients(int);
         bool arePlanesInSameCenterCell(IRL::PlanarSeparator&);
@@ -106,6 +112,16 @@ namespace IRL
         Mesh getMesh()
         {
             return mesh;
+        }
+
+        vector<double> getR2PAngles()
+        {
+            vector<double> x;
+            x.push_back(a1);
+            x.push_back(b1);
+            x.push_back(a2);
+            x.push_back(b2);
+            return x;
         }
     };
 }

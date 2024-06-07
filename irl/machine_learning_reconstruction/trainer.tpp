@@ -10,8 +10,10 @@
 #ifndef IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 
-//#include "irl/interface_reconstruction_methods/elvira.h"
-//#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
+#include "irl/interface_reconstruction_methods/lvira_optimization.h"
+#include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
+#include "irl/interface_reconstruction_methods/elvira.h"
+#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
 
 namespace IRL
 {
@@ -34,28 +36,29 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,3,3);
+            nn = make_shared<model>(108,3,3,100);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
         }
         else if (m == 5)
         {
-            nn = make_shared<model>(189,3,3);
+            nn = make_shared<model>(189,3,3,100);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
         }
         else if (m == 6)
         {
-            nn = make_shared<model>(189,6,3);
+            nn = make_shared<model>(80,4,4,600);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+            //torch::optim::AdamOptions(learning_rate).weight_decay(0.001)
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(4, m);
+            functions = new IRL::grad_functions(3, m);
         }
         else
         {
-            nn = make_shared<model>(108,8,2);
+            nn = make_shared<model>(108,8,2,100);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(1, m);
@@ -81,28 +84,28 @@ namespace IRL
         }
         else if (m == 4)
         {
-            nn = make_shared<model>(108,3,3);
+            nn = make_shared<model>(108,3,3,100);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
         }
         else if (m == 5)
         {
-            nn = make_shared<model>(189,3,3);
+            nn = make_shared<model>(189,3,3,100);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(4, m);
         }
         else if (m == 6)
         {
-            nn = make_shared<model>(189,6,3);
+            nn = make_shared<model>(80,4,4,600);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
-            functions = new IRL::grad_functions(4, m);
+            functions = new IRL::grad_functions(3, m);
         }
         else
         {
-            nn = make_shared<model>(108,8,2);
+            nn = make_shared<model>(108,8,2,100);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(1, m);
@@ -217,6 +220,22 @@ namespace IRL
                     check = y_pred;
                     comp = train_out;
                 }
+                else if (m == 6)
+                {
+                    check = torch::zeros({batch_size, nn->getSize()});
+                    comp = torch::zeros({batch_size, nn->getSize()});
+                    //for (int i = 0; i < batch_size; ++i)
+                    {
+                        //check[i] = torch::autograd::Function<R2P_Moment_Loss>::apply(y_pred[i],train_in[i][(train_in.sizes()[1]-7)/2].item<double>(),train_out[i][6].item<double>(),train_out[i][7].item<double>());//functions->R2PVolumeFracsForward(y_pred[i],train_in[i][(train_in.sizes()[1]-7)/2].item<double>(),train_out[i][6].item<double>(),train_out[i][7].item<double>());
+                    }
+                    //torch::Tensor x = torch::zeros({batch_size, nn->getOutput()});
+                    //x = train_out.index({torch::indexing::Slice(),torch::indexing::Slice(0,4)});
+                    //train_out = torch::zeros({batch_size, nn->getOutput()});
+                    //train_out = x;
+                    //comp = train_in;
+                    check = y_pred;
+                    comp = train_out;
+                }
                 else
                 {
                     check = torch::zeros({batch_size, nn->getOutput()});
@@ -256,7 +275,11 @@ namespace IRL
                 }
                 else
                 {
+                    //loss = critereon_MSE(y_pred, train_out);
+                    //std::cout << check << std::endl;
+                    //std::cout << comp << std::endl;
                     loss = critereon_MSE(check, comp);
+                    //loss = critereon_MSE(check, comp) + critereon_MSE(y_pred, train_out);
                     epoch_loss = epoch_loss + loss.item().toDouble()*batch.data.size(0);
                 }
 
@@ -332,6 +355,22 @@ namespace IRL
                     check = y_pred;
                     comp = val_out;
                 }
+                else if (m == 6)
+                {
+                    check = torch::zeros({val_batch_size, nn->getSize()});
+                    comp = torch::zeros({val_batch_size, nn->getSize()});
+                    //for (int i = 0; i < val_batch_size; ++i)
+                    {
+                        //check[i] = functions->R2PVolumeFracsForward(y_pred[i],val_in[i][(train_in.sizes()[1]-7)/2].item<double>(),val_out[i][6].item<double>(),val_out[i][7].item<double>());
+                    }
+                    //torch::Tensor x = torch::zeros({val_batch_size, nn->getOutput()});
+                    //x = val_out.index({torch::indexing::Slice(),torch::indexing::Slice(0,4)});
+                    //val_out = torch::zeros({val_batch_size, nn->getOutput()});
+                    //val_out = x;
+                    //comp = val_in;
+                    check = y_pred;
+                    comp = val_out;
+                }
                 else
                 {
                     check = torch::zeros({val_batch_size, nn->getOutput()});
@@ -348,6 +387,8 @@ namespace IRL
                 else
                 {
                     loss = critereon_MSE(check, comp);
+                    //loss = critereon_MSE(y_pred, train_out);
+                    //loss = 10*critereon_MSE(check, comp) + critereon_MSE(y_pred, train_out);
                     epoch_loss_val = epoch_loss_val + loss.item().toDouble()*batch.data.size(0);
                 }
 
@@ -379,13 +420,13 @@ namespace IRL
             {
                 if (total_epoch_loss_val < epoch_loss_val_check || epoch == 0)
                 {
-                    epoch_loss_val_check = total_epoch_loss_val;
-                    MPI_Bcast(&epoch_loss_val_check, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                    //epoch_loss_val_check = total_epoch_loss_val;
+                    //MPI_Bcast(&epoch_loss_val_check, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 }
                 else if (epoch < epochs-1)
                 {
-                    epoch = epochs;
-                    MPI_Bcast(&epoch, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                    //epoch = epochs;
+                    //MPI_Bcast(&epoch, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 }
             }
             
@@ -480,7 +521,6 @@ namespace IRL
             }
             else if (n == 3)
             {
-                //invariants.open("invariants.txt");
                 nn_binary->eval();
                 int count = 0;
                 int total = data_test.size().value();
@@ -488,11 +528,6 @@ namespace IRL
                 {
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
-                    /*for (int j = 0; j < 3; ++j)
-                    {
-                        invariants << test_in[j].item<double>() << " ";
-                    }
-                    invariants << "\n";*/
                     torch::Tensor prediction = torch::zeros({1, 3});
                     prediction = nn_binary->forward(test_in);
                     
@@ -528,7 +563,6 @@ namespace IRL
             else if (n == 4)
             {
                 nn->eval();
-                loss_out.open("loss.txt");
                 for(int i = 0; i < data_test.size().value(); ++i)
                 {
                     test_in = data_test.get(i).data;
@@ -543,67 +577,147 @@ namespace IRL
                     {
                         results_ex << test_out[j].item<double>() << " ";
                     }
-                    loss_out << loss.item<double>() << "\n";
                     results_ex << "\n";
                     results_pr << "\n";
                 }
-                loss_out.close();
             }
             else if (n == 6)
             {
                 nn->eval();
-                loss_out.open("loss.txt");
                 for(int i = 0; i < data_test.size().value(); ++i)
                 {
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
                     auto loss = critereon_MSE(prediction, test_out);
-                    for (int j = 0; j < 6; ++j)
+                    for (int j = 0; j < 4; ++j)
                     {
                         results_pr << prediction[j].item<double>() << " ";
                     }
-                    for (int j = 0; j < 6; ++j)
+                    for (int j = 0; j < 4; ++j)
                     {
                         results_ex << test_out[j].item<double>() << " ";
                     }
-                    loss_out << loss.item<double>() << "\n";
                     results_ex << "\n";
                     results_pr << "\n";
                 }
-                loss_out.close();
+            }
+            else if (n == 7)
+            {
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+
+                    IRL::LVIRANeighborhood<IRL::RectangularCuboid> neighborhood;
+                    neighborhood.resize(27);
+                    neighborhood.setCenterOfStencil(13);
+                    IRL::RectangularCuboid cells[27];
+                    for (int i = 0; i < 3; ++i) {
+                        for (int j = 0; j < 3; ++j) {
+                            for (int k = 0; k < 3; ++k) {
+                                double* a = new double();
+                                *a = test_in[7*(i*9+j*3+k)].item<double>();
+                                const double* b = a;
+                                    const int local_index =
+                                        (k) * 9 + (j) * 3 + (i);
+                                    cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
+                                        IRL::Pt(i-1.5, j-1.5, k-1.5),
+                                        IRL::Pt(i-0.5, j-0.5, k-0.5));
+                                    neighborhood.setMember(
+                                        static_cast<IRL::UnsignedIndex_t>(local_index),
+                                        &cells[local_index], b);
+                                    }
+                                }
+                            }
+                            IRL::Pt a_gas_centroid = IRL::Pt(test_in[7*(1*9+1*3+1)+4].item<double>(), test_in[7*(1*9+1*3+1)+5].item<double>(), test_in[7*(1*9+1*3+1)+6].item<double>());
+                            IRL::Pt a_liquid_centroid = IRL::Pt(test_in[7*(1*9+1*3+1)+1].item<double>(), test_in[7*(1*9+1*3+1)+2].item<double>(), test_in[7*(1*9+1*3+1)+3].item<double>());
+                            auto bary_normal = IRL::Normal::fromPtNormalized(
+                                a_gas_centroid - a_liquid_centroid);
+                            bary_normal.normalize();
+                            const double initial_distance =
+                                bary_normal * neighborhood.getCenterCell().calculateCentroid();
+                            IRL::PlanarSeparator a_interface = IRL::PlanarSeparator::fromOnePlane(
+                                IRL::Plane(bary_normal, initial_distance));
+                            IRL::setDistanceToMatchVolumeFractionPartialFill(
+                                neighborhood.getCenterCell(),
+                                neighborhood.getCenterCellStoredMoments(),
+                                &a_interface);
+
+                            a_interface =
+                                IRL::reconstructionWithLVIRA3D(neighborhood, a_interface);
+                    IRL::Normal n = a_interface[0].normal();
+                    torch::Tensor prediction = torch::zeros(3);
+                    prediction[0] = -n[0];
+                    prediction[1] = -n[1];
+                    prediction[2] = -n[2];
+
+                    //auto prediction = nn->forward(test_in);
+                    auto loss = critereon_MSE(prediction, test_out);
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_ex << test_out[j].item<double>() << " ";
+                    }
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+            }
+            else if (n == 8)
+            {
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+
+                    IRL::ELVIRANeighborhood neighborhood;
+                    neighborhood.resize(27);
+                    IRL::RectangularCuboid cells[27];
+                    for (int i = 0; i < 3; ++i) {
+                        for (int j = 0; j < 3; ++j) {
+                            for (int k = 0; k < 3; ++k) {
+                                double* a = new double();
+                                *a = test_in[7*(i*9+j*3+k)].item<double>();
+                                const double* b = a;
+                                    const int local_index =
+                                        (k) * 9 + (j) * 3 + (i);
+                                    cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
+                                        IRL::Pt(i-1.5, j-1.5, k-1.5),
+                                        IRL::Pt(i-0.5, j-0.5, k-0.5));
+                                    neighborhood.setMember(&cells[local_index], b,i-1,j-1,k-1);
+                                    }
+                                }
+                            }
+
+                            IRL::PlanarSeparator a_interface =
+                                IRL::reconstructionWithELVIRA3D(neighborhood);
+                    IRL::Normal n = a_interface[0].normal();
+                    torch::Tensor prediction = torch::zeros(3);
+                    prediction[0] = -n[0];
+                    prediction[1] = -n[1];
+                    prediction[2] = -n[2];
+
+                    //auto prediction = nn->forward(test_in);
+                    auto loss = critereon_MSE(prediction, test_out);
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_ex << test_out[j].item<double>() << " ";
+                    }
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
             }
 
             results_ex.close();
             results_pr.close();
         }
-    }
-
-    IRL::Paraboloid trainer::use_model(std::string in, const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid)
-    {
-        vector<double> fractions;
-        for (int i = 0; i < 3; ++i)
-        {
-            for (int j = 0; j < 3; ++j)
-            {
-                for (int k = 0; k < 3; ++k)
-                {
-                    fractions.push_back(liquid_volume_fraction(i, j, k));
-                    fractions.push_back(liquid_centroid(i,j,k)[0]);
-                    fractions.push_back(liquid_centroid(i,j,k)[1]);
-                    fractions.push_back(liquid_centroid(i,j,k)[2]);
-                }
-            }
-        }
-
-        IRL::fractions *gen = new IRL::fractions(3);
-        torch::load(nn, in);
-        auto y_pred = nn->forward(torch::tensor(fractions));
-        IRL::Paraboloid paraboloid = gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
-        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
-        y_pred[6].item<double>(), y_pred[7].item<double>());
-        delete gen;
-        return paraboloid;
     }
 
     void trainer::load_model(std::string in, int i)
@@ -618,22 +732,8 @@ namespace IRL
         }
     }
 
-    IRL::Normal trainer::get_normal(vector<double>* fractions/*const DataMesh<double> liquid_volume_fraction, const DataMesh<IRL::Pt> liquid_centroid*/)
+    IRL::Normal trainer::get_normal(vector<double>* fractions)
     {
-        //vector<double> fractions;
-        /*for (int i = 0; i < 3; ++i)
-        {
-            for (int j = 0; j < 3; ++j)
-            {
-                for (int k = 0; k < 3; ++k)
-                {
-                    fractions.push_back(liquid_volume_fraction(i, j, k));
-                    fractions.push_back(liquid_centroid(i,j,k)[0]);
-                    fractions.push_back(liquid_centroid(i,j,k)[1]);
-                    fractions.push_back(liquid_centroid(i,j,k)[2]);
-                }
-            }
-        }*/
         auto y_pred = nn->forward(torch::tensor(*fractions));
         auto n = IRL::Normal();
         n[0] = y_pred[0].item<double>();
@@ -642,7 +742,7 @@ namespace IRL
         return n;
     }
 
-    vector<double> trainer::get_2normals(vector<double>* fractions)
+    /*vector<double> trainer::get_2normals(vector<double>* fractions)
     {
         //vector<double> fractions;
         /*for (int i = 0; i < 3; ++i)
@@ -657,7 +757,7 @@ namespace IRL
                     fractions.push_back(liquid_centroid(i,j,k)[2]);
                 }
             }
-        }*/
+        }*
         auto y_pred = nn->forward(torch::tensor(*fractions));
         vector<double> normals;
         normals.push_back(y_pred[0].item<double>());
@@ -667,7 +767,7 @@ namespace IRL
         normals.push_back(y_pred[4].item<double>());
         normals.push_back(y_pred[5].item<double>());
         return normals;
-    }
+    }*/
 }
 
 #endif

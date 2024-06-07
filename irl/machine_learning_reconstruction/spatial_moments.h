@@ -14,6 +14,8 @@
 #include "data_mesh.h"
 #include <math.h>
 #include <torch/torch.h>
+#include <Eigen/Dense>
+#include <Eigen/Eigenvalues> 
 
 using namespace std;
 
@@ -67,6 +69,7 @@ namespace IRL
         torch::Tensor calculate_moments(const DataMesh<double>&, DataMesh<IRL::Pt>&, Mesh);
         vector<double> get_mass_centers(vector<double> fractions);
         vector<double> get_mass_centers_all(vector<double>* fractions);
+        vector<double> get_moment_of_intertia(vector<double>* fractions);
 
         vector<double> getMoments()
         {

@@ -16,17 +16,19 @@ namespace IRL
         int size;
         int out;
         int depth;
-        model(int s, int o, int d) 
+        int width;
+        model(int s, int o, int d, int w) 
         {
             size = s;
             out = o;
             depth = d;
-            l1 = register_module("l1", torch::nn::Linear(size, 100));
+            width = w;
+            l1 = register_module("l1", torch::nn::Linear(size, width));
             for (int i = 0; i < d-1; ++i)
             {
-                layers.push_back(register_module("l" + std::to_string(i+2), torch::nn::Linear(100, 100)));
+                layers.push_back(register_module("l" + std::to_string(i+2), torch::nn::Linear(width, width)));
             }
-            lo = register_module("l" + std::to_string(d+1), torch::nn::Linear(100, out));
+            lo = register_module("l" + std::to_string(d+1), torch::nn::Linear(width, out));
         }
         torch::Tensor forward(torch::Tensor x) 
         {

@@ -113,9 +113,9 @@ namespace IRL
             double d1 = randomd1(a_eng);
 
             IRL::Normal n1 = IRL::Normal(0,0,0);
-            n1[0] = cos(a1) * cos(b1);
-            n1[1] = sin(b1);
-            n1[2] = sin(a1) * cos(b1);
+            n1[0] = sin(b1) * cos(a1);
+            n1[1] = sin(b1) * sin(a1);
+            n1[2] = cos(b1);
 
             p1 = IRL::Plane(n1,d1);
             p = IRL::PlanarSeparator::fromOnePlane(p1);
@@ -141,34 +141,35 @@ namespace IRL
         std::uniform_real_distribution<double> randomb2(rotb2_l, rotb2_h);
         std::uniform_real_distribution<double> randomd1(d1_l, d1_h);
         std::uniform_real_distribution<double> randomd2(d2_l, d2_h);
-        double s = rand() % 2;
+        double s = 1;//rand() % 2;
         if (s < 0.5)
         {
-            s = -1.0;
+            //s = -1.0;
         }
         IRL::Plane p1;
         IRL::Plane p2;
         IRL::PlanarSeparator p;
         bool intersect = false;
         bool same = false;
+        double d1;
+        double d2;
         do
         {
-            double a1 = randoma1(a_eng);
-            double b1 = randomb1(a_eng);
-            double a2 = randoma2(a_eng);
-            double b2 = randomb2(a_eng);
-            double d1 = randomd1(a_eng);
-            double d2 = randomd2(a_eng);
-
+            a1 = randoma1(a_eng);
+            b1 = randomb1(a_eng);
+            a2 = randoma2(a_eng);
+            b2 = randomb2(a_eng);
+            d1 = randomd1(a_eng);
+            d2 = randomd2(a_eng);
             IRL::Normal n1 = IRL::Normal(0,0,0);
-            n1[0] = cos(a1) * cos(b1);
-            n1[1] = sin(a1) * cos(b1);
-            n1[2] = sin(b1);
+            n1[0] = sin(b1) * cos(a1);
+            n1[1] = sin(b1) * sin(a1);
+            n1[2] = cos(b1);
 
-            IRL::Normal n2 = IRL::Normal(0,0,0);
-            n2[0] = cos(a2) * cos(b2);
-            n2[1] = sin(a2) * cos(b2);
-            n2[2] = sin(b2);
+            IRL::Normal n2 = -IRL::Normal(0,0,0);
+            n2[0] = sin(b2) * cos(a2);
+            n2[1] = sin(b2) * sin(a2);
+            n2[2] = cos(b2);
 
             p1 = IRL::Plane(n1,d1);
             p2 = IRL::Plane(n2,d2);
@@ -176,11 +177,6 @@ namespace IRL
             if (!inter)
             {
                 intersect = doPlanesIntersect(p,liquid_volume_fraction);
-                double dot = n1[0]*n2[0] + n1[1]*n2[1] + n1[2]*n2[2];
-                if (dot >= 0)
-                {
-                    intersect = true;
-                }
             }
             else
             {
@@ -194,7 +190,13 @@ namespace IRL
             {
                 same = arePlanesInSameCenterCell(p);
             }
+            double dot = n1[0]*n2[0] + n1[1]*n2[1] + n1[2]*n2[2];
+            if (dot >= 0)
+            {
+                intersect = true;
+            }
         } while (!(isPlaneInCenterCell(p[0], liquid_volume_fraction) && arePlanesInCenterCell(p, liquid_volume_fraction)) || intersect || same);
+        //std::cout << a1 << " " << b1 << " " << a2 << " " << b2 << std::endl;
 
         return p;
     }
@@ -541,13 +543,56 @@ namespace IRL
                 for (int k = 0; k < a_number_of_cells; ++k)
                 {
                     const auto volumes = getCellMoments<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
-                    const auto volumes_gas = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);   
                     auto& volume = volumes.volume();      
                     auto& centroid = volumes.centroid();  
                     auto& volume_gas = volumes_gas.volume();      
                     auto& centroid_gas = volumes_gas.centroid(); 
                    
                     f.push_back(volume);
+                    if (volume < 10e-15 || volume > 1-10e-15)
+                    {
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                    }
+                    else
+                    {
+                        f.push_back(centroid[0] - mesh.xm(i));
+                        f.push_back(centroid[1] - mesh.ym(j));
+                        f.push_back(centroid[2] - mesh.zm(k));   
+                        f.push_back(centroid_gas[0] - mesh.xm(i));
+                        f.push_back(centroid_gas[1] - mesh.ym(j));
+                        f.push_back(centroid_gas[2] - mesh.zm(k));    
+                    }
+                }
+            }
+        }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_barycenters(IRL::PlanarSeparator p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);   
+                    auto& volume = volumes.volume();      
+                    auto& centroid = volumes.centroid();  
+                    auto& volume_gas = volumes_gas.volume();      
+                    auto& centroid_gas = volumes_gas.centroid(); 
+                   
+                    //f.push_back(volume);
                     if (volume < 10e-15 || volume > 1-10e-15)
                     {
                         f.push_back(0);
@@ -591,6 +636,49 @@ namespace IRL
                     auto& centroid_gas = volumes_gas.centroid(); 
                    
                     f.push_back(volume_gas);
+                    if (volume < 10e-15 || volume > 1-10e-15)
+                    {
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                    }
+                    else
+                    {
+                        f.push_back(centroid_gas[0] - mesh.xm(i));
+                        f.push_back(centroid_gas[1] - mesh.ym(j));
+                        f.push_back(centroid_gas[2] - mesh.zm(k));   
+                        f.push_back(centroid[0] - mesh.xm(i));
+                        f.push_back(centroid[1] - mesh.ym(j));
+                        f.push_back(centroid[2] - mesh.zm(k));    
+                    }
+                }
+            }
+        }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_barycenters_gas(IRL::PlanarSeparator p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    auto& volume = volumes.volume();      
+                    auto& centroid = volumes.centroid();  
+                    auto& volume_gas = volumes_gas.volume();      
+                    auto& centroid_gas = volumes_gas.centroid(); 
+                   
+                    //f.push_back(volume_gas);
                     if (volume < 10e-15 || volume > 1-10e-15)
                     {
                         f.push_back(0);
@@ -1193,7 +1281,7 @@ namespace IRL
         // }
         // else
         {
-            for (int i = 0; i <= 10000; ++i)
+            /*for (int i = 0; i <= 10000; ++i)
             {
                 double x = -3 + i * 6.0 / 10000.0;
                 double y = (1/b)*(d-a*x);
@@ -1203,7 +1291,52 @@ namespace IRL
                 {
                     result = true;
                 }
+            }*/
+            double bx1 = -1.5;
+            double bx2 = 1.5;
+            double by1 = -1.5;
+            double by2 = 1.5;
+            double bz1 = -1.5;
+            double bz2 = 1.5;
+
+
+            double y1 = (1/b)*(d-a*bx1);
+            double z1 = (d1-a1*bx1-b1*y1)/c1;
+            if ((y1 >= -1.5 && y1 <= 1.5) && (z1 >= -1.5 && z1 <= 1.5))
+            {
+                return true;
             }
+            double y2 = (1/b)*(d-a*bx2);
+            double z2 = (d1-a1*bx2-b1*y2)/c1;
+            if ((y2 >= -1.5 && y2 <= 1.5) && (z2 >= -1.5 && z2 <= 1.5))
+            {
+                return true;
+            }
+            double x1 = (-b/a)*by1 + d/a;
+            z1 = (d1-a1*x1-b1*by1)/c1;
+            if ((x1 >= -1.5 && x1 <= 1.5) && (z1 >= -1.5 && z1 <= 1.5))
+            {
+                return true;
+            }
+            double x2 = (-b/a)*by2 + d/a;
+            z2 = (d1-a1*x2-b1*by2)/c1;
+            if ((x2 >= -1.5 && x2 <= 1.5) && (z2 >= -1.5 && z2 <= 1.5))
+            {
+                return true;
+            }
+            x1 = (d1-b1*(d/b)-c1*bz1) / (a1+b1*(-a/b));
+            y1 = (1/b)*(d-a*x1);
+            if ((x1 >= -1.5 && x1 <= 1.5) && (y1 >= -1.5 && y1 <= 1.5))
+            {
+                return true;
+            }
+            x2 = (d1-b1*(d/b)-c1*bz2) / (a1+b1*(-a/b));
+            y2 = (1/b)*(d-a*x2);
+            if ((x2 >= -1.5 && x2 <= 1.5) && (y2 >= -1.5 && y2 <= 1.5))
+            {
+                return true;
+            }
+            //std::cout << x << " " << y << " " << z << std::endl;
         }
         return result;
     }

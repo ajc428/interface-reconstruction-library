@@ -273,6 +273,60 @@ namespace IRL
         centers.push_back(zc);
         return centers;
     }
+
+    vector<double> spatial_moments::get_moment_of_intertia(vector<double>* fractions)
+    {
+        double Ixx = 0;
+        double Iyy = 0;
+        double Izz = 0;
+        double Ixy = 0;
+        double Iyz = 0;
+        double Ixz = 0;
+        for(int i = 0; i < 3; ++i)
+        {
+            for(int j = 0; j < 3; ++j)
+            {
+                for(int k = 0; k < 3; ++k)
+                {
+                    Ixx = Ixx + ((fractions[0][7*(i*9+j*3+k)+2]+(j-1))*(fractions[0][7*(i*9+j*3+k)+2]+(j-1))+(fractions[0][7*(i*9+j*3+k)+3]+(k-1))*(fractions[0][7*(i*9+j*3+k)+3]+(k-1)))*fractions[0][7*(i*9+j*3+k)+0];
+                    Iyy = Iyy + ((fractions[0][7*(i*9+j*3+k)+1]+(i-1))*(fractions[0][7*(i*9+j*3+k)+1]+(i-1))+(fractions[0][7*(i*9+j*3+k)+3]+(k-1))*(fractions[0][7*(i*9+j*3+k)+3]+(k-1)))*fractions[0][7*(i*9+j*3+k)+0];
+                    Izz = Izz + ((fractions[0][7*(i*9+j*3+k)+1]+(i-1))*(fractions[0][7*(i*9+j*3+k)+1]+(i-1))+(fractions[0][7*(i*9+j*3+k)+2]+(j-1))*(fractions[0][7*(i*9+j*3+k)+2]+(j-1)))*fractions[0][7*(i*9+j*3+k)+0];
+                    Ixy = Ixy + (fractions[0][7*(i*9+j*3+k)+1]+(i-1))*(fractions[0][7*(i*9+j*3+k)+2]+(j-1))*fractions[0][7*(i*9+j*3+k)+0];
+                    Iyz = Iyz + (fractions[0][7*(i*9+j*3+k)+2]+(j-1))*(fractions[0][7*(i*9+j*3+k)+3]+(k-1))*fractions[0][7*(i*9+j*3+k)+0];
+                    Ixz = Ixz + (fractions[0][7*(i*9+j*3+k)+1]+(i-1))*(fractions[0][7*(i*9+j*3+k)+3]+(k-1))*fractions[0][7*(i*9+j*3+k)+0];
+                }
+            }
+        }
+        Ixy = -Ixy;
+        Iyz = -Iyz;
+        Ixz = -Ixz;
+        Eigen::MatrixXd I(3,3);
+        I(0,0) = Ixx;
+        I(1,0) = Ixy;
+        I(3,0) = Ixz;
+        I(0,1) = Ixy;
+        I(1,1) = Iyy;
+        I(2,1) = Iyz;
+        I(0,2) = Ixz;
+        I(1,2) = Iyz;
+        I(2,2) = Izz;
+        Eigen::EigenSolver<Eigen::MatrixXd> es(I);
+        vector<double> eigenvectors;
+        eigenvectors.push_back(es.eigenvalues()[0].real());
+        eigenvectors.push_back(es.eigenvectors().col(0)[0].real());
+        eigenvectors.push_back(es.eigenvectors().col(0)[1].real());
+        eigenvectors.push_back(es.eigenvectors().col(0)[2].real());
+        eigenvectors.push_back(es.eigenvalues()[1].real());
+        eigenvectors.push_back(es.eigenvectors().col(1)[0].real());
+        eigenvectors.push_back(es.eigenvectors().col(1)[1].real());
+        eigenvectors.push_back(es.eigenvectors().col(1)[2].real());
+        eigenvectors.push_back(es.eigenvalues()[2].real());
+        eigenvectors.push_back(es.eigenvectors().col(2)[0].real());
+        eigenvectors.push_back(es.eigenvectors().col(2)[1].real());
+        eigenvectors.push_back(es.eigenvectors().col(2)[2].real());
+        //std::cout << eigenvectors << std::endl;
+        return eigenvectors;
+    }
 }
 
 #endif

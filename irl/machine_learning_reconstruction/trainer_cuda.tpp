@@ -24,7 +24,7 @@ namespace IRL
         
         if (m == 4)
         {
-            nn = make_shared<model>(108,3,3);
+            nn = make_shared<model>(108,3,3,100);
             nn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -33,9 +33,9 @@ namespace IRL
         }
         else if (m == 6)
         {
-            nn = make_shared<model>(108,1,6);
+            nn = make_shared<model>(108,1,6,100);
             nn->to(device);
-            nnn = make_shared<model>(108,1,6);
+            nnn = make_shared<model>(108,1,6,100);
             nnn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -44,7 +44,7 @@ namespace IRL
         }
         else
         {
-            nn = make_shared<model>(108,8,2);
+            nn = make_shared<model>(108,8,2,100);
             nn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -61,7 +61,7 @@ namespace IRL
         m = s;
         if (m == 4)
         {
-            nn = make_shared<model>(108,3,3);
+            nn = make_shared<model>(108,3,3,100);
             nn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -70,9 +70,9 @@ namespace IRL
         }
         else if (m == 6)
         {
-            nn = make_shared<model>(108,1,6);
+            nn = make_shared<model>(108,1,6,100);
             nn->to(device);
-            nnn = make_shared<model>(108,1,6);
+            nnn = make_shared<model>(108,1,6,100);
             nnn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
@@ -81,7 +81,7 @@ namespace IRL
         }
         else
         {
-            nn = make_shared<model>(108,8,2);
+            nn = make_shared<model>(108,8,2,100);
             nn->to(device);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();

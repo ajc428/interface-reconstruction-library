@@ -21,12 +21,14 @@
 
 #include "irl/machine_learning_reconstruction/fractions.h"
 #include "irl/machine_learning_reconstruction/spatial_moments.h"
+#include "irl/interface_reconstruction_methods/volume_fraction_matching.h"
 
 using torch::autograd::Node;
 using torch::autograd::deleteNode;
 using torch::autograd::SavedVariable;
 
 using torch::autograd::variable_list;
+using torch::autograd::Variable;
 using torch::autograd::tensor_list;
 
 using torch::autograd::compute_requires_grad;
@@ -46,8 +48,7 @@ namespace IRL
         ~grad_functions();
         torch::Tensor VolumeFracsForward(const torch::Tensor);
         torch::Tensor VolumeFracsForwardFD(const torch::Tensor);
-        torch::Tensor MomentsForward(const torch::Tensor, DataMesh<double>&, DataMesh<IRL::Pt>&);
-        torch::Tensor PLICForward(const torch::Tensor);
+        torch::Tensor R2PVolumeFracsForward(const torch::Tensor,double,double,double);
         torch::Tensor VolumeFracsNormalForward(const torch::Tensor, IRL::Normal);
         
         struct VolumeFracsBackward : public Node 
@@ -80,86 +81,6 @@ namespace IRL
                 }
 
                 for (int i = 0; i < 8; ++i)
-                {
-                    torch::Tensor temp2 = torch::zeros(1); 
-                    temp2 = torch::tensor(grad_result(i,0));
-                    temp[i] = temp2;
-                }
-                grad_inputs[0] = temp;
-                return grad_inputs;
-            }
-        };
-
-        struct MomentsBackward : public Node 
-        {
-            vector<torch::Tensor> moment_grads;
-            torch::Tensor y_pred;
-
-            variable_list apply(variable_list&& inputs) override 
-            {
-                Eigen::MatrixXd in_grads(12,1);
-                Eigen::MatrixXd out_grads(8,12);
-                Eigen::MatrixXd grad_result(8,1);
-                for (int i = 0; i < 8; ++i)
-                {
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        out_grads(i,j) = moment_grads[i][j].item<double>();
-                    }
-                }
-                for (int i = 0; i < 3; ++i)
-                {
-                    in_grads(i,0) = inputs[0][i].item<double>();
-                }
-                variable_list grad_inputs(1); 
-                torch::Tensor temp = torch::zeros(8); 
-
-                if (should_compute_output(0)) 
-                {
-                    grad_result = out_grads * in_grads;
-                }
-
-                for (int i = 0; i < 8; ++i)
-                {
-                    torch::Tensor temp2 = torch::zeros(1); 
-                    temp2 = torch::tensor(grad_result(i,0));
-                    temp[i] = temp2;
-                }
-                grad_inputs[0] = temp;
-                return grad_inputs;
-            }
-        };
-
-        struct PLICBackward : public Node 
-        {
-            vector<torch::Tensor> PLIC_grads;
-            torch::Tensor y_pred;
-
-            variable_list apply(variable_list&& inputs) override 
-            {
-                Eigen::MatrixXd in_grads(108,1);
-                Eigen::MatrixXd out_grads(4,108);
-                Eigen::MatrixXd grad_result(4,1);
-                for (int i = 0; i < 4; ++i)
-                {
-                    for (int j = 0; j < 108; ++j)
-                    {
-                        out_grads(i,j) = PLIC_grads[i][j].item<double>();
-                    }
-                }
-                for (int i = 0; i < 108; ++i)
-                {
-                    in_grads(i,0) = inputs[0][i].item<double>();
-                }
-                variable_list grad_inputs(1); 
-                torch::Tensor temp = torch::zeros(4); 
-
-                if (should_compute_output(0)) 
-                {
-                    grad_result = out_grads * in_grads;
-                }
-
-                for (int i = 0; i < 4; ++i)
                 {
                     torch::Tensor temp2 = torch::zeros(1); 
                     temp2 = torch::tensor(grad_result(i,0));
@@ -204,6 +125,38 @@ namespace IRL
                     torch::Tensor temp2 = torch::zeros(1); 
                     temp2 = torch::tensor(grad_result(i,0));
                     temp[i] = temp2;
+                }
+                grad_inputs[0] = temp;
+                return grad_inputs;
+            }
+        };
+
+        struct R2PBackward : public Node 
+        {
+            vector<torch::Tensor> R2P_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                torch::Tensor in_grads = torch::zeros({189,1});
+                torch::Tensor out_grads = torch::zeros({6,189});
+                torch::Tensor grad_result = torch::zeros({6,1});
+                for (int i = 0; i < 6; ++i)
+                {
+                    out_grads.index_put_({i,torch::indexing::Slice()},R2P_grads[i]);
+                }
+                in_grads = inputs[0];
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros(6); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = torch::matmul(out_grads, in_grads);
+                }
+
+                for (int i = 0; i < 6; ++i)
+                {
+                    temp[i] = grad_result[i];
                 }
                 grad_inputs[0] = temp;
                 return grad_inputs;
