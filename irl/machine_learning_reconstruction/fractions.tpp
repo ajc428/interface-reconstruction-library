@@ -108,14 +108,14 @@ namespace IRL
 
         do
         {
-            double a1 = randoma1(a_eng);
-            double b1 = randomb1(a_eng);
+            a1 = randoma1(a_eng);
+            b1 = randomb1(a_eng);
             double d1 = randomd1(a_eng);
 
             IRL::Normal n1 = IRL::Normal(0,0,0);
-            n1[0] = sin(b1) * cos(a1);
-            n1[1] = sin(b1) * sin(a1);
-            n1[2] = cos(b1);
+            n1[0] = cos(b1) * cos(a1);
+            n1[1] = cos(b1) * sin(a1);
+            n1[2] = sin(b1);
 
             p1 = IRL::Plane(n1,d1);
             p = IRL::PlanarSeparator::fromOnePlane(p1);
@@ -162,14 +162,14 @@ namespace IRL
             d1 = randomd1(a_eng);
             d2 = randomd2(a_eng);
             IRL::Normal n1 = IRL::Normal(0,0,0);
-            n1[0] = sin(b1) * cos(a1);
-            n1[1] = sin(b1) * sin(a1);
-            n1[2] = cos(b1);
+            n1[0] = cos(b1) * cos(a1);
+            n1[1] = cos(b1) * sin(a1);
+            n1[2] = sin(b1);
 
             IRL::Normal n2 = -IRL::Normal(0,0,0);
-            n2[0] = sin(b2) * cos(a2);
-            n2[1] = sin(b2) * sin(a2);
-            n2[2] = cos(b2);
+            n2[0] = cos(b2) * cos(a2);
+            n2[1] = cos(b2) * sin(a2);
+            n2[2] = sin(b2);
 
             p1 = IRL::Plane(n1,d1);
             p2 = IRL::Plane(n2,d2);

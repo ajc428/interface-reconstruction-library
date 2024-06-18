@@ -123,6 +123,14 @@ namespace IRL
             x.push_back(b2);
             return x;
         }
+
+        vector<double> getPLICAngles()
+        {
+            vector<double> x;
+            x.push_back(a1);
+            x.push_back(b1);
+            return x;
+        }
     };
 }
 

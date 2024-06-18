@@ -50,7 +50,7 @@ namespace IRL
         }
         else if (m == 6)
         {
-            nn = make_shared<model>(80,4,4,600);
+            nn = make_shared<model>(162,2,3,400);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             //torch::optim::AdamOptions(learning_rate).weight_decay(0.001)
             critereon_MSE = torch::nn::MSELoss();
@@ -98,7 +98,7 @@ namespace IRL
         }
         else if (m == 6)
         {
-            nn = make_shared<model>(80,4,4,600);
+            nn = make_shared<model>(162,2,3,400);
             optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
             critereon_MSE = torch::nn::MSELoss();
             functions = new IRL::grad_functions(3, m);
@@ -278,7 +278,7 @@ namespace IRL
                     //loss = critereon_MSE(y_pred, train_out);
                     //std::cout << check << std::endl;
                     //std::cout << comp << std::endl;
-                    loss = critereon_MSE(check, comp);
+                    loss = functions->MSE_angle_loss(check,comp);
                     //loss = critereon_MSE(check, comp) + critereon_MSE(y_pred, train_out);
                     epoch_loss = epoch_loss + loss.item().toDouble()*batch.data.size(0);
                 }
@@ -386,7 +386,7 @@ namespace IRL
                 }
                 else
                 {
-                    loss = critereon_MSE(check, comp);
+                    loss = functions->MSE_angle_loss(check,comp);
                     //loss = critereon_MSE(y_pred, train_out);
                     //loss = 10*critereon_MSE(check, comp) + critereon_MSE(y_pred, train_out);
                     epoch_loss_val = epoch_loss_val + loss.item().toDouble()*batch.data.size(0);
@@ -420,13 +420,13 @@ namespace IRL
             {
                 if (total_epoch_loss_val < epoch_loss_val_check || epoch == 0)
                 {
-                    //epoch_loss_val_check = total_epoch_loss_val;
-                    //MPI_Bcast(&epoch_loss_val_check, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                    epoch_loss_val_check = total_epoch_loss_val;
+                    MPI_Bcast(&epoch_loss_val_check, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 }
                 else if (epoch < epochs-1)
                 {
-                    //epoch = epochs;
-                    //MPI_Bcast(&epoch, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                    epoch = epochs;
+                    MPI_Bcast(&epoch, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 }
             }
             
@@ -590,11 +590,11 @@ namespace IRL
                     test_out = data_test.get(i).target;
                     auto prediction = nn->forward(test_in);
                     auto loss = critereon_MSE(prediction, test_out);
-                    for (int j = 0; j < 4; ++j)
+                    for (int j = 0; j < 2; ++j)
                     {
                         results_pr << prediction[j].item<double>() << " ";
                     }
-                    for (int j = 0; j < 4; ++j)
+                    for (int j = 0; j < 2; ++j)
                     {
                         results_ex << test_out[j].item<double>() << " ";
                     }

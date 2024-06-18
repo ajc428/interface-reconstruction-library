@@ -1665,8 +1665,8 @@ namespace IRL
                 result = gen->get_fractions_all(plane);
                 if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
                 {
-                    flip = true;
-                    result = gen->get_fractions_gas_all(plane);
+                    //flip = true;
+                    //result = gen->get_fractions_gas_all(plane);
                 }                    
 
                 std::vector<double> fractions;
@@ -1680,7 +1680,7 @@ namespace IRL
                 std::vector<double> center;
                 auto sm = IRL::spatial_moments();
                 center = sm.get_mass_centers_all(&fractions);
-                direction = rotateFractions_all(&fractions,center);
+                //direction = rotateFractions_all(&fractions,center);
                 
                 std::ofstream output;
                 std::string data_name = "fractions.txt";
@@ -1696,6 +1696,9 @@ namespace IRL
                 std::ofstream normals;
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
+                //std::ofstream normals2;
+                //std::string normals2_name = "normals2.txt";
+                //normals2.open(normals2_name, std::ios_base::app);
                 auto normal = plane[0].normal();
 
                 switch (direction)
@@ -1734,6 +1737,11 @@ namespace IRL
                     normal[2] = -normal[2];
                 }
 
+                vector<double> angles = gen->getPLICAngles();
+                double theta1 = angles[0];
+                double phi1 = angles[1];
+                //normals2 << theta1 << "," << phi1 << "\n";
+
                 if (!R2P)
                 {
                     normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
@@ -1742,7 +1750,9 @@ namespace IRL
                 {
                     normals << normal[0] << "," << normal[1] << "," << normal[2] << ",0,0,0" << "\n";
                 }
-                normals.close();   
+
+                normals.close(); 
+                //normals2.close();   
 
                 /*const Mesh& mesh = gen->getMesh();
                 FILE* viz_file;
@@ -1991,6 +2001,7 @@ namespace IRL
 
         void generate_R2P(double rota1_l, double rota1_h, double rotb1_l, double rotb1_h, double rota2_l, double rota2_h, double rotb2_l, double rotb2_h, double d1_l, double d1_h, double d2_l, double d2_h, bool inter, bool same)
         {
+            srand((unsigned) time(NULL));
             torch::Tensor result_all = torch::zeros({162, Ntests});
             for (int n = 0; n < Ntests; ++n) 
             {
@@ -2013,9 +2024,9 @@ namespace IRL
 
                 torch::Tensor result;
                 bool flip = true;//false;
-                //result = gen->get_fractions_all(plane);
-                result = gen->get_barycenters(plane);
-                result_all.index_put_({torch::indexing::Slice(), n}, result);
+                result = gen->get_fractions_all(plane);
+                //result = gen->get_barycenters(plane);
+                //result_all.index_put_({torch::indexing::Slice(), n}, result);
                 torch::Tensor result1;
                 IRL::PlanarSeparator p = IRL::PlanarSeparator::fromOnePlane(plane[0]);
                 //result1 = gen->get_fractions_all(p);
@@ -2036,11 +2047,11 @@ namespace IRL
 
                 int direction = 0;
                 std::vector<double> center;
-                std::vector<double> eigenvectors;
-                auto sm = IRL::spatial_moments();
+                //std::vector<double> eigenvectors;
+                //auto sm = IRL::spatial_moments();
                 //center = sm.get_mass_centers_all(&fractions);
                 //eigenvectors = sm.get_moment_of_intertia(&fractions);
-                int min = 0;
+                //int min = 0;
                 //if (eigenvectors[0] < eigenvectors[4] && eigenvectors[0] < eigenvectors[8])
                 {
                     //min = 0;
@@ -2057,17 +2068,25 @@ namespace IRL
                 //center.push_back(eigenvectors[min+2]);
                 //center.push_back(eigenvectors[min+3]);
                 //direction = rotateFractions_all(&fractions,center);
-                
-                //std::ofstream output;
-                //std::string data_name = "fractions.txt";
-                //output.open(data_name, std::ios_base::app);
+                double c = (rand() % 601 - 300) / 1000.0;
+                center.push_back(plane[0].normal()[0] + c);
+                center.push_back(plane[0].normal()[1] + c);
+                center.push_back(plane[0].normal()[2] + c);
+                direction = rotateFractions_all(&fractions,center);
 
-                //for (int i = 0; i < result.sizes()[0]; ++i)
+                std::ofstream output;
+                std::string data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+
+                for (int i = 0; i < result.sizes()[0]; ++i)
                 {
-                    //output << fractions[i] << ",";
+                    if (i%7!=0)
+                    {
+                        output << fractions[i] << ",";
+                    }
                 }
-                //output << "\n";
-                //output.close();  
+                output << "\n";
+                output.close();  
 
                 std::ofstream normals;
                 std::string normals_name = "normals.txt";
@@ -2085,37 +2104,157 @@ namespace IRL
                     normal1 = IRL::Normal(0,0,0);
                 }
 
+                vector<double> angles = gen->getR2PAngles();
+                double theta1 = angles[0];
+                double phi1 = angles[1];
+                double theta2 = angles[2];
+                double phi2 = angles[3];
+
                 switch (direction)
                 {
                     case 1:
                     normal[0] = -normal[0];
                     normal1[0] = -normal1[0];
+                    theta1 = theta1 + 2*(M_PI/2-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }
+                    theta2 = theta2 + 2*(M_PI/2-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
                     break;
                     case 2:
                     normal[1] = -normal[1];
                     normal1[1] = -normal1[1];
+                    theta1 = theta1 + 2*(M_PI-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }                    
+                    theta2 = theta2 + 2*(M_PI-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
                     break;
                     case 3:
                     normal[2] = -normal[2];
                     normal1[2] = -normal1[2];
+                    phi1 = -phi1;
+                    phi2 = -phi2;
                     break;
                     case 4:
                     normal[0] = -normal[0];
                     normal[1] = -normal[1];
                     normal1[0] = -normal1[0];
                     normal1[1] = -normal1[1];
+                    theta1 = theta1 + 2*(M_PI/2-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }
+                    theta2 = theta2 + 2*(M_PI/2-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
+                    theta1 = theta1 + 2*(M_PI-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }
+                    theta2 = theta2 + 2*(M_PI-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
                     break;
                     case 5:
                     normal[0] = -normal[0];
                     normal[2] = -normal[2];
                     normal1[0] = -normal1[0];
                     normal1[2] = -normal1[2]; 
+                    theta1 = theta1 + 2*(M_PI/2-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }
+                    theta2 = theta2 + 2*(M_PI/2-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
+                    phi1 = -phi1;
+                    phi2 = -phi2;
                     break;
                     case 6:
                     normal[1] = -normal[1];
                     normal[2] = -normal[2];
                     normal1[1] = -normal1[1];
                     normal1[2] = -normal1[2];
+                    theta1 = theta1 + 2*(M_PI-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }
+                    theta2 = theta2 + 2*(M_PI-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
+                    phi1 = -phi1;
+                    phi2 = -phi2;
                     break;
                     case 7:
                     normal[0] = -normal[0];
@@ -2124,6 +2263,44 @@ namespace IRL
                     normal1[0] = -normal1[0];
                     normal1[1] = -normal1[1];
                     normal1[2] = -normal1[2];
+                    theta1 = theta1 + 2*(M_PI/2-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }
+                    theta2 = theta2 + 2*(M_PI/2-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
+                    theta1 = theta1 + 2*(M_PI-theta1);
+                    if (theta1 > 2*M_PI)
+                    {
+                        theta1 = theta1 - 2*M_PI;
+                    }
+                    else if (theta1 < 0)
+                    {
+                        theta1 = theta1 + 2*M_PI;
+                    }
+                    theta2 = theta2 + 2*(M_PI-theta2);
+                    if (theta2 > 2*M_PI)
+                    {
+                        theta2 = theta2 - 2*M_PI;
+                    }
+                    else if (theta2 < 0)
+                    {
+                        theta2 = theta2 + 2*M_PI;
+                    }
+                    phi1 = -phi1;
+                    phi2 = -phi2;
                     break;
                 }
                 if (!flip)
@@ -2136,11 +2313,6 @@ namespace IRL
                     normal1[2] = -normal1[2];
                 }
                 
-                vector<double> angles = gen->getR2PAngles();
-                double theta1 = angles[0]/M_PI-1;
-                double phi1 = angles[1]/M_PI-1;
-                double theta2 = angles[2]/M_PI-1;
-                double phi2 = angles[3]/M_PI-1;
                 //double theta1 = atan2(normal[1],normal[0]);
                 //double phi1 = acos(normal[2]/normal.calculateMagnitude());
                 //double theta2 = atan2(normal1[1],normal1[0]);
@@ -2150,8 +2322,8 @@ namespace IRL
                 //phi1 = sin(phi1);
                 //theta2 = sin(theta2);
                 //phi2 = sin(phi2);
-                //normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "," << plane[0].distance() << "," << plane[1].distance() << "\n";
-                normals << theta1 << "," << phi1 << "," << theta2 << "," << phi2 /*<< "," << plane[0].distance() << "," << plane[1].distance()*/ << "\n";
+                //normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "\n"; //<< "," << plane[0].distance() << "," << plane[1].distance() << "\n";
+                normals << /*theta1 << "," << phi1 << "," <<*/ theta2 << "," << phi2 /*<< "," << plane[0].distance() << "," << plane[1].distance()*/ << "\n";
                 normals.close();     
 
             //     const Mesh& mesh = gen->getMesh();
@@ -2272,7 +2444,7 @@ namespace IRL
             
             //result_all = torch::div((result_all - result_all.mean(1).unsqueeze(0).transpose(0,1)), result_all.std(1).unsqueeze(0).transpose(0,1));
             //std::cout << result_all.index({torch::indexing::Slice(),0}) << std::endl;
-            torch::Tensor Cov = torch::zeros({162, 162});
+            /*torch::Tensor Cov = torch::zeros({162, 162});
             std::tuple<torch::Tensor, torch::Tensor> x;
             std::tuple<torch::Tensor, torch::Tensor> s;
             Cov = torch::matmul(result_all, result_all.transpose(0, 1))/Ntests;
@@ -2281,7 +2453,7 @@ namespace IRL
             torch::Tensor u = torch::real(get<1>(x));
             s = torch::sort(lam,0,true);
             lam = get<0>(s);
-            int r = 80;
+            int r = 100;
             double percent = torch::sum(lam.index({torch::indexing::Slice(0,r)})).item<double>()/torch::sum(lam).item<double>();
             u = u.index({get<1>(s),torch::indexing::Slice()});
             u = u.index({torch::indexing::Slice(0,r),torch::indexing::Slice()});
@@ -2293,13 +2465,13 @@ namespace IRL
 
             for (int i = 0; i < Ntests; ++i)
             {
-                for (int j = 0; j < 80; ++j)
+                for (int j = 0; j < r; ++j)
                 {
                     output << result_all[j][i].item<double>() << ",";
                 }
                 output << "\n";
             }
-            output.close();  
+            output.close();*/  
         }; 
 
         void generate_R2P_with_disturbance(double rota1_l, double rota1_h, double rotb1_l, double rotb1_h, double rota2_l, double rota2_h, double rotb2_l, double rotb2_h, double d1_l, double d1_h, double d2_l, double d2_h, bool inter, bool same)

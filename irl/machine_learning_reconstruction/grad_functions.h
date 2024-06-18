@@ -51,6 +51,18 @@ namespace IRL
         torch::Tensor R2PVolumeFracsForward(const torch::Tensor,double,double,double);
         torch::Tensor VolumeFracsNormalForward(const torch::Tensor, IRL::Normal);
         
+        torch::Tensor MSE_angle_loss(torch::Tensor out, torch::Tensor target)
+        {   
+            //torch::Tensor loss = torch::mse_loss(out,target);
+            //torch::Tensor loss = torch::mean(torch::pow(torch::min(torch::fmod(out-target,2*M_PI),2*M_PI-torch::fmod(out-target,2*M_PI)),2));
+            //torch::Tensor loss = torch::mean(torch::pow(torch::sin(out) - torch::sin(target),2)+torch::pow(torch::cos(out) - torch::cos(target),2));
+
+            torch::Tensor loss = (torch::mse_loss(torch::cos(out.index({torch::indexing::Slice(),1})) * torch::cos(out.index({torch::indexing::Slice(),0})),torch::cos(target.index({torch::indexing::Slice(),1})) * torch::cos(target.index({torch::indexing::Slice(),0}))) + torch::mse_loss(torch::cos(out.index({torch::indexing::Slice(),1})) * torch::sin(out.index({torch::indexing::Slice(),0})),torch::cos(target.index({torch::indexing::Slice(),1})) * torch::sin(target.index({torch::indexing::Slice(),0}))) + torch::mse_loss(torch::sin(out.index({torch::indexing::Slice(),1})),torch::sin(target.index({torch::indexing::Slice(),1}))))/3;
+            //+ (torch::mse_loss(torch::cos(out.index({torch::indexing::Slice(),3})) * torch::cos(out.index({torch::indexing::Slice(),2})),torch::cos(target.index({torch::indexing::Slice(),3})) * torch::cos(target.index({torch::indexing::Slice(),2}))) + torch::mse_loss(torch::cos(out.index({torch::indexing::Slice(),3})) * torch::sin(out.index({torch::indexing::Slice(),2})),torch::cos(target.index({torch::indexing::Slice(),3})) * torch::sin(target.index({torch::indexing::Slice(),2}))) + torch::mse_loss(torch::sin(out.index({torch::indexing::Slice(),3})),torch::sin(target.index({torch::indexing::Slice(),3}))))/3)/2;
+
+            return loss;
+        };
+
         struct VolumeFracsBackward : public Node 
         {
             vector<torch::Tensor> frac_grads;
