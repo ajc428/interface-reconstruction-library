@@ -5,6 +5,7 @@
 
 #include "examples/plic_advector/deformation_3d.h"
 #include "examples/plic_advector/translation_3d.h"
+#include "examples/plic_advector/sheets.h"
 #include "examples/plic_advector/reconstruction_types.h"
 #include "examples/plic_advector/solver.h"
 #include "examples/plic_advector/vof_advection.h"
@@ -60,6 +61,10 @@ static int startSimulation(const std::string& a_simulation_type,
         a_time_duration, a_viz_frequency);
   } else if (a_simulation_type == "Translation3D") {
     return runSimulation<Translation3D>(
+        a_advection_method, a_reconstruction_method, a_time_step_size,
+        a_time_duration, a_viz_frequency);
+  } else if (a_simulation_type == "Sheets") {
+    return runSimulation<Sheets>(
         a_advection_method, a_reconstruction_method, a_time_step_size,
         a_time_duration, a_viz_frequency);
   } else {

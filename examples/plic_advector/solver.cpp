@@ -249,6 +249,10 @@ void writeOutInterface(const int a_iteration,
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
         const auto& recon = a_interface(i, j, k);
+        if (i == mesh.imin() || j == mesh.jmin())
+        {
+          //std::cout << a_interface(i, j, k) << std::endl;
+        }
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));

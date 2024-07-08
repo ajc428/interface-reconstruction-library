@@ -9,14 +9,14 @@ using namespace std;
 
 void create_surface(string name, double x, double y, double z, double alpha, double beta, double gamma, double a, double b)
 {
-    for (int i = 0; i < 3; ++i)
+    //for (int i = 0; i < 3; ++i)
     {
-        for (int j = 0; j < 3; ++j)
+        //for (int j = 0; j < 3; ++j)
         {
-            for (int k = 0; k < 3; ++k)
+            //for (int k = 0; k < 3; ++k)
             {
-                const auto bottom_corner = IRL::Pt(-1.5+i, -1.5+j, -1.5+k);
-                const auto top_corner = IRL::Pt(-0.5+i, -0.5+j, -0.5+k);
+                const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
+                const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
                 const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
                 IRL::fractions *gen = new IRL::fractions(3);
                 IRL::Paraboloid p1 = gen->new_parabaloid(x,y,z,alpha,beta,gamma,a,b);
@@ -27,8 +27,8 @@ void create_surface(string name, double x, double y, double z, double alpha, dou
                 auto surface = first_moments_and_surface.getSurface();
                 const double length_scale = 0.05;
                 IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
-                string name2 = name + std::to_string(i)+std::to_string(j)+std::to_string(k);
-                triangulated_surface.write(name2);
+                //string name2 = name + std::to_string(i)+std::to_string(j)+std::to_string(k);
+                triangulated_surface.write(name);
             }
         }
     }
@@ -37,11 +37,11 @@ void create_surface(string name, double x, double y, double z, double alpha, dou
 void data_generate(int num, double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
 {
     IRL::data_gen gen(3,num);
-    //gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
+    gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_with_disturbance2(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
     //gen.generate_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_two_paraboloids(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
-    gen.generate_two_paraboloids_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
+    //gen.generate_two_paraboloids_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_two_paraboloids_in_cell(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_noise(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h);
     //gen.generate_paraboloid_with_plane(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
@@ -53,8 +53,8 @@ void data_generate_planes(int num, double rota1_l, double rota1_h, double rotb1_
 {
     IRL::data_gen gen(3,num);
     //gen.generate_plane(rota1_l, rota1_h, rotb1_l, rotb1_h, d1_l, d1_h, R2P);
-    gen.generate_plane_with_disturbance(rota1_l, rota1_h, rotb1_l, rotb1_h, d1_l, d1_h, R2P);
-    //gen.generate_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
+    //gen.generate_plane_with_disturbance(rota1_l, rota1_h, rotb1_l, rotb1_h, d1_l, d1_h, R2P);
+    gen.generate_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
     //gen.generate_R2P_with_disturbance(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
 }
 
@@ -62,10 +62,9 @@ void data_generate_planes(int num, double rota1_l, double rota1_h, double rotb1_
 trainer(epochs, data size, learning rate, OPTION)
 Trainer options:
 0: Predict paraboloid, training with coefficients
-1: Predict paraboloid, training with volume fractions, analytical gradients (broken)
-2: Predict paraboloid, training with volume fractions, Finite Difference
-3: Classification, sheet vs. ligament
-4: Predict surface normal
+1: Classification
+2: Predict surface normal
+3: Predict R2P
 ************************/
 
 int main(int argc, char* argv[])
@@ -74,15 +73,16 @@ int main(int argc, char* argv[])
 
     //create_surface("test_surface_", 0.276306,-0.192727,0.28876,0.699365,0.0853489,2.97228,0.452093,1.70223);
     //create_surface("test_surface2_", 0, 0, 0, M_PI/2, M_PI/2, 0, 1, 1);
-    //create_surface("test_surface",-0.320446,-0.496939,0.262045,2.33306,3.61892,6.03591,0.27547,0.245008);
+    //create_surface("test_surface2",0,0,0,0,0,0,0.11,0.11);
     
-    //data_generate(100000,0,2*M_PI,0,2*M_PI,0,2*M_PI,-0.5,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5);
-    //data_generate_planes(50000,0,2*M_PI,-M_PI/2,M_PI/2,0,2*M_PI,-M_PI/2,M_PI/2,-1,1,-1,1,true, true, false);
+    //data_generate(1000,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0009765625,0.0009765625,0.0009765625,0.0009765625,-0.5,0.5,-0.5,0.5,-0.5,0.5);
+    //data_generate_planes(700000,0,2*M_PI,-M_PI/2,M_PI/2,0,2*M_PI,-M_PI/2,M_PI/2,-2,2,-2,2,true, false, true);
 
-    auto t = IRL::trainer(2000, 700000, 0.0001, 6);
+    auto t = IRL::trainer(10000, 10000, 0.0001, 3);
     t.load_train_data("fractions.txt", "normals.txt");
-    t.load_validation_data("fractions_val.txt", "normals_val.txt", 150000);
+    t.load_validation_data("fractions_val.txt", "normals_val.txt", 1000);
     t.load_test_data("fractions.txt", "normals.txt");
     t.train_model(false, "model.pt", "model.pt");
-    t.test_model(6);
+    //t.load_model("model.pt",0);
+    t.test_model(3);
 }

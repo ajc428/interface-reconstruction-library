@@ -132,6 +132,10 @@ int runSimulation(const std::string& a_advection_method,
   {
     load2();
   }
+  else if (a_reconstruction_method == "R2PNet")
+  {
+    load3();
+  }
 
       writeOutVisualization(iteration, a_visualization_frequency,
                             simulation_time, liquid_volume_fraction);

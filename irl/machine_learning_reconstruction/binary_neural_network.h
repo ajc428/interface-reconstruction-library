@@ -20,26 +20,14 @@ namespace IRL
             l1 = register_module("l1", torch::nn::Linear(size, 100));
             l2 = register_module("l2", torch::nn::Linear(100, 100));
             l3 = register_module("l3", torch::nn::Linear(100, 100));
-            l4 = register_module("l4", torch::nn::Linear(100, 100));
-            l5 = register_module("l5", torch::nn::Linear(100, 100));
-            l6 = register_module("l6", torch::nn::Linear(100, 100));
-            l7 = register_module("l7", torch::nn::Linear(100, 100));
-            l8 = register_module("l8", torch::nn::Linear(100, 100));
-            l9 = register_module("l9", torch::nn::Linear(100, 100));
-            l10 = register_module("l10", torch::nn::Linear(100, 2));
+            l10 = register_module("l10", torch::nn::Linear(100, 1));
         }
         torch::Tensor forward(torch::Tensor x) 
         {
             x = torch::nn::functional::relu(l1(x));
             x = torch::nn::functional::relu(l2(x));
             x = torch::nn::functional::relu(l3(x));
-            x = torch::nn::functional::relu(l4(x));
-            x = torch::nn::functional::relu(l5(x));
-            x = torch::nn::functional::relu(l6(x));
-            x = torch::nn::functional::relu(l7(x));
-            x = torch::nn::functional::relu(l8(x));
-            x = torch::nn::functional::relu(l9(x));
-            x = torch::softmax(l10(x),-1);
+            x = torch::sigmoid(l10(x));
             return x;
         }
         torch::nn::Linear l1{nullptr}, l2{nullptr}, l3{nullptr}, l4{nullptr}, l5{nullptr}, l6{nullptr}, l7{nullptr}, l8{nullptr}, l9{nullptr}, l10{nullptr};

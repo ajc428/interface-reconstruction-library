@@ -47,7 +47,7 @@ namespace IRL
         int numranks = 1;
         int batch_size = data_size / numranks;
         int val_batch_size = data_val_size / numranks;
-        int m = 0;
+        int type = 0;
 
         ofstream results_ex;
         ofstream results_pr;
@@ -75,6 +75,7 @@ namespace IRL
         trainer(int);
         trainer(int, int, double, int);
         ~trainer();
+        void init();
         void load_train_data(string, string);
         void load_validation_data(string, string, int);
         void load_test_data(string, string);
@@ -82,6 +83,8 @@ namespace IRL
         void train_model(bool, string, string);
         void test_model(int);
         IRL::Normal get_normal(vector<double>*);
+        IRL::Normal get_r2p_normal(vector<double>*);
+        double get_type(vector<double>*);
         //vector<double> get_2normals(vector<double>*);
     };
 }

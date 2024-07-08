@@ -8,6 +8,7 @@ IRLAddExample_cpp(
   "data.h"
   "deformation_3d.h"
   "translation_3d.h"
+  "sheets.h"
   "reconstruction_types.h"
   "solver.h"
   "vof_advection.h"
@@ -19,6 +20,7 @@ IRLAddExample_cpp(
   "reconstruction_types.cpp"
   "deformation_3d.cpp"
   "translation_3d.cpp"
+  "sheets.cpp"
   OUTPUT_DIR
   "${IRL_EXAMPLES_OUTPUT_DIR}/plic_advector"
   COLLECTION

@@ -19,6 +19,7 @@
 
 void load();
 void load2();
+void load3();
 
 void getReconstruction(
     const std::string& a_reconstruction_method,
@@ -60,6 +61,26 @@ struct ELVIRA3D {
                                 const Data<double>& a_V,
                                 const Data<double>& a_W,
                                 Data<IRL::PlanarSeparator>* a_interface);
+};
+
+struct R2P3D {
+  static void getReconstruction(
+      const Data<double>& a_liquid_volume_fraction,
+      const Data<IRL::Pt>& a_liquid_centroid,
+      const Data<IRL::Pt>& a_gas_centroid,
+      const Data<IRL::LocalizedSeparatorLink>& a_localized_separator_link,
+      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+      const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface);
+};
+
+struct R2PNet {
+  static void getReconstruction(
+      const Data<double>& a_liquid_volume_fraction,
+      const Data<IRL::Pt>& a_liquid_centroid,
+      const Data<IRL::Pt>& a_gas_centroid,
+      const Data<IRL::LocalizedSeparatorLink>& a_localized_separator_link,
+      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+      const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface);
 };
 
 void correctInterfacePlaneBorders(Data<IRL::PlanarSeparator>* a_interface);

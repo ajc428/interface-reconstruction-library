@@ -19,6 +19,8 @@
 #include "irl/interface_reconstruction_methods/reconstruction_interface.h"
 #include "irl/parameters/constants.h"
 #include "irl/planar_reconstruction/localizer_link_from_localized_separator_link.h"
+#include "irl/interface_reconstruction_methods/r2p_neighborhood.h"
+#include "irl/interface_reconstruction_methods/r2p_optimization.h"
 
 #include "examples/plic_advector/basic_mesh.h"
 #include "examples/plic_advector/data.h"
@@ -26,6 +28,8 @@
 
 auto t = IRL::trainer(4);
 auto t2 = IRL::trainer(5);
+auto t3 = IRL::trainer(6);
+auto t4 = IRL::trainer(3);
 
 void load()
 {
@@ -34,7 +38,13 @@ void load()
 
 void load2()
 {
-  t.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", 0);
+  t2.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", 0);
+};
+
+void load3()
+{
+  t3.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", 0);
+  t4.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model_class.pt", 1);
 };
 
 void getReconstruction(
@@ -56,8 +66,15 @@ void getReconstruction(
   } else if (a_reconstruction_method == "LVIRA3D") {
     LVIRA3D::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, a_dt, a_U, a_V, a_W,
                                 a_interface);
-  }
-  else {
+  } else if (a_reconstruction_method == "R2P3D") {
+    R2P3D::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
+                             a_gas_centroid, a_localized_separator_link, a_dt,
+                             a_U, a_V, a_W, a_interface);
+  } else if (a_reconstruction_method == "R2PNet") {
+    R2PNet::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
+                             a_gas_centroid, a_localized_separator_link, a_dt,
+                             a_U, a_V, a_W, a_interface);
+  } else {
     std::cout << "Unknown reconstruction method of : "
               << a_reconstruction_method << '\n';
     std::cout << "Value entries are: ELVIRA3D, LVIRA3D, ML_PLIC. \n";
@@ -2518,6 +2535,1670 @@ void ML_PLIC2::getReconstruction(const Data<double>& a_liquid_volume_fraction, c
   if (count > 0)
   {
     std::cout << "\nSpurious Planes: " << count << std::endl;
+  }
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void R2P3D::getReconstruction(
+    const Data<double>& a_liquid_volume_fraction,
+    const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
+    const Data<IRL::LocalizedSeparatorLink>& a_localized_separator_link,
+    const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+    const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface) {
+  // Get mesh everything is living on.
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  // Container for moments from advection
+  Data<IRL::ListedVolumeMoments<IRL::VolumeMomentsAndNormal>> listed_moments(
+      &mesh);
+
+  // const int k = 0;
+  // const int kk = 0;
+  for (int i = mesh.imino() + 1; i <= mesh.imaxo() - 1; ++i) {
+    for (int j = mesh.jmino() + 1; j <= mesh.jmaxo() - 1; ++j) {
+      for (int k = mesh.kmino() + 1; k <= mesh.kmaxo() - 1; ++k) {
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        const auto localizer_link =
+            IRL::LocalizerLinkFromLocalizedSeparatorLink(
+                &a_localized_separator_link(i, j, k));
+        for (IRL::UnsignedIndex_t n = 0;
+             n < (*a_interface)(i, j, k).getNumberOfPlanes(); ++n) {
+          IRL::Polygon interface_poly =
+              IRL::getPlanePolygonFromReconstruction<IRL::Polygon>(
+                  cell, (*a_interface)(i, j, k), (*a_interface)(i, j, k)[n]);
+          if (interface_poly.getNumberOfVertices() == 0) {
+            continue;
+          }
+          for (IRL::UnsignedIndex_t tri = 0;
+               tri < interface_poly.getNumberOfSimplicesInDecomposition();
+               ++tri) {
+            IRL::Tri simplex = static_cast<IRL::Tri>(
+                interface_poly.getSimplexFromDecomposition(tri));
+            for (auto& vertex : simplex) {
+              vertex = back_project_vertex(vertex, a_dt, a_U, a_V, a_W);
+            }
+            simplex.calculateAndSetPlaneOfExistence();
+            auto new_moments =
+                IRL::getVolumeMoments<IRL::TaggedAccumulatedListedVolumeMoments<
+                    IRL::VolumeMomentsAndNormal>>(simplex, localizer_link);
+            for (IRL::UnsignedIndex_t moment = 0; moment < new_moments.size();
+                 ++moment) {
+              auto index_for_tag =
+                  getIndexFromTag(mesh, new_moments.getTagForIndex(moment));
+              listed_moments(index_for_tag[0], index_for_tag[1],
+                             index_for_tag[2]) +=
+                  new_moments.getMomentsForIndex(moment);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Now have all of the advected moments. Get and store the reconstructions
+  // from this by partitioning with Kmeans (i.e., AdvectedNormals).
+  IRL::R2PNeighborhood<IRL::RectangularCuboid> neighborhood;
+  ////////////////////////////////////////////////
+  neighborhood.resize(27);
+  neighborhood.setCenterOfStencil(13);
+  IRL::RectangularCuboid stencil_cells[27];
+  IRL::SeparatedMoments<IRL::VolumeMoments> stencil_moments[27];
+  int num_mof = 0;
+  int num_adv = 0;
+  int num_adv2 = 0;
+  ////////////////////////////////////////////////
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW ||
+            a_liquid_volume_fraction(i, j, k) >
+                IRL::global_constants::VF_HIGH) {
+          const double distance =
+              std::copysign(1.0, a_liquid_volume_fraction(i, j, k) - 0.5);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+              IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
+          continue;
+        }
+
+        // Set up R2P neighborhood
+        for (int ii = i - 1; ii < i + 2; ++ii) {
+          for (int jj = j - 1; jj < j + 2; ++jj) {
+            for (int kk = k - 1; kk < k + 2; ++kk) {
+              const int ind =
+                  (ii - i + 1) * 9 + (jj - j + 1) * 3 + (kk - k + 1);
+              stencil_cells[ind] = IRL::RectangularCuboid::fromBoundingPts(
+                  IRL::Pt(mesh.x(ii), mesh.y(jj), mesh.z(kk)),
+                  IRL::Pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1)));
+              double vol = stencil_cells[ind].calculateVolume();
+              stencil_moments[ind] = IRL::SeparatedMoments<IRL::VolumeMoments>(
+                  IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk) * vol,
+                                     a_liquid_centroid(ii, jj, kk)),
+                  IRL::VolumeMoments(
+                      (1.0 - a_liquid_volume_fraction(ii, jj, kk)) * vol,
+                      a_gas_centroid(ii, jj, kk)));
+              neighborhood.setMember(static_cast<IRL::UnsignedIndex_t>(ind),
+                                     &stencil_cells[ind],
+                                     &stencil_moments[ind]);
+            }
+          }
+        }
+
+        if (listed_moments(i, j, k).size() == 0) {
+          // No interface advected in, use MoF
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(
+              IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+              IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+          double vol = cell.calculateVolume();
+          IRL::SeparatedMoments<IRL::VolumeMoments> svm(
+              IRL::VolumeMoments(a_liquid_volume_fraction(i, j, k) * vol,
+                                 a_liquid_centroid(i, j, k)),
+              IRL::VolumeMoments(
+                  (1.0 - a_liquid_volume_fraction(i, j, k)) * vol,
+                  a_gas_centroid(i, j, k)));
+          (*a_interface)(i, j, k) = IRL::reconstructionWithMOF3D(cell, svm);
+          ++num_mof;
+          neighborhood.setSurfaceArea(
+              getReconstructionSurfaceArea(cell, (*a_interface)(i, j, k)));
+        } else {
+          (*a_interface)(i, j, k) = IRL::reconstructionWithAdvectedNormals(
+              listed_moments(i, j, k), neighborhood);
+          ++num_adv;
+          if ((*a_interface)(i, j, k).getNumberOfPlanes() == 2) {
+            ++num_adv2;
+          }
+          double area_sum = 0.0;
+          for (const auto& moment : listed_moments(i, j, k)) {
+            area_sum += moment.volumeMoments().volume();
+          }
+          neighborhood.setSurfaceArea(area_sum);
+        }
+        (*a_interface)(i, j, k) =
+            reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
+      }
+    }
+  }
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+
+
+void R2PNet::getReconstruction(
+    const Data<double>& a_liquid_volume_fraction,
+    const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
+    const Data<IRL::LocalizedSeparatorLink>& a_localized_separator_link,
+    const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+    const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface) {
+  // Get mesh everything is living on.
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  // Container for moments from advection
+  Data<IRL::ListedVolumeMoments<IRL::VolumeMomentsAndNormal>> listed_moments(
+      &mesh);
+      IRL::Normal n = IRL::Normal(0,0,0);
+      IRL::Normal n1 = IRL::Normal(0,0,0);
+  // const int k = 0;
+  // const int kk = 0;
+  for (int i = mesh.imino() + 1; i <= mesh.imaxo() - 1; ++i) {
+    for (int j = mesh.jmino() + 1; j <= mesh.jmaxo() - 1; ++j) {
+      for (int k = mesh.kmino() + 1; k <= mesh.kmaxo() - 1; ++k) {
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        const auto localizer_link =
+            IRL::LocalizerLinkFromLocalizedSeparatorLink(
+                &a_localized_separator_link(i, j, k));
+        for (IRL::UnsignedIndex_t n = 0;
+             n < (*a_interface)(i, j, k).getNumberOfPlanes(); ++n) {
+          IRL::Polygon interface_poly =
+              IRL::getPlanePolygonFromReconstruction<IRL::Polygon>(
+                  cell, (*a_interface)(i, j, k), (*a_interface)(i, j, k)[n]);
+          if (interface_poly.getNumberOfVertices() == 0) {
+            continue;
+          }
+          for (IRL::UnsignedIndex_t tri = 0;
+               tri < interface_poly.getNumberOfSimplicesInDecomposition();
+               ++tri) {
+            IRL::Tri simplex = static_cast<IRL::Tri>(
+                interface_poly.getSimplexFromDecomposition(tri));
+            for (auto& vertex : simplex) {
+              vertex = back_project_vertex(vertex, a_dt, a_U, a_V, a_W);
+            }
+            simplex.calculateAndSetPlaneOfExistence();
+            auto new_moments =
+                IRL::getVolumeMoments<IRL::TaggedAccumulatedListedVolumeMoments<
+                    IRL::VolumeMomentsAndNormal>>(simplex, localizer_link);
+            for (IRL::UnsignedIndex_t moment = 0; moment < new_moments.size();
+                 ++moment) {
+              auto index_for_tag =
+                  getIndexFromTag(mesh, new_moments.getTagForIndex(moment));
+              listed_moments(index_for_tag[0], index_for_tag[1],
+                             index_for_tag[2]) +=
+                  new_moments.getMomentsForIndex(moment);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Now have all of the advected moments. Get and store the reconstructions
+  // from this by partitioning with Kmeans (i.e., AdvectedNormals).
+  IRL::R2PNeighborhood<IRL::RectangularCuboid> neighborhood;
+  ////////////////////////////////////////////////
+  neighborhood.resize(27);
+  neighborhood.setCenterOfStencil(13);
+  IRL::RectangularCuboid stencil_cells[27];
+  IRL::SeparatedMoments<IRL::VolumeMoments> stencil_moments[27];
+  int num_mof = 0;
+  int num_adv = 0;
+  int num_adv2 = 0;
+  ////////////////////////////////////////////////
+  for (int i = mesh.imin()+1; i <= mesh.imax()-1; ++i) {
+    for (int j = mesh.jmin()+1; j <= mesh.jmax()-1; ++j) {
+      for (int k = mesh.kmin()+1; k <= mesh.kmax()-1; ++k) {
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW ||
+            a_liquid_volume_fraction(i, j, k) >
+                IRL::global_constants::VF_HIGH) {
+          const double distance =
+              std::copysign(1.0, a_liquid_volume_fraction(i, j, k) - 0.5);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+              IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
+          continue;
+        }
+
+        std::vector<double> fractions;
+        // Set up R2P neighborhood
+        for (int ii = i - 1; ii < i + 2; ++ii) {
+          for (int jj = j - 1; jj < j + 2; ++jj) {
+            for (int kk = k - 1; kk < k + 2; ++kk) {
+              const int ind =
+                  (ii - i + 1) * 9 + (jj - j + 1) * 3 + (kk - k + 1);
+              stencil_cells[ind] = IRL::RectangularCuboid::fromBoundingPts(
+                  IRL::Pt(mesh.x(ii), mesh.y(jj), mesh.z(kk)),
+                  IRL::Pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1)));
+              double vol = stencil_cells[ind].calculateVolume();
+              stencil_moments[ind] = IRL::SeparatedMoments<IRL::VolumeMoments>(
+                  IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk) * vol,
+                                     a_liquid_centroid(ii, jj, kk)),
+                  IRL::VolumeMoments(
+                      (1.0 - a_liquid_volume_fraction(ii, jj, kk)) * vol,
+                      a_gas_centroid(ii, jj, kk)));
+              neighborhood.setMember(static_cast<IRL::UnsignedIndex_t>(ind),
+                                     &stencil_cells[ind],
+                                     &stencil_moments[ind]);
+                  if (ii > mesh.imax() && jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj < mesh.jmin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj < mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                  }
+
+
+                  else if (ii > mesh.imax() && jj > mesh.jmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), jj, mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  
+
+                  else if (ii > mesh.imax() && jj < mesh.jmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), jj, mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else if (ii < mesh.imin() && jj < mesh.jmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), jj, mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else if (ii < mesh.imin() && jj > mesh.jmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), jj, mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  
+                  
+                  else if (ii > mesh.imax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), jj, kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmin(), kk));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, jj, mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), jj, kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmax(), kk));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, jj, mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, jj, kk));
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+            }
+          }
+        }
+
+        if (listed_moments(i, j, k).size() == 0) {
+          // No interface advected in, use MoF
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(
+              IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+              IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+          double vol = cell.calculateVolume();
+          IRL::SeparatedMoments<IRL::VolumeMoments> svm(
+              IRL::VolumeMoments(a_liquid_volume_fraction(i, j, k) * vol,
+                                 a_liquid_centroid(i, j, k)),
+              IRL::VolumeMoments(
+                  (1.0 - a_liquid_volume_fraction(i, j, k)) * vol,
+                  a_gas_centroid(i, j, k)));
+          (*a_interface)(i, j, k) = IRL::reconstructionWithMOF3D(cell, svm);
+          ++num_mof;
+          neighborhood.setSurfaceArea(
+              getReconstructionSurfaceArea(cell, (*a_interface)(i, j, k)));
+        } else {
+          (*a_interface)(i, j, k) = IRL::reconstructionWithAdvectedNormals(
+              listed_moments(i, j, k), neighborhood);
+          ++num_adv;
+          if ((*a_interface)(i, j, k).getNumberOfPlanes() == 2) {
+            ++num_adv2;
+          }
+          double area_sum = 0.0;
+          for (const auto& moment : listed_moments(i, j, k)) {
+            area_sum += moment.volumeMoments().volume();
+          }
+          neighborhood.setSurfaceArea(area_sum);
+        }
+        //double type = t4.get_type(&fractions);
+        //std::cout << type << std::endl;
+        // if (type < 0.5)
+        // {
+        //   (*a_interface)(i, j, k) =
+        //       reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
+        //       continue;
+        // }
+        // (*a_interface)(i, j, k) =
+        //      reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
+        // if ((*a_interface)(i, j, k).getNumberOfPlanes() == 1 || type < 0.5)
+        // {
+        //  continue;
+        // }
+        // std::cout << "hi" << std::endl;
+        //else if (IRL::magnitude((*a_interface)(i, j, k)[0].normal() - (*a_interface)(i, j, k)[1].normal()) >= 1)
+        //{
+        //  continue;
+        //}
+        //std::cout << "hi" << std::endl;
+        std::vector<double> center;
+        center.push_back((*a_interface)(i, j, k)[0].normal()[0]);
+        center.push_back((*a_interface)(i, j, k)[0].normal()[1]);
+        center.push_back((*a_interface)(i, j, k)[0].normal()[2]);
+        //std::cout << center << std::endl;
+        std::vector<double> fractions1 = fractions;
+
+        int direction = 0;
+            if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
+            {
+                direction = 1;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 2;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 3;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 4;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 5;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 6;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 7;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+          //std::vector<double> barycenters;
+          //for (int g = 0; g < 189; g++)
+          {
+            //if(g%7!=0)
+            {
+              //barycenters.push_back(fractions[g]);
+            }
+          }
+          n = t3.get_r2p_normal(&fractions);
+          switch (direction)
+          {
+            case 1:
+              n[0] = -n[0];
+              break;
+            case 2:
+              n[1] = -n[1];
+              break;
+            case 3:
+              n[2] = -n[2];
+              break;
+            case 4:
+              n[0] = -n[0];
+              n[1] = -n[1];
+              break;
+            case 5:
+              n[0] = -n[0];
+              n[2] = -n[2];
+              break;
+            case 6:
+              n[1] = -n[1];
+              n[2] = -n[2];
+              break;
+            case 7:
+              n[0] = -n[0];
+              n[1] = -n[1];
+              n[2] = -n[2];
+              break;
+          }
+
+        center.clear();
+        center.push_back(n[0]);
+        center.push_back(n[1]);
+        center.push_back(n[2]);
+        fractions = fractions1;
+        direction = 0;
+            if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
+            {
+                direction = 1;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 2;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 3;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 4;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 5;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 6;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 7;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+          //barycenters.clear();
+          //for (int g = 0; g < 189; g++)
+          {
+            //if(g%7!=0)
+            {
+              //barycenters.push_back(fractions[g]);
+            }
+          }
+          n1 = t3.get_r2p_normal(&fractions);
+          switch (direction)
+          {
+            case 1:
+              n1[0] = -n1[0];
+              break;
+            case 2:
+              n1[1] = -n1[1];
+              break;
+            case 3:
+              n1[2] = -n1[2];
+              break;
+            case 4:
+              n1[0] = -n1[0];
+              n1[1] = -n1[1];
+              break;
+            case 5:
+              n1[0] = -n1[0];
+              n1[2] = -n1[2];
+              break;
+            case 6:
+              n1[1] = -n1[1];
+              n1[2] = -n1[2];
+              break;
+            case 7:
+              n1[0] = -n1[0];
+              n1[1] = -n1[1];
+              n1[2] = -n1[2];
+              break;
+          }
+          // n1[0] = -0.5;
+          // n1[1] = -0.5;
+          // n1[2] = -0.5;
+          // n[0] = 0.5;
+          // n[1] = 0.5;
+          // n[2] = 0.5; -0.519615; .577350269;
+          const double d = a_liquid_volume_fraction(i,j,k);
+          double dist1 = (*a_interface)(i, j, k)[0].distance();
+          double dist2 = (*a_interface)(i, j, k)[1].distance();
+          const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(IRL::Plane(n1, dist1),IRL::Plane(n, dist2),1);
+          //std::cout << i << " " << j << " " << k << std::endl;
+          //std::cout << (*a_interface)(i, j, k) << std::endl;
+          IRL::runIterativeSolverForDistance(cube, d, &(*a_interface)(i, j, k), 1e-12);
+          //std::cout << (*a_interface)(i, j, k) << std::endl<< std::endl;
+      }
+    }
   }
   a_interface->updateBorder();
   correctInterfacePlaneBorders(a_interface);
