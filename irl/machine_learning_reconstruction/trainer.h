@@ -67,7 +67,7 @@ namespace IRL
         shared_ptr<IRL::model> nn;
         shared_ptr<IRL::binary_model> nn_binary;
         torch::nn::MSELoss critereon_MSE;
-        torch::nn::CrossEntropyLoss critereon_BCE;
+        torch::nn::BCELoss critereon_BCE;
         torch::optim::Optimizer *optimizer;
         IRL::grad_functions *functions;
         

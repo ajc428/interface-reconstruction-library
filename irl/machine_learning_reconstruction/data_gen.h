@@ -2028,11 +2028,18 @@ namespace IRL
                 << "," << plane[1].normal()[0] << "," << plane[1].normal()[1] << "," << plane[1].normal()[2] << "," << plane[1].distance() << "," << plane.flip() << "\n";
                 coefficients.close();
 
-                // std::ofstream type;
-                // name = "type.txt";
-                // type.open(name, std::ios_base::app);
-                // type << std::to_string(1) << "\n";
-                // type.close();
+                std::ofstream type;
+                name = "type.txt";
+                type.open(name, std::ios_base::app);
+                if (!inter)
+                {
+                    type << std::to_string(0) << "\n";                   
+                }
+                else
+                {
+                    type << std::to_string(1) << "\n";
+                }
+                type.close();
 
                 torch::Tensor result;
                 bool flip = true;//false;
@@ -2084,7 +2091,7 @@ namespace IRL
                 center.push_back(plane[0].normal()[0] + c);
                 center.push_back(plane[0].normal()[1] + c);
                 center.push_back(plane[0].normal()[2] + c);
-                direction = rotateFractions_all(&fractions,center);
+                //direction = rotateFractions_all(&fractions,center);
 
                 std::ofstream output;
                 std::string data_name = "fractions.txt";

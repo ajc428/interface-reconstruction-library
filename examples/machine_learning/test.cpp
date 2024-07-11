@@ -76,13 +76,13 @@ int main(int argc, char* argv[])
     //create_surface("test_surface2",0,0,0,0,0,0,0.11,0.11);
     
     //data_generate(1000,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0009765625,0.0009765625,0.0009765625,0.0009765625,-0.5,0.5,-0.5,0.5,-0.5,0.5);
-    //data_generate_planes(700000,0,2*M_PI,-M_PI/2,M_PI/2,0,2*M_PI,-M_PI/2,M_PI/2,-2,2,-2,2,true, false, true);
+    //data_generate_planes(50000,0,2*M_PI,-M_PI/2,M_PI/2,0,2*M_PI,-M_PI/2,M_PI/2,-2,2,-2,2,true, true, true);
 
-    auto t = IRL::trainer(10000, 10000, 0.0001, 3);
-    t.load_train_data("fractions.txt", "normals.txt");
-    t.load_validation_data("fractions_val.txt", "normals_val.txt", 1000);
-    t.load_test_data("fractions.txt", "normals.txt");
+    auto t = IRL::trainer(10000, 120000, 0.0001, 1);
+    t.load_train_data("fractions.txt", "type.txt");
+    t.load_validation_data("fractions_val.txt", "type_val.txt", 10000);
+    t.load_test_data("fractions_test.txt", "type_test.txt");
     t.train_model(false, "model.pt", "model.pt");
     //t.load_model("model.pt",0);
-    t.test_model(3);
+    t.test_model(1);
 }

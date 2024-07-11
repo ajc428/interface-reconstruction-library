@@ -20,6 +20,8 @@ namespace IRL
             l1 = register_module("l1", torch::nn::Linear(size, 100));
             l2 = register_module("l2", torch::nn::Linear(100, 100));
             l3 = register_module("l3", torch::nn::Linear(100, 100));
+            l4 = register_module("l4", torch::nn::Linear(100, 100));
+            l5 = register_module("l5", torch::nn::Linear(100, 100));
             l10 = register_module("l10", torch::nn::Linear(100, 1));
         }
         torch::Tensor forward(torch::Tensor x) 
@@ -27,10 +29,12 @@ namespace IRL
             x = torch::nn::functional::relu(l1(x));
             x = torch::nn::functional::relu(l2(x));
             x = torch::nn::functional::relu(l3(x));
+            x = torch::nn::functional::relu(l4(x));
+            x = torch::nn::functional::relu(l5(x));
             x = torch::sigmoid(l10(x));
             return x;
         }
-        torch::nn::Linear l1{nullptr}, l2{nullptr}, l3{nullptr}, l4{nullptr}, l5{nullptr}, l6{nullptr}, l7{nullptr}, l8{nullptr}, l9{nullptr}, l10{nullptr};
+        torch::nn::Linear l1{nullptr}, l2{nullptr}, l3{nullptr}, l4{nullptr}, l5{nullptr}, l10{nullptr};
 
         int getSize()
         {
