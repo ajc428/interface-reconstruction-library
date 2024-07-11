@@ -59,7 +59,8 @@ namespace IRL
             case 1:
                 nn_binary = make_shared<binary_model>(189);
                 optimizer = new torch::optim::Adam(nn_binary->parameters(), learning_rate);
-                critereon_BCE = torch::nn::CrossEntropyLoss();
+                //optimizer = new torch::optim::Adam(nn_binary->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(0.001));
+                critereon_BCE = torch::nn::BCELoss();
                 critereon_MSE = torch::nn::MSELoss();
             break;
             case 2:
@@ -176,7 +177,7 @@ namespace IRL
                 torch::Tensor loss = torch::zeros({batch_size, 1});
                 if (type == 1)
                 {
-                    loss = critereon_MSE(check, comp);
+                    loss = critereon_BCE(check, comp);
                     count = 0;
                     for (int i = 0; i < batch_size; ++i)
                     {
@@ -196,8 +197,8 @@ namespace IRL
                     {
                         loss = critereon_MSE(check, comp);
                     }
-                    epoch_loss = epoch_loss + loss.item().toDouble()*batch.data.size(0);
                 }
+                epoch_loss = epoch_loss + loss.item().toDouble()*batch.data.size(0);
 
                 optimizer->zero_grad();
                 loss.backward();
@@ -210,7 +211,7 @@ namespace IRL
                         {
                             MPI_Allreduce(MPI_IN_PLACE, param.value().grad().data_ptr(), param.value().grad().numel(), mpiDatatype.at(param.value().grad().scalar_type()), MPI_SUM, MPI_COMM_WORLD);
                             param.value().grad().data() = param.value().grad().data()/numranks;
-                        } 
+                        }
                     }
                     else
                     {
@@ -267,31 +268,21 @@ namespace IRL
                 torch::Tensor loss = torch::zeros({val_batch_size, 1});
                 if (type == 1)
                 {
-                    loss = critereon_MSE(check, comp);
-                    count = 0;
-                    for (int i = 0; i < val_batch_size; ++i)
-                    {
-                        if ((comp[i].item<double>() == 1 && check[i].item<double>() > 0.5) || (comp[i].item<double>() == 0 && check[i].item<double>() <= 0.5))
-                        {
-                            ++count;
-                        }
-                    }
+                    loss = critereon_BCE(check, comp);
+                }
+                else if (type == 3)
+                {
+                    loss = functions->MSE_angle_loss(comp,check);
                 }
                 else
                 {
-                    if (type == 3)
-                    {
-                        loss = functions->MSE_angle_loss(comp,check);
-                    }
-                    else
-                    {
-                        loss = critereon_MSE(check, comp);
-                    }
-                    epoch_loss_val = epoch_loss_val + loss.item().toDouble()*batch.data.size(0);
+                    loss = critereon_MSE(check, comp);
                 }
+                epoch_loss_val = epoch_loss_val + loss.item().toDouble()*batch.data.size(0);
 
                 if (numranks > 1)
                 {
+                    MPI_Allreduce(&epoch_loss, &total_epoch_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                     MPI_Allreduce(&epoch_loss_val, &total_epoch_loss_val, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 }
             }
