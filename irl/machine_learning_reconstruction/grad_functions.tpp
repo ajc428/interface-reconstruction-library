@@ -43,6 +43,174 @@ namespace IRL
         delete sm;
     }
 
+    torch::Tensor grad_functions::LVIRAForward(const torch::Tensor y_pred, const torch::Tensor fractions) 
+    {
+        IRL::PlanarSeparator a_interface;
+
+        IRL::LVIRANeighborhood<IRL::RectangularCuboid> neighborhood;
+        neighborhood.resize(27);
+        neighborhood.setCenterOfStencil(13);
+        IRL::RectangularCuboid cells[27];
+        for (int i = 0; i < 3; ++i) 
+        {
+            for (int j = 0; j < 3; ++j) 
+            {
+                for (int k = 0; k < 3; ++k) 
+                {
+                    double* a = new double();
+                    *a = fractions[7*(i*9+j*3+k)].item<double>();
+                    const double* b = a;
+                    const int local_index = k*9 + j*3 + i;
+                    cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
+                        IRL::Pt(i-1.5, j-1.5, k-1.5),
+                        IRL::Pt(i-0.5, j-0.5, k-0.5));
+                    neighborhood.setMember(
+                        static_cast<IRL::UnsignedIndex_t>(local_index),
+                        &cells[local_index], b);
+                }
+            }
+        }
+
+        IRL::Pt a_gas_centroid = IRL::Pt(fractions[7*(1*9+1*3+1)+4].item<double>(), fractions[7*(1*9+1*3+1)+5].item<double>(), fractions[7*(1*9+1*3+1)+6].item<double>());
+        IRL::Pt a_liquid_centroid = IRL::Pt(fractions[7*(1*9+1*3+1)+1].item<double>(), fractions[7*(1*9+1*3+1)+2].item<double>(), fractions[7*(1*9+1*3+1)+3].item<double>());
+        auto bary_normal = IRL::Normal::fromPtNormalized(
+            a_gas_centroid - a_liquid_centroid);
+        bary_normal.normalize();
+        const double initial_distance =
+            bary_normal * neighborhood.getCenterCell().calculateCentroid();
+        a_interface = IRL::PlanarSeparator::fromOnePlane(
+            IRL::Plane(bary_normal, initial_distance));
+        IRL::setDistanceToMatchVolumeFractionPartialFill(
+            neighborhood.getCenterCell(),
+            neighborhood.getCenterCellStoredMoments(),
+            &a_interface);
+
+        double e = 0.01;//std::sqrt(DBL_EPSILON);
+        torch::Tensor weights = torch::zeros({27,27});
+        std::vector<double> w;
+
+        for (int i = 0; i < 27; ++i)
+        {
+            w.push_back(y_pred[i].item<double>());
+            weights.index_put_({i,torch::indexing::Slice()},y_pred);
+            weights[i][i] += e;
+        }
+        a_interface = IRL::reconstructionWithLVIRA3D(neighborhood,a_interface,w);
+        torch::Tensor result = torch::zeros({3,1});
+        result[0] = -a_interface[0].normal()[0];
+        result[1] = -a_interface[0].normal()[1];
+        result[2] = -a_interface[0].normal()[2];
+
+        vector<torch::Tensor> ep;
+        vector<torch::Tensor> grads;
+        torch::Tensor result_grad = torch::zeros({3,1});
+
+        for (int i = 0; i < 27; ++i)
+        {
+            w.clear();
+            for (int j = 0; j < 27; ++j)
+            {
+                w.push_back(weights[i][j].item<double>());
+            }
+            a_interface = IRL::reconstructionWithLVIRA3D(neighborhood,a_interface,w);
+            result_grad[0] = -a_interface[0].normal()[0];
+            result_grad[1] = -a_interface[0].normal()[1];
+            result_grad[2] = -a_interface[0].normal()[2];
+            ep.push_back(result_grad);
+            torch::Tensor temp = torch::zeros({3,1});
+            for (int j = 0; j < 3; ++j)
+            {
+                temp[j] = (ep[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            grads.push_back(temp);
+        }
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<ELVIRABackward>(new grad_functions::ELVIRABackward(), deleteNode);
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->ELVIRA_grads = grads;
+            grad_fn->y_pred = y_pred;
+            set_history(flatten_tensor_args(result), grad_fn);
+        }
+        return result;
+    }
+
+    torch::Tensor grad_functions::ELVIRAForward(const torch::Tensor y_pred, const torch::Tensor fractions) 
+    {
+        IRL::PlanarSeparator a_interface;
+
+        IRL::ELVIRANeighborhood neighborhood;
+        neighborhood.resize(27);
+        IRL::RectangularCuboid cells[27];
+        for (int i = 0; i < 3; ++i) 
+        {
+            for (int j = 0; j < 3; ++j) 
+            {
+                for (int k = 0; k < 3; ++k) 
+                {
+                    double* a = new double();
+                    *a = fractions[7*(i*9+j*3+k)].item<double>();
+                    const double* b = a;
+                    const int local_index = k*9 + j*3 + i;
+                    cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
+                        IRL::Pt(i-1.5, j-1.5, k-1.5),
+                        IRL::Pt(i-0.5, j-0.5, k-0.5));
+                    neighborhood.setMember(&cells[local_index],b,i-1,j-1,k-1);
+                }
+            }
+        }
+
+
+        double e = 0.01;//std::sqrt(DBL_EPSILON);
+        torch::Tensor weights = torch::zeros({27,27});
+        std::vector<double> w;
+
+        for (int i = 0; i < 27; ++i)
+        {
+            w.push_back(y_pred[i].item<double>());
+            weights.index_put_({i,torch::indexing::Slice()},y_pred);
+            weights[i][i] += e;
+        }
+        a_interface = IRL::reconstructionWithELVIRA3D(neighborhood,w);
+        torch::Tensor result = torch::zeros({3,1});
+        result[0] = -a_interface[0].normal()[0];
+        result[1] = -a_interface[0].normal()[1];
+        result[2] = -a_interface[0].normal()[2];
+
+        vector<torch::Tensor> ep;
+        vector<torch::Tensor> grads;
+        torch::Tensor result_grad = torch::zeros({3,1});
+
+        for (int i = 0; i < 27; ++i)
+        {
+            w.clear();
+            for (int j = 0; j < 27; ++j)
+            {
+                w.push_back(weights[i][j].item<double>());
+            }
+            a_interface = IRL::reconstructionWithELVIRA3D(neighborhood,w);
+            result_grad[0] = -a_interface[0].normal()[0];
+            result_grad[1] = -a_interface[0].normal()[1];
+            result_grad[2] = -a_interface[0].normal()[2];
+            ep.push_back(result_grad);
+            torch::Tensor temp = torch::zeros({3,1});
+            for (int j = 0; j < 3; ++j)
+            {
+                temp[j] = (ep[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            grads.push_back(temp);
+        }
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<ELVIRABackward>(new grad_functions::ELVIRABackward(), deleteNode);
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->ELVIRA_grads = grads;
+            grad_fn->y_pred = y_pred;
+            set_history(flatten_tensor_args(result), grad_fn);
+        }
+        return result;
+    }
+
     torch::Tensor grad_functions::VolumeFracsForward(const torch::Tensor y_pred) 
     {
         IRL::Paraboloid paraboloid;

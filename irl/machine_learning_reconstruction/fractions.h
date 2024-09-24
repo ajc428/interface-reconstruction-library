@@ -58,7 +58,7 @@ namespace IRL
         bool arePlanesInCenterCell(const IRL::PlanarSeparator&, const DataMesh<double>&);
         bool areParaboloidsInSameCell(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
         bool doParaboloidsIntersect(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
-        bool doPlanesIntersect(IRL::PlanarSeparator& p, const DataMesh<double>& a_liquid_volume_fraction);
+        bool doPlanesIntersect(IRL::PlanarSeparator& p, const DataMesh<double>& a_liquid_volume_fraction, double limit);
     public:
         fractions(const int);
 
@@ -66,6 +66,7 @@ namespace IRL
         IRL::Paraboloid new_parabaloid(double, double, double, IRL::ReferenceFrame, double, double);
         IRL::PlanarSeparator new_random_plane(double, double, double, double, double, double);
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
+        IRL::PlanarSeparator new_step_R2P(bool, int, int);
         IRL::PlanarSeparator new_random_R2P(double, double, double, double, double, double, double, double, double, double, double, double, bool, bool);
         IRL::Paraboloid new_random_parabaloid_not_center(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         IRL::Paraboloid new_interface_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, IRL::Paraboloid);

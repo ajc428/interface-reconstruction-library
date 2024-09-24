@@ -19,7 +19,7 @@
 #include <string>
 #include "irl/machine_learning_reconstruction/neural_network.h"
 #include "irl/machine_learning_reconstruction/grad_functions.h"
-#include "irl/machine_learning_reconstruction/binary_neural_network.h"
+#include "irl/machine_learning_reconstruction/classification_neural_network.h"
 #include "data_set.h"
 
 using namespace std;
@@ -65,9 +65,9 @@ namespace IRL
         string validation_out_file;
 
         shared_ptr<IRL::model> nn;
-        shared_ptr<IRL::binary_model> nn_binary;
         torch::nn::MSELoss critereon_MSE;
         torch::nn::BCELoss critereon_BCE;
+        torch::nn::CrossEntropyLoss critereon_CE;
         torch::optim::Optimizer *optimizer;
         IRL::grad_functions *functions;
         
@@ -79,7 +79,7 @@ namespace IRL
         void load_train_data(string, string);
         void load_validation_data(string, string, int);
         void load_test_data(string, string);
-        void load_model(string, int);
+        void load_model(string);
         void train_model(bool, string, string);
         void test_model(int);
         IRL::Normal get_normal(vector<double>*);

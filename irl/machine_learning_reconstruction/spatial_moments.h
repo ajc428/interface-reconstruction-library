@@ -37,36 +37,20 @@ namespace IRL
         double mu200;
         double mu020;
         double mu002;
-
-        double mx000;
-        double my000;
-        double mz000;
-        double mx100;
-        double my100;
-        double mz100;
-        double mx010;
-        double my010;
-        double mz010;
-        double mx001;
-        double my001;
-        double mz001;
-        double x_xc;
-        double x_yc;
-        double x_zc;
-        double y_xc;
-        double y_yc;
-        double y_zc;
-        double z_xc;
-        double z_yc;
-        double z_zc;
-
-        vector<double> centroid_x;
-        vector<double> centroid_y;
-        vector<double> centroid_z;
+        double mu300;
+        double mu030;
+        double mu003;
+        double mu210;
+        double mu201;
+        double mu120;
+        double mu102;
+        double mu021;
+        double mu012;
+        double mu111;
 
     public:
         spatial_moments();
-        torch::Tensor calculate_moments(const DataMesh<double>&, DataMesh<IRL::Pt>&, Mesh);
+        torch::Tensor calculate_moments(vector<double>, IRL::Normal, int);
         vector<double> get_mass_centers(vector<double> fractions);
         vector<double> get_mass_centers_all(vector<double>* fractions);
         vector<double> get_moment_of_intertia(vector<double>* fractions);

@@ -72,8 +72,8 @@ namespace IRL
 
         do
         {
-            alpha = /*distribution1(generator);//*/random_coeffsa(a_eng);
-            beta = /*distribution2(generator);//*/random_coeffsb(a_eng);
+            alpha = random_coeffsa(a_eng);//distribution1(generator);
+            beta = random_coeffsb(a_eng);//distribution2(generator);
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
             datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
             angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
@@ -83,7 +83,7 @@ namespace IRL
             IRL::UnitQuaternion z_rotation(angles[2], frame[2]);
             frame = x_rotation * y_rotation * z_rotation * frame;
             p = IRL::Paraboloid(datum, frame, alpha, beta);
-        } while (!(isParaboloidInCenterCell(p, liquid_volume_fraction)));
+        } while (!(isParaboloidInCenterCell(p, liquid_volume_fraction))/* || (datum[0] > -0.5 && datum[0] < 0.5 && datum[1] > -0.5 && datum[1] < 0.5 && datum[2] > -0.5 && datum[2] < 0.5)*/);
 
         return p;
     }
@@ -140,7 +140,14 @@ namespace IRL
         std::uniform_real_distribution<double> randoma2(rota2_l, rota2_h);
         std::uniform_real_distribution<double> randomb2(rotb2_l, rotb2_h);
         std::uniform_real_distribution<double> randomd1(d1_l, d1_h);
-        std::uniform_real_distribution<double> randomd2(d2_l, d2_h);
+        //std::uniform_real_distribution<double> randomd2(d2_l, d2_h);
+
+        std::uniform_real_distribution<double> randomNx1(-1, 1);
+        std::uniform_real_distribution<double> randomNy1(-1, 1);
+        std::uniform_real_distribution<double> randomNz1(-1, 1);
+        std::uniform_real_distribution<double> randomNx2(-1, 1);
+        std::uniform_real_distribution<double> randomNy2(-1, 1);
+        std::uniform_real_distribution<double> randomNz2(-1, 1);
         double s = 1;//rand() % 2;
         if (s < 0.5)
         {
@@ -153,34 +160,59 @@ namespace IRL
         bool same = false;
         double d1;
         double d2;
+
+        a1 = randoma1(a_eng);
+        b1 = randomb1(a_eng);
+
+        double nx1 = randomNx1(a_eng);
+        double ny1 = randomNy1(a_eng);
+        double nz1 = randomNz1(a_eng);
+
+        IRL::Normal n1 = IRL::Normal(0,0,0);
+        n1[0] = 1;//cos(b1) * cos(a1);
+        n1[1] = 0.0000000001;//cos(b1) * sin(a1);
+        n1[2] = 0.0000000001;//sin(b1);
+        //if (inter)
+        {
+            // n1[0] = cos(b1) * cos(a1);
+            // n1[1] = cos(b1) * sin(a1);
+            // n1[2] = sin(b1);
+            n1[0] = nx1;
+            n1[1] = ny1;
+            n1[2] = nz1;
+        }
         do
         {
-            a1 = randoma1(a_eng);
-            b1 = randomb1(a_eng);
+            double nx2 = randomNx2(a_eng);
+            double ny2 = randomNy2(a_eng);
+            double nz2 = randomNz2(a_eng);
             a2 = randoma2(a_eng);
             b2 = randomb2(a_eng);
             d1 = randomd1(a_eng);
+            std::uniform_real_distribution<double> randomd2(d2_l, d2_h);
             d2 = randomd2(a_eng);
-            IRL::Normal n1 = IRL::Normal(0,0,0);
-            n1[0] = cos(b1) * cos(a1);
-            n1[1] = cos(b1) * sin(a1);
-            n1[2] = sin(b1);
-
-            IRL::Normal n2 = -IRL::Normal(0,0,0);
-            n2[0] = cos(b2) * cos(a2);
-            n2[1] = cos(b2) * sin(a2);
-            n2[2] = sin(b2);
-
+            IRL::Normal n2 = -n1;
+            //if(inter)
+            {
+                // n2[0] = cos(b2) * cos(a2);
+                // n2[1] = cos(b2) * sin(a2);
+                // n2[2] = sin(b2);
+                n2[0] = nx2;
+                n2[1] = ny2;
+                n2[2] = nz2;
+            }
+            n1.normalize();
+            n2.normalize();
             p1 = IRL::Plane(n1,d1);
             p2 = IRL::Plane(n2,d2);
             p = IRL::PlanarSeparator::fromTwoPlanes(p1,p2,s);
             if (!inter)
             {
-                intersect = doPlanesIntersect(p,liquid_volume_fraction);
+                intersect = doPlanesIntersect(p,liquid_volume_fraction, 0.5);////////////////////////////////////////////////////IMPORTANT
             }
             else
             {
-                intersect = !doPlanesIntersect(p,liquid_volume_fraction);
+                intersect = !doPlanesIntersect(p,liquid_volume_fraction, 0.5);
             }
             if (in)
             {
@@ -191,12 +223,77 @@ namespace IRL
                 same = arePlanesInSameCenterCell(p);
             }
             double dot = n1[0]*n2[0] + n1[1]*n2[1] + n1[2]*n2[2];
-            if (dot >= 0)
+            if (!inter)
             {
-                intersect = true;
+                if (dot >= -0.98)
+                //if (dot <= -0.5)
+                {
+                    intersect = true;
+                }
+            }
+            else
+            {
+                if (dot >= -0.98)
+                //if (dot <= -0.5)
+                {
+                    intersect = true;
+                }
             }
         } while (!(isPlaneInCenterCell(p[0], liquid_volume_fraction) && arePlanesInCenterCell(p, liquid_volume_fraction)) || intersect || same);
         //std::cout << a1 << " " << b1 << " " << a2 << " " << b2 << std::endl;
+
+        return p;
+    }
+
+    IRL::PlanarSeparator fractions::new_step_R2P(bool inter, int current, int total)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        std::random_device rd;  
+        std::mt19937_64 a_eng(rd());
+        std::uniform_real_distribution<double> randomd1(0, 2);
+
+        IRL::Plane p1;
+        IRL::Plane p2;
+        IRL::PlanarSeparator p;
+        bool intersect = false;
+        bool same = false;
+        double d1;
+        double d2;
+
+        double nx1 = 0;
+        double ny1 = 0;
+        double nz1 = 1;
+
+        IRL::Normal n1 = IRL::Normal(0,0,0);
+        n1[0] = nx1;
+        n1[1] = ny1;
+        n1[2] = nz1;
+        ++current;
+        double nx2 = -nx1 + (double(current)/double(total))*0.45;
+        double ny2 = -ny1;
+        double nz2 = -nz1;
+        IRL::Normal n2 = IRL::Normal(nx2,ny2,nz2);
+        n1.normalize();
+        n2.normalize();
+        do
+        {
+            d1 = randomd1(a_eng);
+            std::uniform_real_distribution<double> randomd2(0, 10);
+            d2 = randomd2(a_eng);
+            p1 = IRL::Plane(n1,d1);
+            p2 = IRL::Plane(n2,d2);
+            p = IRL::PlanarSeparator::fromTwoPlanes(p1,p2,1);
+            if (!inter)
+            {
+                intersect = doPlanesIntersect(p,liquid_volume_fraction, 1.5);
+            }
+            else
+            {
+                intersect = !doPlanesIntersect(p,liquid_volume_fraction, 0.5);
+            }
+            same = !arePlanesInSameCenterCell(p);
+            double dot = n1[0]*n2[0] + n1[1]*n2[1] + n1[2]*n2[2];
+        } while (!(isPlaneInCenterCell(p[0], liquid_volume_fraction) && arePlanesInCenterCell(p, liquid_volume_fraction)) || intersect || same);
 
         return p;
     }
@@ -292,17 +389,21 @@ namespace IRL
         //std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
         std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
         std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
-        std::uniform_real_distribution<double> random_translationx(-1.5, 1.5);
+        std::uniform_real_distribution<double> random_translationx(0.001, 0.5);
         std::uniform_real_distribution<double> random_translationy(-1.5, 1.5);
         std::uniform_real_distribution<double> random_translationz(-1.5, 1.5);
         IRL::Paraboloid p;
 
         do
         {
-            alpha = random_coeffsa(a_eng);
-            beta = random_coeffsb(a_eng);
+            double x = random_translationx(a_eng);
+            alpha = -para.getAlignedParaboloid().a();//random_coeffsa(a_eng);
+            beta = -para.getAlignedParaboloid().b();//random_coeffsb(a_eng);
             frame = IRL::ReferenceFrame(-para.getReferenceFrame()[0], para.getReferenceFrame()[1], -para.getReferenceFrame()[2]);
-            datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
+            double dx = para.getReferenceFrame()[2][0] * x;
+            double dy = para.getReferenceFrame()[2][1] * x;
+            double dz = para.getReferenceFrame()[2][2] * x;
+            datum = IRL::Pt(para.getDatum()[0] + dx, para.getDatum()[1] + dy, para.getDatum()[2] + dz);//IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
             //std::array<double, 3> angles2 = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
 
             //IRL::UnitQuaternion x_rotation(angles2[0], frame[0]);
@@ -1252,7 +1353,7 @@ namespace IRL
         return result;
     }
 
-    bool fractions::doPlanesIntersect(IRL::PlanarSeparator& p, const DataMesh<double>& a_liquid_volume_fraction)
+    bool fractions::doPlanesIntersect(IRL::PlanarSeparator& p, const DataMesh<double>& a_liquid_volume_fraction, double limit)
     {
         bool result = false;
         double a1 = p[0].normal()[0];
@@ -1292,47 +1393,47 @@ namespace IRL
                     result = true;
                 }
             }*/
-            double bx1 = -1.5;
-            double bx2 = 1.5;
-            double by1 = -1.5;
-            double by2 = 1.5;
-            double bz1 = -1.5;
-            double bz2 = 1.5;
+            double bx1 = -limit;
+            double bx2 = limit;
+            double by1 = -limit;
+            double by2 = limit;
+            double bz1 = -limit;
+            double bz2 = limit;
 
 
             double y1 = (1/b)*(d-a*bx1);
             double z1 = (d1-a1*bx1-b1*y1)/c1;
-            if ((y1 >= -1.5 && y1 <= 1.5) && (z1 >= -1.5 && z1 <= 1.5))
+            if ((y1 >= -limit && y1 <= limit) && (z1 >= -limit && z1 <= limit))
             {
                 return true;
             }
             double y2 = (1/b)*(d-a*bx2);
             double z2 = (d1-a1*bx2-b1*y2)/c1;
-            if ((y2 >= -1.5 && y2 <= 1.5) && (z2 >= -1.5 && z2 <= 1.5))
+            if ((y2 >= -limit && y2 <= limit) && (z2 >= -limit && z2 <= limit))
             {
                 return true;
             }
             double x1 = (-b/a)*by1 + d/a;
             z1 = (d1-a1*x1-b1*by1)/c1;
-            if ((x1 >= -1.5 && x1 <= 1.5) && (z1 >= -1.5 && z1 <= 1.5))
+            if ((x1 >= -limit && x1 <= limit) && (z1 >= -limit && z1 <= limit))
             {
                 return true;
             }
             double x2 = (-b/a)*by2 + d/a;
             z2 = (d1-a1*x2-b1*by2)/c1;
-            if ((x2 >= -1.5 && x2 <= 1.5) && (z2 >= -1.5 && z2 <= 1.5))
+            if ((x2 >= -limit && x2 <= limit) && (z2 >= -limit && z2 <= limit))
             {
                 return true;
             }
             x1 = (d1-b1*(d/b)-c1*bz1) / (a1+b1*(-a/b));
             y1 = (1/b)*(d-a*x1);
-            if ((x1 >= -1.5 && x1 <= 1.5) && (y1 >= -1.5 && y1 <= 1.5))
+            if ((x1 >= -limit && x1 <= limit) && (y1 >= -limit && y1 <= limit))
             {
                 return true;
             }
             x2 = (d1-b1*(d/b)-c1*bz2) / (a1+b1*(-a/b));
             y2 = (1/b)*(d-a*x2);
-            if ((x2 >= -1.5 && x2 <= 1.5) && (y2 >= -1.5 && y2 <= 1.5))
+            if ((x2 >= -limit && x2 <= limit) && (y2 >= -limit && y2 <= limit))
             {
                 return true;
             }

@@ -102,11 +102,19 @@ class ELVIRA_3D {
 
  public:
   /// \brief Default constructor.
-  ELVIRA_3D(void) = default;
+  ELVIRA_3D(void)
+  {
+    for (int i = 0; i < 27; ++i)
+    {
+      weights.push_back(1.0/27.0);
+    }
+  };
 
   /// \brief Solve the system for the reconstruction, restarting
   /// the neighboring geoemtry
   PlanarSeparator solve(const ELVIRANeighborhood* a_neighborhood_pointer);
+
+  void setWeights(std::vector<double> w);
 
   /// \brief Default destructor.
   ~ELVIRA_3D(void) = default;
@@ -159,6 +167,7 @@ class ELVIRA_3D {
   /// If lowest error yet, save as best_reconstruction_m.
   void tryNormal(Normal a_normal);
 
+  std::vector<double> weights;
   /// \brief Storage of the stencil information
   const ELVIRANeighborhood* neighborhood_VF_m;
   /// \brief Array of column sums needed in ELVIRA

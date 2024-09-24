@@ -45,8 +45,15 @@ namespace IRL
         {
             for (int n = 0; n < Ntests; ++n) 
             {
+                torch::Tensor result;
                 std::cout << n << endl;
                 IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                result = gen->get_fractions_all(paraboloid);
+                while (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                {
+                    paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                    result = gen->get_fractions_all(paraboloid);
+                }
                 angles = gen->getAngles();
 
                 std::ofstream coefficients;
@@ -57,7 +64,14 @@ namespace IRL
                 << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
 
-                std::ofstream classification;
+                std::ofstream type;
+                name = "type.txt";
+                type.open(name, std::ios_base::app);
+                //type << std::to_string(0) << "," << std::to_string(0) << "," << std::to_string(1) << "\n";
+                type << std::to_string(0) << "\n";
+                type.close();
+
+                /*std::ofstream classification;
                 std::string data_name = "type.txt";
                 classification.open(data_name, std::ios_base::app);
                 if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
@@ -72,9 +86,9 @@ namespace IRL
                 {
                     classification << "0,0,1" << " \n";
                 }
-                classification.close();
+                classification.close();*/
 
-                torch::Tensor result;
+                
                 bool flip = false;
                 if (!all)
                 {
@@ -117,7 +131,7 @@ namespace IRL
                 }
                 
                 std::ofstream output;
-                data_name = "fractions.txt";
+                std::string data_name = "fractions.txt";
                 output.open(data_name, std::ios_base::app);
 
                 for (int i = 0; i < result.sizes()[0]; ++i)
@@ -134,6 +148,30 @@ namespace IRL
                 auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
+
+                IRL::Normal dir = normal;
+                dir.normalize();
+                auto moments = sm.calculate_moments(fractions, dir, number_of_cells);
+
+                std::ofstream moments_out;
+                std::string moments_name = "moments.txt";
+                moments_out.open(moments_name, std::ios_base::app);
+                auto cell = IRL::RectangularCuboid::fromBoundingPts(
+                                            IRL::Pt(-number_of_cells/2.0,-number_of_cells/2.0,-number_of_cells/2.0),
+                                            IRL::Pt(number_of_cells/2.0,number_of_cells/2.0,number_of_cells/2.0));
+                auto surface_stencil = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                double area = surface_stencil.getSurface().getSurfaceArea();
+                //moments[0] = moments[0] / pow(area,1.0/5.0);
+                // moments[1] = moments[1] / pow(area,(5.0));
+                // moments[2] = moments[2] / pow(area,(15.0/2.0));
+                //moments[moments.sizes()[0]-1] = moments[moments.sizes()[0]-1] / area;                          
+                for (int i = 0; i < moments.sizes()[0]; ++i)
+                {
+                    moments_out << moments[i].item<double>() << ",";
+                }
+                //moments_out << paraboloid.getAlignedParaboloid().a() + paraboloid.getAlignedParaboloid().b() << ",";
+                moments_out << "\n";
+                moments_out.close();  
 
                 switch (direction)
                 {
@@ -595,19 +633,19 @@ namespace IRL
                 normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "\n";
                 normals.close();      
 
-                const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
-                const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
-                const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+                // const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
+                // const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
+                // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
 
-                const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
-                const double length_scale = 0.05;
-                IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
-                IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
-                string name3 = "p";
-                string name4 = "i";
-                triangulated_surface.write(name3);
-                triangulated_surface2.write(name4);       
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                // const double length_scale = 0.05;
+                // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                // IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
+                // string name3 = "p";
+                // string name4 = "i";
+                // triangulated_surface.write(name3);
+                // triangulated_surface2.write(name4);       
             }       
         };
 
@@ -909,28 +947,28 @@ namespace IRL
                 << "," << interface.getAlignedParaboloid().a() << "," << interface.getAlignedParaboloid().b() << "\n";
                 coefficients2.close();
 
-                std::ofstream classification;
-                std::string data_name = "type.txt";
-                classification.open(data_name, std::ios_base::app);
-                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
-                {
-                    classification << "0,1,0" << " \n";
-                }
-                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
-                {
-                    classification << "1,0,0" << " \n";
-                }
-                else
-                {
-                    classification << "0,0,1" << " \n";
-                }
-                classification.close();
-
-                std::ofstream inter;
-                std::string interface_name = "interface.txt";
-                inter.open(interface_name, std::ios_base::app);
-                inter << "0,1" << " \n";
-                inter.close();
+                // std::ofstream classification;
+                // std::string data_name = "type.txt";
+                // classification.open(data_name, std::ios_base::app);
+                // if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
+                // {
+                //     classification << "0,1,0" << " \n";
+                // }
+                // else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
+                // {
+                //     classification << "1,0,0" << " \n";
+                // }
+                // else
+                // {
+                //     classification << "0,0,1" << " \n";
+                // }
+                // classification.close();
+                std::ofstream type1;
+                name = "type.txt";
+                type1.open(name, std::ios_base::app);
+                type1 << std::to_string(0) << "\n";
+                //type1 << std::to_string(1) << "\n";
+                type1.close();
 
                 torch::Tensor result;
                 torch::Tensor result1;
@@ -953,12 +991,12 @@ namespace IRL
                 {
                     result = gen->get_fractions_all(paraboloid);
                     result1 = gen->get_fractions_all(interface);
-                    if (result[((result.sizes()[0]-7)/2)].item<double>() + result1[((result1.sizes()[0]-7)/2)].item<double>() > 0.5)
-                    {
-                        flip = true;
-                        result = gen->get_fractions_gas_all(paraboloid);
-                        result1 = gen->get_fractions_gas_all(interface);
-                    }                    
+                    // if (result[((result.sizes()[0]-7)/2)].item<double>() + result1[((result1.sizes()[0]-7)/2)].item<double>() > 0.5)
+                    // {
+                    //     flip = true;
+                    //     result = gen->get_fractions_gas_all(paraboloid);
+                    //     result1 = gen->get_fractions_gas_all(interface);
+                    // }                    
                 }
 
                 std::vector<double> fractions;
@@ -968,145 +1006,209 @@ namespace IRL
                     mod = 7;
                 }
                 
-                for (int i = 0; i < result.sizes()[0]; ++i)
-                {
-                    if (i%mod == 0)
-                    {
-                        IRL::Pt pl;
-                        IRL::Pt pl1;
-                        IRL::Pt pg;
-                        IRL::Pt pg1;
-                        if (!flip)
-                        {
-                            pl = IRL::Pt(result[((result.sizes()[0]-7)/2) + 1].item<double>(), result[((result.sizes()[0]-7)/2) + 2].item<double>(), result[((result.sizes()[0]-7)/2) + 3].item<double>());
-                            pg = IRL::Pt(result[((result.sizes()[0]-7)/2) + 4].item<double>(), result[((result.sizes()[0]-7)/2) + 5].item<double>(), result[((result.sizes()[0]-7)/2) + 6].item<double>());
-                            pl1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 1].item<double>(), result1[((result1.sizes()[0]-7)/2) + 2].item<double>(), result1[((result1.sizes()[0]-7)/2) + 3].item<double>());
-                            pg1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 4].item<double>(), result1[((result1.sizes()[0]-7)/2) + 5].item<double>(), result1[((result1.sizes()[0]-7)/2) + 6].item<double>());
-                        }
-                        else
-                        {
-                            pg = IRL::Pt(result[((result.sizes()[0]-7)/2) + 1].item<double>(), result[((result.sizes()[0]-7)/2) + 2].item<double>(), result[((result.sizes()[0]-7)/2) + 3].item<double>());
-                            pl = IRL::Pt(result[((result.sizes()[0]-7)/2) + 4].item<double>(), result[((result.sizes()[0]-7)/2) + 5].item<double>(), result[((result.sizes()[0]-7)/2) + 6].item<double>());
-                            pg1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 1].item<double>(), result1[((result1.sizes()[0]-7)/2) + 2].item<double>(), result1[((result1.sizes()[0]-7)/2) + 3].item<double>());
-                            pl1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 4].item<double>(), result1[((result1.sizes()[0]-7)/2) + 5].item<double>(), result1[((result1.sizes()[0]-7)/2) + 6].item<double>());
-                        }
-                        if (IRL::distanceBetweenPts(pl,pl1) < IRL::distanceBetweenPts(pg,pg1))
-                        {
-                            type = false;
-                            break;
-                        }
-                    }
-                }
+                // for (int i = 0; i < result.sizes()[0]; ++i)
+                // {
+                //     if (i%mod == 0)
+                //     {
+                //         IRL::Pt pl;
+                //         IRL::Pt pl1;
+                //         IRL::Pt pg;
+                //         IRL::Pt pg1;
+                //         if (!flip)
+                //         {
+                //             pl = IRL::Pt(result[((result.sizes()[0]-7)/2) + 1].item<double>(), result[((result.sizes()[0]-7)/2) + 2].item<double>(), result[((result.sizes()[0]-7)/2) + 3].item<double>());
+                //             pg = IRL::Pt(result[((result.sizes()[0]-7)/2) + 4].item<double>(), result[((result.sizes()[0]-7)/2) + 5].item<double>(), result[((result.sizes()[0]-7)/2) + 6].item<double>());
+                //             pl1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 1].item<double>(), result1[((result1.sizes()[0]-7)/2) + 2].item<double>(), result1[((result1.sizes()[0]-7)/2) + 3].item<double>());
+                //             pg1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 4].item<double>(), result1[((result1.sizes()[0]-7)/2) + 5].item<double>(), result1[((result1.sizes()[0]-7)/2) + 6].item<double>());
+                //         }
+                //         else
+                //         {
+                //             pg = IRL::Pt(result[((result.sizes()[0]-7)/2) + 1].item<double>(), result[((result.sizes()[0]-7)/2) + 2].item<double>(), result[((result.sizes()[0]-7)/2) + 3].item<double>());
+                //             pl = IRL::Pt(result[((result.sizes()[0]-7)/2) + 4].item<double>(), result[((result.sizes()[0]-7)/2) + 5].item<double>(), result[((result.sizes()[0]-7)/2) + 6].item<double>());
+                //             pg1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 1].item<double>(), result1[((result1.sizes()[0]-7)/2) + 2].item<double>(), result1[((result1.sizes()[0]-7)/2) + 3].item<double>());
+                //             pl1 = IRL::Pt(result1[((result1.sizes()[0]-7)/2) + 4].item<double>(), result1[((result1.sizes()[0]-7)/2) + 5].item<double>(), result1[((result1.sizes()[0]-7)/2) + 6].item<double>());
+                //         }
+                //         if (IRL::distanceBetweenPts(pl,pl1) < IRL::distanceBetweenPts(pg,pg1))
+                //         {
+                //             type = false;
+                //             break;
+                //         }
+                //     }
+                // }
                 int ind = 0;
                 int count = 0;
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
-                    if (type)
+                    //if (type)
                     {
                         if (i%mod == 0)
                         {
-                            if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() <= IRL::global_constants::VF_LOW)
+                            ind = i;
+                            count = 0;
+                            if ((result[i].item<double>() < IRL::global_constants::VF_LOW || result[i].item<double>() > IRL::global_constants::VF_HIGH) && result1[i].item<double>() < IRL::global_constants::VF_LOW || result1[i].item<double>() > IRL::global_constants::VF_HIGH)
                             {
+                                fractions.push_back(0);
                                 option = true;
-                                same_cell = false;
-                            }
-                            else if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() < IRL::global_constants::VF_HIGH)
-                            {
-                                option = false;
-                                same_cell = true;
                             }
                             else
                             {
+                                if (result[i].item<double>() < IRL::global_constants::VF_LOW || result[i].item<double>() > IRL::global_constants::VF_HIGH)
+                                {
+                                    fractions.push_back(1 - result1[i].item<double>());
+                                }
+                                else if (result1[i].item<double>() < IRL::global_constants::VF_LOW || result1[i].item<double>() > IRL::global_constants::VF_HIGH)
+                                {
+                                    fractions.push_back(1 - result[i].item<double>());
+                                }
+                                else
+                                {
+                                    fractions.push_back(1 - (result[i].item<double>() + result1[i].item<double>()));
+                                }
                                 option = false;
-                                same_cell = false;
                             }
-                            count = 0;
-                        }
-                        if (option)
-                        {
-                            fractions.push_back(result1[i].item<double>());
-                            count = 0;
-                        }
-                        else if (!same_cell)
-                        {
-                            fractions.push_back(result[i].item<double>());
-                            count = 0;
+                            // if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() <= IRL::global_constants::VF_LOW)
+                            // {
+                            //     option = true;
+                            //     same_cell = false;
+                            // }
+                            // else if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() < IRL::global_constants::VF_HIGH)
+                            // {
+                            //     option = false;
+                            //     same_cell = true;
+                            // }
+                            // else
+                            // {
+                            //     option = false;
+                            //     same_cell = false;
+                            // }
+                            // count = 0;
                         }
                         else
                         {
-                            if (i%mod == 0)
+                            if (option)
                             {
-                                fractions.push_back(result[i].item<double>() + result1[i].item<double>());
-                                ind = i;
+                                fractions.push_back(0);
                             }
                             else
                             {
-                                ++count;
-                                double x = result[ind].item<double>();
-                                double y = result1[ind].item<double>();
-                                if (count > 3)
+                                if (count < 3)
                                 {
-                                    x = 1 - x;
-                                    y = 1 - y;
+                                    if (result[i].item<double>() < IRL::global_constants::VF_LOW || result[i].item<double>() > IRL::global_constants::VF_HIGH)
+                                    {
+                                        fractions.push_back(result1[i+3].item<double>());
+                                    }
+                                    else if (result1[i].item<double>() < IRL::global_constants::VF_LOW || result1[i].item<double>() > IRL::global_constants::VF_HIGH)
+                                    {
+                                        fractions.push_back(result[i+3].item<double>());
+                                    }
+                                    else
+                                    {
+                                        fractions.push_back((result[i].item<double>() * (1-result[ind].item<double>()) + result1[i].item<double>() * (1-result1[ind].item<double>())) / (2 - result[i].item<double>() - result1[i].item<double>()));
+                                    }
                                 }
-                                double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
-                                fractions.push_back(c);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (i%mod == 0)
-                        {
-                            count = 0;
-                            if (result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() >= IRL::global_constants::VF_HIGH)
-                            {
-                                option = true;
-                                same_cell = false;
-                            }
-                            else if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() < IRL::global_constants::VF_HIGH)
-                            {
-                                option = false;
-                                same_cell = true;
-                            }
-                            else
-                            {
-                                option = false;
-                                same_cell = false;
-                            }
-                        }
-                        if (option)
-                        {
-                            fractions.push_back(result1[i].item<double>());
-                            count = 0;
-                        }
-                        else if (!same_cell)
-                        {
-                            fractions.push_back(result[i].item<double>());
-                            count = 0;
-                        }
-                        else
-                        {
-                            if (i%mod == 0)
-                            {
-                                fractions.push_back(result[i].item<double>() + result1[i].item<double>());
-                                ind = i;
-                            }
-                            else
-                            {
-                                ++count;
-                                double x = result[ind].item<double>();
-                                double y = result1[ind].item<double>();
-                                if (count > 3)
+                                else
                                 {
-                                    x = 1 - x;
-                                    y = 1 - y;
+                                    if (result[i].item<double>() < IRL::global_constants::VF_LOW || result[i].item<double>() > IRL::global_constants::VF_HIGH)
+                                    {
+                                        fractions.push_back(result1[i-3].item<double>());
+                                    }
+                                    else if (result1[i].item<double>() < IRL::global_constants::VF_LOW || result1[i].item<double>() > IRL::global_constants::VF_HIGH)
+                                    {
+                                        fractions.push_back(result[i-3].item<double>());
+                                    }
+                                    else
+                                    {
+                                        fractions.push_back((result[i].item<double>() * (result[ind].item<double>()) + result1[i].item<double>() * (result1[ind].item<double>())) / (result[i].item<double>() + result1[i].item<double>()));
+                                    }  
                                 }
-                                double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
-                                fractions.push_back(c);
                             }
+                            ++count;
                         }
+                        // if (option)
+                        // {
+                        //     fractions.push_back(result1[i].item<double>());
+                        //     count = 0;
+                        // }
+                        // else if (!same_cell)
+                        // {
+                        //     fractions.push_back(result[i].item<double>());
+                        //     count = 0;
+                        // }
+                        // else
+                        // {
+                        //     if (i%mod == 0)
+                        //     {
+                        //         fractions.push_back(result[i].item<double>() + result1[i].item<double>());
+                        //         ind = i;
+                        //     }
+                        //     else
+                        //     {
+                        //         ++count;
+                        //         double x = result[ind].item<double>();
+                        //         double y = result1[ind].item<double>();
+                        //         if (count > 3)
+                        //         {
+                        //             x = 1 - x;
+                        //             y = 1 - y;
+                        //         }
+                        //         double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
+                        //         fractions.push_back(c);
+                        //     }
+                        // }
                     }
+                    // else
+                    // {
+                    //     if (i%mod == 0)
+                    //     {
+                    //         count = 0;
+                    //         if (result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() >= IRL::global_constants::VF_HIGH)
+                    //         {
+                    //             option = true;
+                    //             same_cell = false;
+                    //         }
+                    //         else if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() < IRL::global_constants::VF_HIGH)
+                    //         {
+                    //             option = false;
+                    //             same_cell = true;
+                    //         }
+                    //         else
+                    //         {
+                    //             option = false;
+                    //             same_cell = false;
+                    //         }
+                    //     }
+                    //     if (option)
+                    //     {
+                    //         fractions.push_back(result1[i].item<double>());
+                    //         count = 0;
+                    //     }
+                    //     else if (!same_cell)
+                    //     {
+                    //         fractions.push_back(result[i].item<double>());
+                    //         count = 0;
+                    //     }
+                    //     else
+                    //     {
+                    //         if (i%mod == 0)
+                    //         {
+                    //             fractions.push_back(result[i].item<double>() + result1[i].item<double>());
+                    //             ind = i;
+                    //         }
+                    //         else
+                    //         {
+                    //             ++count;
+                    //             double x = result[ind].item<double>();
+                    //             double y = result1[ind].item<double>();
+                    //             if (count > 3)
+                    //             {
+                    //                 x = 1 - x;
+                    //                 y = 1 - y;
+                    //             }
+                    //             double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
+                    //             fractions.push_back(c);
+                    //         }
+                    //     }
+                    // }
                 }
 
                 int direction = 0;
@@ -1114,17 +1216,157 @@ namespace IRL
                 auto sm = IRL::spatial_moments();
                 if (!all)
                 {
-                    center = sm.get_mass_centers(fractions);
-                    direction = rotateFractions(&fractions,center);
+                    //center = sm.get_mass_centers(fractions);
+                    //direction = rotateFractions(&fractions,center);
                 }
                 else
                 {
-                    center = sm.get_mass_centers_all(&fractions);
-                    direction = rotateFractions_all(&fractions,center);
+                    //center = sm.get_mass_centers_all(&fractions);
+                    //direction = rotateFractions_all(&fractions,center);
                 }
 
+                int track[number_of_cells][number_of_cells][number_of_cells];
+                for (int i = 0; i < number_of_cells; ++i)
+                {
+                    for (int j = 0; j < number_of_cells; ++j)
+                    {
+                        for (int k = 0; k < number_of_cells; ++k)
+                        {
+                            track[i][j][k] = 1;
+                        }
+                    }
+                }
+                // double vol = 0;
+                // for (int i = 0; i < number_of_cells; ++i)
+                // {
+                //     for (int j = 0; j < number_of_cells; ++j)
+                //     {
+                //         for (int k = 0; k < number_of_cells; ++k)
+                //         {
+                //             vol = vol + result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>();
+                //             track[i][j][k] = 0;
+                //             if ((i == 0 || i == number_of_cells-1) || (j == 0 || j == number_of_cells-1) || (k == 0 || k == number_of_cells-1))
+                //             {
+                //                 if (fractions[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)] > IRL::global_constants::VF_LOW && fractions[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)] < IRL::global_constants::VF_HIGH)
+                //                 {
+                //                     track[i][j][k] = 1;
+                //                 }
+                //             }
+                //         }  
+                //     }  
+                // }  
+
+                // int num = 0;
+                // if (flip)
+                // {
+                //     num = 1;
+                // }
+
+                // int i = rand() % number_of_cells;
+                // int j = rand() % number_of_cells;
+                // int k = rand() % number_of_cells;
+                // int lim1 = number_of_cells;
+                // int lim2 = number_of_cells;
+                // while (track[i][j][k] == 0)
+                // {
+                //     i = rand() % number_of_cells;
+                //     j = rand() % number_of_cells;
+                //     k = rand() % number_of_cells;
+                // }
+
+                // if (i == 0 || i == number_of_cells-1)
+                // {
+                //     int cur;
+                //     int next;
+                //     if (i == 0)
+                //     {
+                //         cur = i;
+                //         next = number_of_cells/2;
+                //     }
+                //     else
+                //     {
+                //         cur = number_of_cells/2+1;
+                //         next = number_of_cells;
+                //     }
+                //     for (int ii = cur; ii < next; ++ii)
+                //     {
+                //         for (int jj = 0; jj < lim1; ++jj)
+                //         {
+                //             for (int kk = 0; kk < lim2; ++kk)
+                //             {
+                //                 track[ii][jj][kk] = 0;
+                //                 fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 for (int n = 1; n <= 6; ++n)
+                //                 {
+                //                     fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                // else if (j == 0 || j == number_of_cells-1)
+                // {
+                //     int cur;
+                //     int next;
+                //     if (j == 0)
+                //     {
+                //         cur = j;
+                //         next = number_of_cells/2;
+                //     }
+                //     else
+                //     {
+                //         cur = number_of_cells/2+1;
+                //         next = number_of_cells;
+                //     }
+                //     for (int jj = cur; jj < next; ++jj)
+                //     {
+                //         for (int ii = 0; ii < lim1; ++ii)
+                //         {
+                //             for (int kk = 0; kk < lim2; ++kk)
+                //             {
+                //                 track[ii][jj][kk] = 0;
+                //                 fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 for (int n = 1; n <= 6; ++n)
+                //                 {
+                //                     fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                // else if (k == 0 || k == number_of_cells-1)
+                // {
+                //     int cur;
+                //     int next;
+                //     if (k == 0)
+                //     {
+                //         cur = k;
+                //         next = number_of_cells/2;
+                //     }
+                //     else
+                //     {
+                //         cur = number_of_cells/2+1;
+                //         next = number_of_cells;
+                //     }
+                //     for (int kk = cur; kk < next; ++kk)
+                //     {
+                //         for (int jj = 0; jj < lim1; ++jj)
+                //         {
+                //             for (int ii = 0; ii < lim2; ++ii)
+                //             {
+                //                 track[ii][jj][kk] = 0;
+                //                 fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 for (int n = 1; n <= 6; ++n)
+                //                 {
+                //                     fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }  
+
                 std::ofstream output;
-                data_name = "fractions.txt";
+                string data_name = "fractions.txt";
                 output.open(data_name, std::ios_base::app);
 
                 for (int i = 0; i < result.sizes()[0]; ++i)
@@ -1137,13 +1379,55 @@ namespace IRL
                 std::ofstream normals;
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
-                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
-                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, interface);
-                auto surface = surface_and_moments.getSurface();
-                auto surface1 = surface_and_moments1.getSurface();
-                auto normal = surface.getAverageNormalNonAligned();
-                auto normal1 = surface1.getAverageNormalNonAligned();
+
+                IRL::RectangularCuboid cell;
+                IRL::Normal normal = IRL::Normal(0,0,0);
+                IRL::Normal normal1 = IRL::Normal(0,0,0);
+                double area = 0;
+                track[1][1][1] = 1;
+                for (int i = 0; i < number_of_cells; ++i)
+                {
+                    for (int j = 0; j < number_of_cells; ++j)
+                    {
+                        for (int k = 0; k < number_of_cells; ++k)
+                        {
+                            if (track[i][j][k] == 1)
+                            {
+                                cell = IRL::RectangularCuboid::fromBoundingPts(
+                                            IRL::Pt(-number_of_cells/2.0+i,-number_of_cells/2.0+j,-number_of_cells/2.0+k),
+                                            IRL::Pt(-number_of_cells/2.0+1+i,-number_of_cells/2.0+1+j,-number_of_cells/2.0+1+k));
+                                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                                auto surface = surface_and_moments.getSurface();
+                                auto surface1 = surface_and_moments1.getSurface();
+                                normal = normal + surface.getAverageNormalNonAligned();
+                                normal1 = normal1 + surface1.getAverageNormalNonAligned();
+                                area = area + surface.getSurfaceArea();
+                                area = area + surface1.getSurfaceArea();
+                            }
+                        }
+                    }
+                }
+                normal.normalize();
+                normal1.normalize();
+                IRL::Normal dir = normal - normal1;
+                dir.normalize();
+                auto moments = sm.calculate_moments(fractions, dir, number_of_cells);
+
+                std::ofstream moments_out;
+                std::string moments_name = "moments.txt";
+                moments_out.open(moments_name, std::ios_base::app);
+                //moments[0] = moments[0] / pow(area,(1.0/5.0));
+                // moments[1] = moments[1] / pow(area,(5.0));
+                // moments[2] = moments[2] / pow(area,(15.0/2.0));
+                //moments[moments.sizes()[0]-1] = moments[moments.sizes()[0]-1] / area;                        
+                for (int i = 0; i < moments.sizes()[0]; ++i)
+                {
+                    moments_out << moments[i].item<double>() << ",";
+                }
+                //moments_out << paraboloid.getAlignedParaboloid().a() + paraboloid.getAlignedParaboloid().b() << ",";
+                moments_out << "\n";
+                moments_out.close();  
 
                 switch (direction)
                 {
@@ -1199,19 +1483,19 @@ namespace IRL
                 normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "\n";
                 normals.close();      
 
-                const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
-                const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
-                const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+                // const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
+                // const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
+                // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
 
-                const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
-                const double length_scale = 0.05;
-                IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
-                IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
-                string name3 = "p";
-                string name4 = "i";
-                triangulated_surface.write(name3);
-                triangulated_surface2.write(name4);       
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                // const double length_scale = 0.05;
+                // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                // IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
+                // string name3 = "p";
+                // string name4 = "i";
+                // triangulated_surface.write(name3);
+                // triangulated_surface2.write(name4);       
             }
         };
 
@@ -1558,19 +1842,19 @@ namespace IRL
                 normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "\n";
                 normals.close();      
 
-                const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
-                const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
-                const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+                // const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
+                // const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
+                // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
 
-                const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
-                const double length_scale = 0.05;
-                IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
-                IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
-                string name3 = "p";
-                string name4 = "i";
-                triangulated_surface.write(name3);
-                triangulated_surface2.write(name4);       
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                // const double length_scale = 0.05;
+                // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                // IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
+                // string name3 = "p";
+                // string name4 = "i";
+                // triangulated_surface.write(name3);
+                // triangulated_surface2.write(name4);       
             }
         };
 
@@ -1671,8 +1955,8 @@ namespace IRL
                 result = gen->get_fractions_all(plane);
                 if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
                 {
-                    //flip = true;
-                    //result = gen->get_fractions_gas_all(plane);
+                    flip = true;
+                    result = gen->get_fractions_gas_all(plane);
                 }                    
 
                 std::vector<double> fractions;
@@ -2013,13 +2297,17 @@ namespace IRL
             {
                 std::cout << n << endl;
                 IRL::PlanarSeparator plane = gen->new_random_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
-                //torch::Tensor result;
-                //result = gen->get_fractions_all(plane);
-                //while (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                //IRL::PlanarSeparator plane = gen->new_step_R2P(inter, n, Ntests);
+                torch::Tensor result;
+                result = gen->get_fractions_all(plane);
+                while (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5/* && result[((result.sizes()[0]-7)/2)].item<double>() < 0.85*/)
                 {
-                    //plane = gen->new_random_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
-                    //result = gen->get_fractions_all(plane);
+                    //IRL::PlanarSeparator plane = gen->new_step_R2P(inter, n, Ntests);
+                    plane = gen->new_random_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
+                    //IRL::PlanarSeparator plane = gen->new_step_R2P(inter, n, Ntests);
+                    result = gen->get_fractions_all(plane);
                 }
+                //std::cout << result[((result.sizes()[0]-7)/2)].item<double>() << std::endl;
                 //result_all.index_put_({torch::indexing::Slice(), n}, result);
                 std::ofstream coefficients;
                 std::string name = "coefficients.txt";
@@ -2039,11 +2327,23 @@ namespace IRL
                 {
                     type << std::to_string(1) << "\n";
                 }
+                //type << std::to_string(1) << "\n";
+                //type << std::to_string(0) << "\n";
+                //type << std::to_string(1) << "," << std::to_string(0) << "," << std::to_string(0) << "\n";
+                // if (!same)
+                // {
+                //     type << std::to_string(0) << "\n";
+                // }
+                // else
+                // {
+                //     type << std::to_string(1) << "\n";
+                // }
                 type.close();
 
-                torch::Tensor result;
-                bool flip = true;//false;
-                result = gen->get_fractions_all(plane);
+                //torch::Tensor result;
+                bool flip = false;
+                //result = gen->get_fractions_all(plane);
+                //std::cout << result[((result.sizes()[0]-7)/2)].item<double>() << std::endl;
                 //result = gen->get_barycenters(plane);
                 //result_all.index_put_({torch::indexing::Slice(), n}, result);
                 torch::Tensor result1;
@@ -2051,10 +2351,149 @@ namespace IRL
                 //result1 = gen->get_fractions_all(p);
                 if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
                 {
-                    //flip = true;
-                    //result = gen->get_fractions_gas_all(plane);
+                    result = gen->get_fractions_gas_all(plane);
                     //result1 = gen->get_fractions_gas_all(p);
-                }                    
+                }  
+
+                int track[number_of_cells][number_of_cells][number_of_cells];
+                for (int i = 0; i < number_of_cells; ++i)
+                {
+                    for (int j = 0; j < number_of_cells; ++j)
+                    {
+                        for (int k = 0; k < number_of_cells; ++k)
+                        {
+                            track[i][j][k] = 1;
+                        }
+                    }
+                }
+                // double vol = 0;
+                // for (int i = 0; i < number_of_cells; ++i)
+                // {
+                //     for (int j = 0; j < number_of_cells; ++j)
+                //     {
+                //         for (int k = 0; k < number_of_cells; ++k)
+                //         {
+                //             vol = vol + result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>();
+                //             track[i][j][k] = 0;
+                //             if ((i == 0 || i == number_of_cells-1) || (j == 0 || j == number_of_cells-1) || (k == 0 || k == number_of_cells-1))
+                //             {
+                //                 if (result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() > IRL::global_constants::VF_LOW && result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() < IRL::global_constants::VF_HIGH)
+                //                 {
+                //                     track[i][j][k] = 1;
+                //                 }
+                //             }
+                //         }  
+                //     }  
+                // }  
+
+                // int num = 0;
+                // if (flip)
+                // {
+                //     num = 1;
+                // }
+
+                // int i = rand() % number_of_cells;
+                // int j = rand() % number_of_cells;
+                // int k = rand() % number_of_cells;
+                // int lim1 = number_of_cells;
+                // int lim2 = number_of_cells;
+                // while (track[i][j][k] == 0)
+                // {
+                //     i = rand() % number_of_cells;
+                //     j = rand() % number_of_cells;
+                //     k = rand() % number_of_cells;
+                // }
+
+                // if (i == 0 || i == number_of_cells-1)
+                // {
+                //     int cur;
+                //     int next;
+                //     if (i == 0)
+                //     {
+                //         cur = i;
+                //         next = number_of_cells/2;
+                //     }
+                //     else
+                //     {
+                //         cur = number_of_cells/2+1;
+                //         next = number_of_cells;
+                //     }
+                //     for (int ii = cur; ii < next; ++ii)
+                //     {
+                //         for (int jj = 0; jj < lim1; ++jj)
+                //         {
+                //             for (int kk = 0; kk < lim2; ++kk)
+                //             {
+                //                 track[ii][jj][kk] = 0;
+                //                 result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 for (int n = 1; n <= 6; ++n)
+                //                 {
+                //                     result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                // else if (j == 0 || j == number_of_cells-1)
+                // {
+                //     int cur;
+                //     int next;
+                //     if (j == 0)
+                //     {
+                //         cur = j;
+                //         next = number_of_cells/2;
+                //     }
+                //     else
+                //     {
+                //         cur = number_of_cells/2+1;
+                //         next = number_of_cells;
+                //     }
+                //     for (int jj = cur; jj < next; ++jj)
+                //     {
+                //         for (int ii = 0; ii < lim1; ++ii)
+                //         {
+                //             for (int kk = 0; kk < lim2; ++kk)
+                //             {
+                //                 track[ii][jj][kk] = 0;
+                //                 result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 for (int n = 1; n <= 6; ++n)
+                //                 {
+                //                     result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                // else if (k == 0 || k == number_of_cells-1)
+                // {
+                //     int cur;
+                //     int next;
+                //     if (k == 0)
+                //     {
+                //         cur = k;
+                //         next = number_of_cells/2;
+                //     }
+                //     else
+                //     {
+                //         cur = number_of_cells/2+1;
+                //         next = number_of_cells;
+                //     }
+                //     for (int kk = cur; kk < next; ++kk)
+                //     {
+                //         for (int jj = 0; jj < lim1; ++jj)
+                //         {
+                //             for (int ii = 0; ii < lim2; ++ii)
+                //             {
+                //                 track[ii][jj][kk] = 0;
+                //                 result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 for (int n = 1; n <= 6; ++n)
+                //                 {
+                //                     result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }                      
 
                 std::vector<double> fractions;
                 //std::vector<double> fractions1;
@@ -2067,7 +2506,45 @@ namespace IRL
                 int direction = 0;
                 std::vector<double> center;
                 //std::vector<double> eigenvectors;
-                //auto sm = IRL::spatial_moments();
+                auto sm = IRL::spatial_moments();
+                IRL::Normal dir = plane[0].normal() - plane[1].normal();
+                dir.normalize();
+                auto moments = sm.calculate_moments(fractions, dir, number_of_cells);
+
+                std::ofstream moments_out;
+                std::string moments_name = "moments.txt";
+                moments_out.open(moments_name, std::ios_base::app);
+                IRL::RectangularCuboid cell;
+                double area = 0;
+                track[1][1][1] = 1;
+                for (int i = 0; i < number_of_cells; ++i)
+                {
+                    for (int j = 0; j < number_of_cells; ++j)
+                    {
+                        for (int k = 0; k < number_of_cells; ++k)
+                        {
+                            if (track[i][j][k] == 1)
+                            {
+                                cell = IRL::RectangularCuboid::fromBoundingPts(
+                                            IRL::Pt(-number_of_cells/2.0+i,-number_of_cells/2.0+j,-number_of_cells/2.0+k),
+                                            IRL::Pt(-number_of_cells/2.0+1+i,-number_of_cells/2.0+1+j,-number_of_cells/2.0+1+k));
+                                area = area + getReconstructionSurfaceArea(cell,plane);
+                            }
+                        }
+                    }
+                }
+                moments[0] = moments[0] / pow(area,(1.0));
+                // moments[1] = moments[1] / pow(area,(5.0));
+                // moments[2] = moments[2] / pow(area,(15.0/2.0));
+                //moments[moments.sizes()[0]-1] = moments[moments.sizes()[0]-1] / area;
+                for (int i = 0; i < moments.sizes()[0]; ++i)
+                {
+                    moments_out << moments[i].item<double>() << ",";
+                }
+                //moments_out << 0 << ",";
+                moments_out << "\n";
+                moments_out.close();  
+
                 //center = sm.get_mass_centers_all(&fractions);
                 //eigenvectors = sm.get_moment_of_intertia(&fractions);
                 //int min = 0;
@@ -2345,120 +2822,120 @@ namespace IRL
                 normals << /*theta1 << "," << phi1 << "," <<*/ theta2 << "," << phi2 /*<< "," << plane[0].distance() << "," << plane[1].distance()*/ << "\n";
                 normals.close();     
 
-            //     const Mesh& mesh = gen->getMesh();
-            //     FILE* viz_file;
-            //     std::string file_name = "interface_0.vtu";
-            //     viz_file = fopen(file_name.c_str(), "w");
+                // const Mesh& mesh = gen->getMesh();
+                // FILE* viz_file;
+                // std::string file_name = "interface_0.vtu";
+                // viz_file = fopen(file_name.c_str(), "w");
 
-            //     // Build vectors of vertex locations and connectivities
-            //     std::size_t n_vert = 0;
-            //     std::size_t n_faces = 0;
-            //     std::size_t current_face_size = 0;
-            //     std::string vert_loc;
-            //     std::string connectivity;
-            //     std::string offsets;
+                // // Build vectors of vertex locations and connectivities
+                // std::size_t n_vert = 0;
+                // std::size_t n_faces = 0;
+                // std::size_t current_face_size = 0;
+                // std::string vert_loc;
+                // std::string connectivity;
+                // std::string offsets;
 
-            //     auto add_polyhedron = [&](const auto& a_poly) {
-            //         using T = std::decay_t<decltype(a_poly)>;
-            //         std::unordered_map<const typename T::vertex_type*, IRL::UnsignedIndex_t>
-            //             unique_vertices;
-            //         for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfVertices(); ++n) {
-            //         unique_vertices[a_poly.getVertex(n)] = n + n_vert;
-            //         const auto& vert_pt = a_poly.getVertex(n)->getLocation();
-            //         vert_loc += std::to_string(vert_pt[0]) + " " +
-            //                     std::to_string(vert_pt[1]) + " " +
-            //                     std::to_string(vert_pt[2]) + "\n";
-            //         }
-            //         assert(unique_vertices.size() == a_poly.getNumberOfVertices());
+                // auto add_polyhedron = [&](const auto& a_poly) {
+                //     using T = std::decay_t<decltype(a_poly)>;
+                //     std::unordered_map<const typename T::vertex_type*, IRL::UnsignedIndex_t>
+                //         unique_vertices;
+                //     for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfVertices(); ++n) {
+                //     unique_vertices[a_poly.getVertex(n)] = n + n_vert;
+                //     const auto& vert_pt = a_poly.getVertex(n)->getLocation();
+                //     vert_loc += std::to_string(vert_pt[0]) + " " +
+                //                 std::to_string(vert_pt[1]) + " " +
+                //                 std::to_string(vert_pt[2]) + "\n";
+                //     }
+                //     assert(unique_vertices.size() == a_poly.getNumberOfVertices());
 
-            //         for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfFaces(); ++n) {
-            //         const auto& face = a_poly[n];
-            //         auto current_half_edge = face->getStartingHalfEdge();
-            //         do {
-            //             ++current_face_size;
-            //             connectivity +=
-            //                 std::to_string(unique_vertices[current_half_edge->getVertex()]) +
-            //                 " ";
-            //             current_half_edge = current_half_edge->getNextHalfEdge();
-            //         } while (current_half_edge != face->getStartingHalfEdge());
-            //         offsets += std::to_string(current_face_size) + " ";
-            //         connectivity += "\n";
-            //         }
+                //     for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfFaces(); ++n) {
+                //     const auto& face = a_poly[n];
+                //     auto current_half_edge = face->getStartingHalfEdge();
+                //     do {
+                //         ++current_face_size;
+                //         connectivity +=
+                //             std::to_string(unique_vertices[current_half_edge->getVertex()]) +
+                //             " ";
+                //         current_half_edge = current_half_edge->getNextHalfEdge();
+                //     } while (current_half_edge != face->getStartingHalfEdge());
+                //     offsets += std::to_string(current_face_size) + " ";
+                //     connectivity += "\n";
+                //     }
 
-            //         n_vert += a_poly.getNumberOfVertices();
-            //         n_faces += a_poly.getNumberOfFaces();
-            //     };
+                //     n_vert += a_poly.getNumberOfVertices();
+                //     n_faces += a_poly.getNumberOfFaces();
+                // };
 
-            //     for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-            //         for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-            //             for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-            //                 const auto& recon = plane;
-            //                 auto cell = IRL::RectangularCuboid::fromBoundingPts(
-            //                     IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
-            //                     IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+                // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+                //     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+                //         for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+                //             const auto& recon = plane;
+                //             auto cell = IRL::RectangularCuboid::fromBoundingPts(
+                //                 IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+                //                 IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
 
-            //                 if (recon.isFlipped()) {
-            //                 auto he_poly = cell.generateHalfEdgeVersion();
-            //                 auto seg = he_poly.generateSegmentedPolyhedron();
-            //                 for (const auto& plane : recon) {
-            //                     decltype(seg) clipped;
-            //                     auto new_plane = plane.generateFlippedPlane();
-            //                     IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, new_plane);
-            //                     add_polyhedron(clipped);
-            //                 }
-            //                 } else {
-            //                 auto he_poly = cell.generateHalfEdgeVersion();
-            //                 auto seg = he_poly.generateSegmentedPolyhedron();
-            //                 for (const auto& plane : recon) {
-            //                     decltype(seg) clipped;
-            //                     IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, plane);
-            //                 }
-            //                 add_polyhedron(seg);
-            //                 }
-            //             }
-            //         }
-            //     }
+                //             if (recon.isFlipped()) {
+                //             auto he_poly = cell.generateHalfEdgeVersion();
+                //             auto seg = he_poly.generateSegmentedPolyhedron();
+                //             for (const auto& plane : recon) {
+                //                 decltype(seg) clipped;
+                //                 auto new_plane = plane.generateFlippedPlane();
+                //                 IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, new_plane);
+                //                 add_polyhedron(clipped);
+                //             }
+                //             } else {
+                //             auto he_poly = cell.generateHalfEdgeVersion();
+                //             auto seg = he_poly.generateSegmentedPolyhedron();
+                //             for (const auto& plane : recon) {
+                //                 decltype(seg) clipped;
+                //                 IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, plane);
+                //             }
+                //             add_polyhedron(seg);
+                //             }
+                //         }
+                //     }
+                // }
 
-            //     // Write header
-            //     {
-            //         fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
-            //         fprintf(viz_file,
-            //                 "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
-            //                 "byte_order=\"LittleEndian\">\n");
-            //         fprintf(viz_file, "<UnstructuredGrid>\n");
-            //         fprintf(viz_file, "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
-            //                 n_vert, n_faces);
+                // // Write header
+                // {
+                //     fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
+                //     fprintf(viz_file,
+                //             "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
+                //             "byte_order=\"LittleEndian\">\n");
+                //     fprintf(viz_file, "<UnstructuredGrid>\n");
+                //     fprintf(viz_file, "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
+                //             n_vert, n_faces);
 
-            //         fprintf(viz_file, "<Points>\n");
-            //         fprintf(viz_file,
-            //                 "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
-            //         fprintf(viz_file, "%s", vert_loc.c_str());
-            //         fprintf(viz_file, "</DataArray>\n");
-            //         fprintf(viz_file, "</Points>\n");
+                //     fprintf(viz_file, "<Points>\n");
+                //     fprintf(viz_file,
+                //             "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
+                //     fprintf(viz_file, "%s", vert_loc.c_str());
+                //     fprintf(viz_file, "</DataArray>\n");
+                //     fprintf(viz_file, "</Points>\n");
 
-            //         fprintf(viz_file, "<Cells>\n");
-            //         fprintf(viz_file,
-            //                 "<DataArray type=\"Int32\" Name=\"connectivity\" "
-            //                 "format=\"ascii\">\n");
-            //         fprintf(viz_file, "%s", connectivity.c_str());
-            //         fprintf(viz_file, "</DataArray>\n");
+                //     fprintf(viz_file, "<Cells>\n");
+                //     fprintf(viz_file,
+                //             "<DataArray type=\"Int32\" Name=\"connectivity\" "
+                //             "format=\"ascii\">\n");
+                //     fprintf(viz_file, "%s", connectivity.c_str());
+                //     fprintf(viz_file, "</DataArray>\n");
 
-            //         fprintf(viz_file,
-            //                 "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-            //         fprintf(viz_file, "%s", offsets.c_str());
-            //         fprintf(viz_file, "\n</DataArray>\n");
+                //     fprintf(viz_file,
+                //             "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
+                //     fprintf(viz_file, "%s", offsets.c_str());
+                //     fprintf(viz_file, "\n</DataArray>\n");
 
-            //         // Cell type - General Polygon type
-            //         fprintf(viz_file,
-            //                 "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-            //         for (std::size_t n = 0; n < n_faces; ++n) {
-            //         fprintf(viz_file, "7 ");  // General polygon type
-            //         }
-            //         fprintf(viz_file,
-            //                 "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
-            //                 "VTKFile>\n");
-            //     }
-            //     fclose(viz_file);        
+                //     // Cell type - General Polygon type
+                //     fprintf(viz_file,
+                //             "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
+                //     for (std::size_t n = 0; n < n_faces; ++n) {
+                //     fprintf(viz_file, "7 ");  // General polygon type
+                //     }
+                //     fprintf(viz_file,
+                //             "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
+                //             "VTKFile>\n");
+                // }
+                // fclose(viz_file);        
             }  
             
             //result_all = torch::div((result_all - result_all.mean(1).unsqueeze(0).transpose(0,1)), result_all.std(1).unsqueeze(0).transpose(0,1));

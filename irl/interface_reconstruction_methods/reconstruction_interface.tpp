@@ -107,6 +107,13 @@ PlanarSeparator reconstructionWithELVIRA3D(
   return elvira_system.solve(&a_neighborhood_geometry);
 }
 
+PlanarSeparator reconstructionWithELVIRA3D(
+    const ELVIRANeighborhood& a_neighborhood_geometry, std::vector<double> weights) {
+  ELVIRA_3D elvira_system;
+  elvira_system.setWeights(weights);
+  return elvira_system.solve(&a_neighborhood_geometry);
+}
+
 template <class CellType>
 PlanarSeparator reconstructionWithML3(/*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag) 
 {
@@ -166,7 +173,7 @@ PlanarSeparator reconstructionWithML3(/*const ELVIRANeighborhood& a_neighborhood
   }
 
   flag[0] = 0;
-  n = t.get_normal(&fractions);
+  //n = t.get_normal(&fractions);
   n.normalize();
   /*if (n[1] > 0.9995)
   {
@@ -277,7 +284,7 @@ PlanarSeparator reconstructionWithML2(/*const ELVIRANeighborhood& a_neighborhood
 
   flag[0] = 0;
   auto start = std::chrono::system_clock::now();
-  n = t2.get_normal(&fractions);
+  //n = t2.get_normal(&fractions);
   auto stop = std::chrono::system_clock::now();
   std::chrono::duration<double> runtime = stop - start;
   //printf("Total run time: %20f \n\n", runtime.count());
@@ -341,14 +348,14 @@ PlanarSeparator reconstructionWithML(const double* normal, const double* vf_cent
 
 void loadML(std::string name/*, std::string name1, std::string name2*/)
 {
-  t.load_model(name, 0);
+  //t.load_model(name);
   //t2.load_model(name1, 1);
   //b.load_model(name2, 0);
 }
 
 void loadML2(std::string name/*, std::string name1, std::string name2*/)
 {
-  t2.load_model(name, 0);
+  //t2.load_model(name);
   //t2.load_model(name1, 1);
   //b.load_model(name2, 0);
 }
@@ -358,6 +365,12 @@ PlanarSeparator reconstructionWithLVIRA2D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction) {
   LVIRA_2D<CellType> lvira_system;
+  std::vector<double> w;
+  for (int i = 0; i < a_neighborhood_geometry.size(); ++i)
+  {
+    w.push_back(1.0/a_neighborhood_geometry.size());
+  }
+  lvira_system.setWeights(w);
   return lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
 }
 
@@ -366,11 +379,22 @@ PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction) {
   LVIRA_3D<CellType> lvira_system;  
-  auto start = std::chrono::system_clock::now();
+  std::vector<double> w;
+  for (int i = 0; i < a_neighborhood_geometry.size(); ++i)
+  {
+    w.push_back(1.0/a_neighborhood_geometry.size());
+  }
+  lvira_system.setWeights(w);
   auto temp = lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
-  auto stop = std::chrono::system_clock::now();
-  std::chrono::duration<double> runtime = stop - start;
-  //printf("Total run time: %20f \n\n", runtime.count());
+  return temp;
+}
+
+template <class CellType>
+PlanarSeparator reconstructionWithLVIRA3D(
+    const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
+    PlanarSeparator a_initial_reconstruction, std::vector<double> weights) {
+  LVIRA_3D<CellType> lvira_system;  
+  auto temp = lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction, weights);
   return temp;
 }
 

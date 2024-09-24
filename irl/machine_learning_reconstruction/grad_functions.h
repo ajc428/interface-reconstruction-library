@@ -22,6 +22,10 @@
 #include "irl/machine_learning_reconstruction/fractions.h"
 #include "irl/machine_learning_reconstruction/spatial_moments.h"
 #include "irl/interface_reconstruction_methods/volume_fraction_matching.h"
+#include "irl/interface_reconstruction_methods/elvira.h"
+#include "irl/interface_reconstruction_methods/lvira_optimization.h"
+#include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
+#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
 
 using torch::autograd::Node;
 using torch::autograd::deleteNode;
@@ -46,6 +50,8 @@ namespace IRL
     public:
         grad_functions(int, int);
         ~grad_functions();
+        torch::Tensor LVIRAForward(const torch::Tensor,const torch::Tensor);
+        torch::Tensor ELVIRAForward(const torch::Tensor,const torch::Tensor);
         torch::Tensor VolumeFracsForward(const torch::Tensor);
         torch::Tensor VolumeFracsForwardFD(const torch::Tensor);
         torch::Tensor R2PVolumeFracsForward(const torch::Tensor,double,double,double);
@@ -61,6 +67,37 @@ namespace IRL
             //+ (torch::mse_loss(torch::cos(out.index({torch::indexing::Slice(),3})) * torch::cos(out.index({torch::indexing::Slice(),2})),torch::cos(target.index({torch::indexing::Slice(),3})) * torch::cos(target.index({torch::indexing::Slice(),2}))) + torch::mse_loss(torch::cos(out.index({torch::indexing::Slice(),3})) * torch::sin(out.index({torch::indexing::Slice(),2})),torch::cos(target.index({torch::indexing::Slice(),3})) * torch::sin(target.index({torch::indexing::Slice(),2}))) + torch::mse_loss(torch::sin(out.index({torch::indexing::Slice(),3})),torch::sin(target.index({torch::indexing::Slice(),3}))))/3)/2;
 
             return loss;
+        };
+
+        struct ELVIRABackward : public Node 
+        {
+            vector<torch::Tensor> ELVIRA_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                torch::Tensor in_grads = torch::zeros({3,1});
+                torch::Tensor out_grads = torch::zeros({27,3});
+                torch::Tensor grad_result = torch::zeros({27,1});
+                for (int i = 0; i < 27; ++i)
+                {
+                    out_grads[i] = torch::flatten(ELVIRA_grads[i]);
+                }
+                in_grads = inputs[0];
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros({27,1}); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = torch::matmul(out_grads, in_grads);
+                }
+                for (int i = 0; i < 27; ++i)
+                {
+                    temp[i] = grad_result[i];
+                }
+                grad_inputs[0] = torch::flatten(temp);
+                return grad_inputs;
+            }
         };
 
         struct VolumeFracsBackward : public Node 

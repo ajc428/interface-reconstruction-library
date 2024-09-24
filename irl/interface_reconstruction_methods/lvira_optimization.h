@@ -97,6 +97,12 @@ class LVIRACommon {
       const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
       const PlanarSeparator& a_reconstruction);
 
+  template <class LVIRAType>
+  PlanarSeparator runOptimization(
+      LVIRAType* a_ptr_to_LVIRA_object,
+      const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
+      const PlanarSeparator& a_reconstruction,std::vector<double> w);
+
   /// \brief Return the final reconstruction to be used.
   PlanarSeparator getFinalReconstruction(void);
 
@@ -173,6 +179,8 @@ class LVIRACommon {
   /// \brief Set up system and vectors with correct values/weights.
   void fillGeometryAndWeightVectors(void);
 
+  void setWeights(std::vector<double> w);
+
   /// \brief Update guess_values_m given a reconstruction.
   void setWeightedGeometryVectorFromReconstruction(
       const PlanarSeparator& a_reconstruction);
@@ -194,6 +202,7 @@ class LVIRACommon {
   /// \brief Pointer to neighborhood being used in reconstruction.
   const LVIRANeighborhood<CellType>* neighborhood_m;
   /// \brief Weights to be applied to the corect and guess values
+  std::vector<double> weights;
   Eigen::Matrix<double, Eigen::Dynamic, 1> weights_m;
   /// \brief Weigted vector of correct values we are trying to match.
   Eigen::Matrix<double, Eigen::Dynamic, 1> correct_values_m;
@@ -238,6 +247,8 @@ class LVIRA_2D : public LVIRACommon<CellType, LVIRA_2D_columns> {
   /// \brief Perform optimization and return planar separator.
   PlanarSeparator solve(const LVIRANeighborhood<CellType>& a_neighborhood,
                         const PlanarSeparator& a_reconstruction);
+  PlanarSeparator solve(const LVIRANeighborhood<CellType>& a_neighborhood,
+    const PlanarSeparator& a_reconstruction,std::vector<double> w);
 
   /// \brief Initialize simulation parameters that will
   /// be needed during the optimization.
@@ -274,6 +285,8 @@ class LVIRA_3D : public LVIRACommon<CellType, LVIRA_3D_columns> {
   /// \brief Perform optimization and return planar separator.
   PlanarSeparator solve(const LVIRANeighborhood<CellType>& a_neighborhood,
                         const PlanarSeparator& a_reconstruction);
+  PlanarSeparator solve(const LVIRANeighborhood<CellType>& a_neighborhood,
+    const PlanarSeparator& a_reconstruction, std::vector<double> w);
 
   /// \brief Initialize simulation parameters that will
   /// be needed during the optimization.

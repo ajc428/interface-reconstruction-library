@@ -17,12 +17,14 @@ namespace IRL
         int out;
         int depth;
         int width;
-        model(int s, int o, int d, int w) 
+        int type;
+        model(int s, int o, int d, int w, int t) 
         {
             size = s;
             out = o;
             depth = d;
             width = w;
+            type = t;
             l1 = register_module("l1", torch::nn::Linear(size, width));
             for (int i = 0; i < d-1; ++i)
             {
@@ -37,7 +39,18 @@ namespace IRL
             {
                 x = torch::nn::functional::relu(layers[i](x));
             }
-            x = lo(x);
+            switch (type)
+            {
+                case 1:
+                    x = torch::sigmoid(lo(x));
+                break;
+                case 2:
+                    x = torch::nn::functional::softmax(lo(x),-1);
+                break;
+                default:
+                    x = lo(x);
+                break;
+            }
             return x;
         }
         std::vector<torch::nn::Linear> layers;

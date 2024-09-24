@@ -19,6 +19,27 @@ PlanarSeparator LVIRACommon<CellType, kColumns>::runOptimization(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     const PlanarSeparator& a_reconstruction) {
   neighborhood_m = &a_neighborhood_geometry;
+  for (int i = 0; i < neighborhood_m->size(); ++i)
+  {
+    weights.push_back(1.0/neighborhood_m->size());
+  }
+  a_ptr_to_LVIRA_object->setup(a_reconstruction);
+  LevenbergMarquardt<LVIRAType, -1, static_cast<int>(LVIRAType::columns_m)>
+      lm_solver;
+  lm_solver.solve(a_ptr_to_LVIRA_object,
+                  static_cast<int>(correct_values_m.rows()),
+                  a_ptr_to_LVIRA_object->getJacobianStepSize());
+  return a_ptr_to_LVIRA_object->getFinalReconstruction();
+}
+
+template <class CellType, UnsignedIndex_t kColumns>
+template <class LVIRAType>
+PlanarSeparator LVIRACommon<CellType, kColumns>::runOptimization(
+    LVIRAType* a_ptr_to_LVIRA_object,
+    const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
+    const PlanarSeparator& a_reconstruction,std::vector<double> w) {
+  weights = w;
+  neighborhood_m = &a_neighborhood_geometry;
   a_ptr_to_LVIRA_object->setup(a_reconstruction);
   LevenbergMarquardt<LVIRAType, -1, static_cast<int>(LVIRAType::columns_m)>
       lm_solver;
@@ -180,6 +201,15 @@ void LVIRACommon<CellType, kColumns>::
   }
 }
 
+template <class CellType, UnsignedIndex_t kColumns>
+void LVIRACommon<CellType, kColumns>::setWeights(std::vector<double> w)
+{
+  for (UnsignedIndex_t i = 0; i < neighborhood_m->size(); ++i)
+  {
+    weights_m(i) = w[i];
+  }
+}
+
 // Turn off warnings about sign conversion because need to work
 // with Eigen which using long int
 #pragma GCC diagnostic push
@@ -192,13 +222,13 @@ void LVIRACommon<CellType, kColumns>::fillGeometryAndWeightVectors(void) {
     correct_values_m(n) = neighborhood_m->getStoredMoments(n);
 
     // Add even weighting of 1 for liquid volume
-    weights_m(n) = 1.0;
+    //weights_m(n) = 1.0;
   }
 
   // Normalize weight to have an L2 magnitude of 1
-  const double liquid_volume_weight_magnitude = 1.0 / weights_m.norm();
+  //const double liquid_volume_weight_magnitude = 1.0 / weights_m.norm();
   for (UnsignedIndex_t n = 0; n < guess_values_m.rows(); ++n) {
-    weights_m(n) *= liquid_volume_weight_magnitude;
+    //weights_m(n) *= liquid_volume_weight_magnitude;
     correct_values_m(n) *= weights_m(n);
   }
 }
@@ -227,6 +257,13 @@ PlanarSeparator LVIRA_2D<CellType>::solve(
     const LVIRANeighborhood<CellType>& a_neighborhood,
     const PlanarSeparator& a_reconstruction) {
   return this->runOptimization(this, a_neighborhood, a_reconstruction);
+}
+
+template <class CellType>
+PlanarSeparator LVIRA_2D<CellType>::solve(
+    const LVIRANeighborhood<CellType>& a_neighborhood,
+    const PlanarSeparator& a_reconstruction, std::vector<double> w) {
+  return this->runOptimization(this, a_neighborhood, a_reconstruction, w);
 }
 
 template <class CellType>
@@ -270,8 +307,16 @@ PlanarSeparator LVIRA_3D<CellType>::solve(
 }
 
 template <class CellType>
+PlanarSeparator LVIRA_3D<CellType>::solve(
+    const LVIRANeighborhood<CellType>& a_neighborhood,
+    const PlanarSeparator& a_reconstruction, std::vector<double> w) {
+  return this->runOptimization(this, a_neighborhood, a_reconstruction, w);
+}
+
+template <class CellType>
 void LVIRA_3D<CellType>::setup(const PlanarSeparator& a_reconstruction) {
   this->allocateMatrices(this->neighborhood_m->size());
+  this->setWeights(this->weights);
   this->fillGeometryAndWeightVectors();
   this->best_reference_frame_m =
       getOrthonormalSystem(a_reconstruction[0].normal());

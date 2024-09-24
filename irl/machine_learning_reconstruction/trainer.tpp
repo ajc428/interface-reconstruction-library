@@ -10,11 +10,6 @@
 #ifndef IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_TRAINER_TPP_
 
-#include "irl/interface_reconstruction_methods/lvira_optimization.h"
-#include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
-#include "irl/interface_reconstruction_methods/elvira.h"
-#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
-
 namespace IRL
 {
     trainer::trainer(int s)
@@ -53,25 +48,38 @@ namespace IRL
         switch (type)
         {
             case 0:
-                nn = make_shared<model>(189,8,3,100);
+                nn = make_shared<model>(189,8,3,100,0);
                 optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
             case 1:
-                nn_binary = make_shared<binary_model>(189);
-                optimizer = new torch::optim::Adam(nn_binary->parameters(), learning_rate);
-                //optimizer = new torch::optim::Adam(nn_binary->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(0.001));
-                critereon_BCE = torch::nn::BCELoss();
+                nn = make_shared<model>(189,3,3,100,0);
+                optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
             break;
             case 2:
-                nn = make_shared<model>(189,3,3,100);
+                nn = make_shared<model>(189,2,3,200,0);
                 optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+                //torch::optim::AdamOptions(learning_rate).weight_decay(0.001)
                 critereon_MSE = torch::nn::MSELoss();
             break;
             case 3:
-                nn = make_shared<model>(189,2,3,200);
+                nn = make_shared<model>(3,1,5,100,1);
                 optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
-                //torch::optim::AdamOptions(learning_rate).weight_decay(0.001)
+                //optimizer = new torch::optim::Adam(nn->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(0.001));
+                critereon_BCE = torch::nn::BCELoss();
+                critereon_MSE = torch::nn::MSELoss();
+            break;
+            case 4:
+                nn = make_shared<model>(189,3,5,100,2);
+                optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
+                //optimizer = new torch::optim::Adam(nn->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(0.001));
+                critereon_BCE = torch::nn::BCELoss();
+                critereon_MSE = torch::nn::MSELoss();
+                critereon_CE = torch::nn::CrossEntropyLoss();
+            break;
+            case 5:
+                nn = make_shared<model>(189,27,3,100,2);
+                optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
             break;
         }
@@ -116,16 +124,11 @@ namespace IRL
 
         if (load)
         {
-            if (type == 1)
-            {
-                torch::load(nn_binary, in);
-            }
-            else
-            {
-                torch::load(nn, in);
-            }
+            torch::load(nn, in);
         }
         double epoch_loss_val_check = 0;
+        double lambda1 = 0.0;
+        double lambda2 = 0.0;
         for (int epoch = 0; epoch < epochs; ++epoch)
         {
             double epoch_loss = 0;
@@ -134,16 +137,9 @@ namespace IRL
             double total_epoch_loss_val = 0;
             int count = 0;
             int size = 0;
-            if (type == 1)
-            {
-                nn_binary->train();
-                size = 1;
-            }
-            else
-            {
-                nn->train();
-                size = nn->getOutput();
-            }
+
+            nn->train();
+            size = nn->getOutput();
 
             for (auto& batch : *data_loader_train)
             {
@@ -154,19 +150,22 @@ namespace IRL
                 torch::Tensor check;
                 torch::Tensor comp;
 
-                if (type == 1)
-                {
-                    y_pred = nn_binary->forward(train_in);
-                }
-                else
-                {
-                    y_pred = nn->forward(train_in);
-                }
+                y_pred = nn->forward(train_in);
 
                 if (type == 1000)
                 {
                     check = functions->VolumeFracsForwardFD(y_pred);
                     comp = train_in;
+                }
+                else if (type == 5)
+                {
+                    check = torch::zeros({batch_size, 3});
+                    comp = torch::zeros({batch_size, 3});
+                    for (int i = 0; i < batch_size; ++i)
+                    {
+                        check[i] = torch::flatten(functions->LVIRAForward(y_pred[i], train_in[i]));
+                    }
+                    comp = train_out;
                 }
                 else
                 {
@@ -175,9 +174,19 @@ namespace IRL
                 }
 
                 torch::Tensor loss = torch::zeros({batch_size, 1});
-                if (type == 1)
+                torch::Tensor l2 = torch::tensor(0.0);
+                torch::Tensor l1 = torch::tensor(0.0);
+                for (auto &param : nn->named_parameters())
                 {
-                    loss = critereon_BCE(check, comp);
+                    if (param.key().find("weight") != std::string::npos)
+                    {
+                        l2 = l2 + lambda2 * param.value().square().sum();
+                        l1 = l1 + lambda1 * param.value().abs().sum();
+                    }
+                }
+                if (type == 3)
+                {
+                    loss = critereon_BCE(check, comp) + l2 + l1;
                     count = 0;
                     for (int i = 0; i < batch_size; ++i)
                     {
@@ -187,16 +196,28 @@ namespace IRL
                         }
                     }
                 }
+                else if (type == 4)
+                {
+                    loss = critereon_CE(check, comp) + l2 + l1;
+                    count = 0;
+                    for (int i = 0; i < batch_size; ++i)
+                    {
+                        auto ind = torch::argmax(comp[i]);
+                        auto ind2 = torch::argmax(check[i]);
+
+                        if (ind.item<int>() == ind2.item<int>())
+                        {
+                            ++count;
+                        }
+                    }
+                }
+                else if (type == 2)
+                {
+                    loss = functions->MSE_angle_loss(comp,check) + l2 + l1;
+                }
                 else
                 {
-                    if (type == 3)
-                    {
-                        loss = functions->MSE_angle_loss(comp,check);
-                    }
-                    else
-                    {
-                        loss = critereon_MSE(check, comp);
-                    }
+                    loss = critereon_MSE(check, comp) + l2 + l1;
                 }
                 epoch_loss = epoch_loss + loss.item().toDouble()*batch.data.size(0);
 
@@ -205,37 +226,19 @@ namespace IRL
 
                 if (numranks > 1)
                 {
-                    if (type == 1)
+                    for (auto &param : nn->named_parameters())
                     {
-                        for (auto &param : nn_binary->named_parameters())
-                        {
-                            MPI_Allreduce(MPI_IN_PLACE, param.value().grad().data_ptr(), param.value().grad().numel(), mpiDatatype.at(param.value().grad().scalar_type()), MPI_SUM, MPI_COMM_WORLD);
-                            param.value().grad().data() = param.value().grad().data()/numranks;
-                        }
-                    }
-                    else
-                    {
-                        for (auto &param : nn->named_parameters())
-                        {
-                            MPI_Allreduce(MPI_IN_PLACE, param.value().grad().data_ptr(), param.value().grad().numel(), mpiDatatype.at(param.value().grad().scalar_type()), MPI_SUM, MPI_COMM_WORLD);
-                            param.value().grad().data() = param.value().grad().data()/numranks;
-                            
-                        } 
-                        MPI_Allreduce(&epoch_loss, &total_epoch_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    }
+                        MPI_Allreduce(MPI_IN_PLACE, param.value().grad().data_ptr(), param.value().grad().numel(), mpiDatatype.at(param.value().grad().scalar_type()), MPI_SUM, MPI_COMM_WORLD);
+                        param.value().grad().data() = param.value().grad().data()/numranks;
+                        
+                    } 
+                    MPI_Allreduce(&epoch_loss, &total_epoch_loss, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 }
 
                 optimizer->step();
             }
 
-            if (type == 1)
-            {
-                nn_binary->eval();
-            }
-            else
-            {
-                nn->eval();
-            }           
+            nn->eval();          
             
             for (auto& batch : *data_loader_val)
             {
@@ -245,19 +248,22 @@ namespace IRL
                 torch::Tensor check;
                 torch::Tensor comp;
 
-                if (type == 1)
-                {
-                    y_pred = nn_binary->forward(val_in);
-                }
-                else
-                {
-                    y_pred = nn->forward(val_in);
-                }
+                y_pred = nn->forward(val_in);
 
                 if (type == 1000)
                 {
                     check = functions->VolumeFracsForwardFD(y_pred);
                     comp = val_in;
+                }
+                else if (type == 5)
+                {
+                    check = torch::zeros({val_batch_size, 3});
+                    comp = torch::zeros({val_batch_size, 3});
+                    for (int i = 0; i < val_batch_size; ++i)
+                    {
+                        check[i] = torch::flatten(functions->LVIRAForward(y_pred[i], val_in[i]));
+                    }
+                    comp = val_out;
                 }
                 else
                 {
@@ -266,17 +272,31 @@ namespace IRL
                 }
 
                 torch::Tensor loss = torch::zeros({val_batch_size, 1});
-                if (type == 1)
+                torch::Tensor l2 = torch::tensor(0.0);
+                torch::Tensor l1 = torch::tensor(0.0);
+                for (auto &param : nn->named_parameters())
                 {
-                    loss = critereon_BCE(check, comp);
+                    if (param.key().find("weight") != std::string::npos)
+                    {
+                        l2 = l2 + lambda2 * param.value().square().sum();
+                        l1 = l1 + lambda1 * param.value().abs().sum();
+                    }
                 }
-                else if (type == 3)
+                if (type == 3)
                 {
-                    loss = functions->MSE_angle_loss(comp,check);
+                    loss = critereon_BCE(check, comp) + l2 + l1;
+                }
+                else if (type == 4)
+                {
+                    loss = critereon_CE(check, comp) + l2 + l1;
+                }
+                else if (type == 2)
+                {
+                    loss = functions->MSE_angle_loss(comp,check) + l2 + l1;
                 }
                 else
                 {
-                    loss = critereon_MSE(check, comp);
+                    loss = critereon_MSE(check, comp) + l2 + l1;
                 }
                 epoch_loss_val = epoch_loss_val + loss.item().toDouble()*batch.data.size(0);
 
@@ -295,14 +315,14 @@ namespace IRL
             total_epoch_loss_val = total_epoch_loss_val / data_val_size;
             if (rank == 0)
             {
-                if (type == 1)
+                if (type == 3 || type == 4)
                 {
                     cout << epoch << " " << count << "/" << batch_size << endl;
                 }
                 cout << epoch << " " << total_epoch_loss << " " << total_epoch_loss_val << endl;
                 std::cout.flush();
             }
-            if (epoch % 1000 == 0)
+            if (epoch % 100 == 0)
             {
                 if (total_epoch_loss_val < epoch_loss_val_check || epoch == 0)
                 {
@@ -311,23 +331,15 @@ namespace IRL
                 }
                 else if (epoch < epochs-1)
                 {
-                    epoch = epochs;
+                    //epoch = epochs;
                     MPI_Bcast(&epoch, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 }
             }
             
             MPI_Barrier(MPI_COMM_WORLD);
-            if (rank == 0 && (epoch % 1000 == 0 || epoch == epochs - 1))
+            if (rank == 0 && (epoch % 100 == 0 || epoch == epochs - 1))
             {
-                if (type == 1)
-                {
-                    torch::save(nn_binary, out);
-
-                }
-                else
-                {
-                    torch::save(nn, out);
-                }
+                torch::save(nn, out);
             }
             MPI_Barrier(MPI_COMM_WORLD);
         }
@@ -343,9 +355,9 @@ namespace IRL
             results_pr.open("result_pr.txt");
             int size = 0;
 
-            if (n == 1)
+            if (n == 3)
             {
-                nn_binary->eval();
+                nn->eval();
                 size = 1;
                 int count = 0;
                 int total = data_test.size().value();
@@ -354,7 +366,7 @@ namespace IRL
                     test_in = data_test.get(i).data;
                     test_out = data_test.get(i).target;
                     torch::Tensor prediction = torch::zeros({1, 1});
-                    prediction = nn_binary->forward(test_in);
+                    prediction = nn->forward(test_in);
                     if ((test_out[0].item<double>() == 1 && prediction[0].item<double>() > 0.5) || (test_out[0].item<double>() == 0 && prediction[0].item<double>() <= 0.5))
                     {
                         ++count;
@@ -367,6 +379,63 @@ namespace IRL
                     results_pr << "\n";
                 }
                 std::cout << "Result: " << count << "/" << total << " (" << data_test.size().value() << ")" << std::endl;
+            }
+            else if (type == 4)
+            {
+                nn->eval();
+                size = 3;
+                int count = 0;
+                int total = data_test.size().value();
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    torch::Tensor prediction = torch::softmax(nn->forward(test_in),0);
+                    auto ind = torch::argmax(test_out);
+                    auto ind2 = torch::argmax(prediction);
+                    if (ind.item<int>() == ind2.item<int>())
+                    {
+                        ++count;
+                    }
+
+                    for (int j = 0; j < size; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < size; ++j)
+                    {
+                        results_ex << test_out[j].item<double>() << " ";
+                    }
+
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
+                std::cout << "Result: " << count << "/" << total << " (" << data_test.size().value() << ")" << std::endl;
+            }
+            else if (type == 5)
+            {
+                nn->eval();
+                size = nn->getOutput();
+                for(int i = 0; i < data_test.size().value(); ++i)
+                {
+                    test_in = data_test.get(i).data;
+                    test_out = data_test.get(i).target;
+                    torch::Tensor weights = torch::zeros({27, 1});
+                    torch::Tensor prediction = torch::zeros({size, 1});
+                    weights = nn->forward(test_in);
+                    prediction = functions->LVIRAForward(weights, test_in);
+                    
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_pr << prediction[j].item<double>() << " ";
+                    }
+                    for (int j = 0; j < 3; ++j)
+                    {
+                        results_ex << test_out[j].item<double>() << " ";
+                    }
+                    results_ex << "\n";
+                    results_pr << "\n";
+                }
             }
             else
             {
@@ -509,16 +578,9 @@ namespace IRL
         }
     }
 
-    void trainer::load_model(std::string in, int i)
+    void trainer::load_model(std::string in)
     {
-        if (i == 0)
-        {
-            torch::load(nn, in);
-        }
-        else if (i == 1)
-        {
-            torch::load(nn_binary, in);
-        }
+        torch::load(nn,in);
     }
 
     IRL::Normal trainer::get_normal(vector<double>* fractions)
@@ -543,7 +605,7 @@ namespace IRL
 
     double trainer::get_type(vector<double>* fractions)
     {
-        auto y_pred = nn_binary->forward(torch::tensor(*fractions));
+        auto y_pred = nn->forward(torch::tensor(*fractions));
         return y_pred[0].item<double>();
     }
 

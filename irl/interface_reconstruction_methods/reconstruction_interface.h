@@ -28,8 +28,8 @@
 
 namespace IRL {
 
-IRL::trainer t = IRL::trainer(4);
-IRL::trainer t2 = IRL::trainer(5);
+// IRL::trainer t = IRL::trainer(4);
+// IRL::trainer t2 = IRL::trainer(5);
 //IRL::trainer t2 = IRL::trainer(4);
 //IRL::trainer b = IRL::trainer(6);
 /*IRL::trainer_cuda tc = IRL::trainer_cuda(4);
@@ -75,6 +75,10 @@ inline PlanarSeparator reconstructionWithELVIRA2D(
 inline PlanarSeparator reconstructionWithELVIRA3D(
     const ELVIRANeighborhood& a_neighborhood_geometry);
 
+    /// \brief Perform ELVIRA Reconstruction for 3D.
+inline PlanarSeparator reconstructionWithELVIRA3D(
+    const ELVIRANeighborhood& a_neighborhood_geometry, std::vector<double> weights);
+
 /// \brief Perform ML Reconstruction for 3D.
 template <class CellType>
 inline PlanarSeparator reconstructionWithML3(
@@ -101,6 +105,11 @@ template <class CellType>
 inline PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction);
+
+template <class CellType>
+inline PlanarSeparator reconstructionWithLVIRA3D(
+    const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
+    PlanarSeparator a_initial_reconstruction, std::vector<double> weights);
 
 /// \brief Perform MOF Reconstruction for 2D with optional weights.
 /// Defaults to even weighting.
