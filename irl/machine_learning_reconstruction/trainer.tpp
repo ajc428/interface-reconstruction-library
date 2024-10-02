@@ -78,7 +78,7 @@ namespace IRL
                 critereon_CE = torch::nn::CrossEntropyLoss();
             break;
             case 5:
-                nn = make_shared<model>(189,27,3,100,2);
+                nn = make_shared<model>(189,27,3,100,3);
                 optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
             break;
@@ -460,118 +460,118 @@ namespace IRL
                     results_pr << "\n";
                 }
             }
-            /*else if (n == 7)
-            {
-                for(int i = 0; i < data_test.size().value(); ++i)
-                {
-                    test_in = data_test.get(i).data;
-                    test_out = data_test.get(i).target;
+            // else if (n == 7)
+            // {
+            //     for(int i = 0; i < data_test.size().value(); ++i)
+            //     {
+            //         test_in = data_test.get(i).data;
+            //         test_out = data_test.get(i).target;
 
-                    IRL::LVIRANeighborhood<IRL::RectangularCuboid> neighborhood;
-                    neighborhood.resize(27);
-                    neighborhood.setCenterOfStencil(13);
-                    IRL::RectangularCuboid cells[27];
-                    for (int i = 0; i < 3; ++i) {
-                        for (int j = 0; j < 3; ++j) {
-                            for (int k = 0; k < 3; ++k) {
-                                double* a = new double();
-                                *a = test_in[7*(i*9+j*3+k)].item<double>();
-                                const double* b = a;
-                                    const int local_index =
-                                        (k) * 9 + (j) * 3 + (i);
-                                    cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
-                                        IRL::Pt(i-1.5, j-1.5, k-1.5),
-                                        IRL::Pt(i-0.5, j-0.5, k-0.5));
-                                    neighborhood.setMember(
-                                        static_cast<IRL::UnsignedIndex_t>(local_index),
-                                        &cells[local_index], b);
-                                    }
-                                }
-                            }
-                            IRL::Pt a_gas_centroid = IRL::Pt(test_in[7*(1*9+1*3+1)+4].item<double>(), test_in[7*(1*9+1*3+1)+5].item<double>(), test_in[7*(1*9+1*3+1)+6].item<double>());
-                            IRL::Pt a_liquid_centroid = IRL::Pt(test_in[7*(1*9+1*3+1)+1].item<double>(), test_in[7*(1*9+1*3+1)+2].item<double>(), test_in[7*(1*9+1*3+1)+3].item<double>());
-                            auto bary_normal = IRL::Normal::fromPtNormalized(
-                                a_gas_centroid - a_liquid_centroid);
-                            bary_normal.normalize();
-                            const double initial_distance =
-                                bary_normal * neighborhood.getCenterCell().calculateCentroid();
-                            IRL::PlanarSeparator a_interface = IRL::PlanarSeparator::fromOnePlane(
-                                IRL::Plane(bary_normal, initial_distance));
-                            IRL::setDistanceToMatchVolumeFractionPartialFill(
-                                neighborhood.getCenterCell(),
-                                neighborhood.getCenterCellStoredMoments(),
-                                &a_interface);
+            //         IRL::LVIRANeighborhood<IRL::RectangularCuboid> neighborhood;
+            //         neighborhood.resize(27);
+            //         neighborhood.setCenterOfStencil(13);
+            //         IRL::RectangularCuboid cells[27];
+            //         for (int i = 0; i < 3; ++i) {
+            //             for (int j = 0; j < 3; ++j) {
+            //                 for (int k = 0; k < 3; ++k) {
+            //                     double* a = new double();
+            //                     *a = test_in[7*(i*9+j*3+k)].item<double>();
+            //                     const double* b = a;
+            //                         const int local_index =
+            //                             (k) * 9 + (j) * 3 + (i);
+            //                         cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
+            //                             IRL::Pt(i-1.5, j-1.5, k-1.5),
+            //                             IRL::Pt(i-0.5, j-0.5, k-0.5));
+            //                         neighborhood.setMember(
+            //                             static_cast<IRL::UnsignedIndex_t>(local_index),
+            //                             &cells[local_index], b);
+            //                         }
+            //                     }
+            //                 }
+            //                 IRL::Pt a_gas_centroid = IRL::Pt(test_in[7*(1*9+1*3+1)+4].item<double>(), test_in[7*(1*9+1*3+1)+5].item<double>(), test_in[7*(1*9+1*3+1)+6].item<double>());
+            //                 IRL::Pt a_liquid_centroid = IRL::Pt(test_in[7*(1*9+1*3+1)+1].item<double>(), test_in[7*(1*9+1*3+1)+2].item<double>(), test_in[7*(1*9+1*3+1)+3].item<double>());
+            //                 auto bary_normal = IRL::Normal::fromPtNormalized(
+            //                     a_gas_centroid - a_liquid_centroid);
+            //                 bary_normal.normalize();
+            //                 const double initial_distance =
+            //                     bary_normal * neighborhood.getCenterCell().calculateCentroid();
+            //                 IRL::PlanarSeparator a_interface = IRL::PlanarSeparator::fromOnePlane(
+            //                     IRL::Plane(bary_normal, initial_distance));
+            //                 IRL::setDistanceToMatchVolumeFractionPartialFill(
+            //                     neighborhood.getCenterCell(),
+            //                     neighborhood.getCenterCellStoredMoments(),
+            //                     &a_interface);
 
-                            a_interface =
-                                IRL::reconstructionWithLVIRA3D(neighborhood, a_interface);
-                    IRL::Normal n = a_interface[0].normal();
-                    torch::Tensor prediction = torch::zeros(3);
-                    prediction[0] = -n[0];
-                    prediction[1] = -n[1];
-                    prediction[2] = -n[2];
+            //                 a_interface =
+            //                     IRL::reconstructionWithLVIRA3D(neighborhood, a_interface);
+            //         IRL::Normal n = a_interface[0].normal();
+            //         torch::Tensor prediction = torch::zeros(3);
+            //         prediction[0] = -n[0];
+            //         prediction[1] = -n[1];
+            //         prediction[2] = -n[2];
 
-                    //auto prediction = nn->forward(test_in);
-                    auto loss = critereon_MSE(prediction, test_out);
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        results_pr << prediction[j].item<double>() << " ";
-                    }
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        results_ex << test_out[j].item<double>() << " ";
-                    }
-                    results_ex << "\n";
-                    results_pr << "\n";
-                }
-            }
-            else if (n == 8)
-            {
-                for(int i = 0; i < data_test.size().value(); ++i)
-                {
-                    test_in = data_test.get(i).data;
-                    test_out = data_test.get(i).target;
+            //         //auto prediction = nn->forward(test_in);
+            //         auto loss = critereon_MSE(prediction, test_out);
+            //         for (int j = 0; j < 3; ++j)
+            //         {
+            //             results_pr << prediction[j].item<double>() << " ";
+            //         }
+            //         for (int j = 0; j < 3; ++j)
+            //         {
+            //             results_ex << test_out[j].item<double>() << " ";
+            //         }
+            //         results_ex << "\n";
+            //         results_pr << "\n";
+            //     }
+            // }
+            // else if (n == 8)
+            // {
+            //     for(int i = 0; i < data_test.size().value(); ++i)
+            //     {
+            //         test_in = data_test.get(i).data;
+            //         test_out = data_test.get(i).target;
 
-                    IRL::ELVIRANeighborhood neighborhood;
-                    neighborhood.resize(27);
-                    IRL::RectangularCuboid cells[27];
-                    for (int i = 0; i < 3; ++i) {
-                        for (int j = 0; j < 3; ++j) {
-                            for (int k = 0; k < 3; ++k) {
-                                double* a = new double();
-                                *a = test_in[7*(i*9+j*3+k)].item<double>();
-                                const double* b = a;
-                                    const int local_index =
-                                        (k) * 9 + (j) * 3 + (i);
-                                    cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
-                                        IRL::Pt(i-1.5, j-1.5, k-1.5),
-                                        IRL::Pt(i-0.5, j-0.5, k-0.5));
-                                    neighborhood.setMember(&cells[local_index], b,i-1,j-1,k-1);
-                                    }
-                                }
-                            }
+            //         IRL::ELVIRANeighborhood neighborhood;
+            //         neighborhood.resize(27);
+            //         IRL::RectangularCuboid cells[27];
+            //         for (int i = 0; i < 3; ++i) {
+            //             for (int j = 0; j < 3; ++j) {
+            //                 for (int k = 0; k < 3; ++k) {
+            //                     double* a = new double();
+            //                     *a = test_in[7*(i*9+j*3+k)].item<double>();
+            //                     const double* b = a;
+            //                         const int local_index =
+            //                             (k) * 9 + (j) * 3 + (i);
+            //                         cells[local_index] = IRL::RectangularCuboid::fromBoundingPts(
+            //                             IRL::Pt(i-1.5, j-1.5, k-1.5),
+            //                             IRL::Pt(i-0.5, j-0.5, k-0.5));
+            //                         neighborhood.setMember(&cells[local_index], b,i-1,j-1,k-1);
+            //                         }
+            //                     }
+            //                 }
 
-                            IRL::PlanarSeparator a_interface =
-                                IRL::reconstructionWithELVIRA3D(neighborhood);
-                    IRL::Normal n = a_interface[0].normal();
-                    torch::Tensor prediction = torch::zeros(3);
-                    prediction[0] = -n[0];
-                    prediction[1] = -n[1];
-                    prediction[2] = -n[2];
+            //                 IRL::PlanarSeparator a_interface =
+            //                     IRL::reconstructionWithELVIRA3D(neighborhood);
+            //         IRL::Normal n = a_interface[0].normal();
+            //         torch::Tensor prediction = torch::zeros(3);
+            //         prediction[0] = -n[0];
+            //         prediction[1] = -n[1];
+            //         prediction[2] = -n[2];
 
-                    //auto prediction = nn->forward(test_in);
-                    auto loss = critereon_MSE(prediction, test_out);
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        results_pr << prediction[j].item<double>() << " ";
-                    }
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        results_ex << test_out[j].item<double>() << " ";
-                    }
-                    results_ex << "\n";
-                    results_pr << "\n";
-                }
-            }*/
+            //         //auto prediction = nn->forward(test_in);
+            //         auto loss = critereon_MSE(prediction, test_out);
+            //         for (int j = 0; j < 3; ++j)
+            //         {
+            //             results_pr << prediction[j].item<double>() << " ";
+            //         }
+            //         for (int j = 0; j < 3; ++j)
+            //         {
+            //             results_ex << test_out[j].item<double>() << " ";
+            //         }
+            //         results_ex << "\n";
+            //         results_pr << "\n";
+            //     }
+            // }
 
             results_ex.close();
             results_pr.close();

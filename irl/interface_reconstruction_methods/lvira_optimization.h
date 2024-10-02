@@ -286,7 +286,7 @@ class LVIRA_3D : public LVIRACommon<CellType, LVIRA_3D_columns> {
   PlanarSeparator solve(const LVIRANeighborhood<CellType>& a_neighborhood,
                         const PlanarSeparator& a_reconstruction);
   PlanarSeparator solve(const LVIRANeighborhood<CellType>& a_neighborhood,
-    const PlanarSeparator& a_reconstruction, std::vector<double> w);
+    const PlanarSeparator& a_reconstruction, double* w);
 
   /// \brief Initialize simulation parameters that will
   /// be needed during the optimization.

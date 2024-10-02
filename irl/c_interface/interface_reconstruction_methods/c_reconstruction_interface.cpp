@@ -33,6 +33,17 @@ void c_reconstructELVIRA3D(const c_ELVIRANeigh* a_elvira_neighborhood,
       reconstructionWithELVIRA3D(*a_elvira_neighborhood->obj_ptr);
 }
 
+void c_reconstructELVIRA3D_weights(const c_ELVIRANeigh* a_elvira_neighborhood,
+                           c_PlanarSep* a_separator, double* weights) {
+  assert(a_elvira_neighborhood != nullptr);
+  assert(a_elvira_neighborhood->obj_ptr != nullptr);
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  assert(weights != nullptr);
+  *a_separator->obj_ptr =
+      reconstructionWithELVIRA3D(*a_elvira_neighborhood->obj_ptr, weights);
+}
+
 void c_reconstructML3(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const c_R2PNeigh_RectCub* a_r2p_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
                            c_PlanarSep* a_separator, int* flag) {
   //assert(a_elvira_neighborhood != nullptr);
@@ -347,6 +358,17 @@ void c_reconstructLVIRA3D_RectCub(const c_LVIRANeigh_RectCub* a_neighborhood,
   assert(a_separator->obj_ptr != nullptr);
   (*a_separator->obj_ptr) = IRL::reconstructionWithLVIRA3D(
       *a_neighborhood->obj_ptr, *a_separator->obj_ptr);
+}
+
+void c_reconstructLVIRA3D_RectCub_weights(const c_LVIRANeigh_RectCub* a_neighborhood,
+                c_PlanarSep* a_separator, double* weights) {
+  assert(a_neighborhood != nullptr);
+  assert(a_neighborhood->obj_ptr != nullptr);
+  assert(a_separator != nullptr);
+  assert(a_separator->obj_ptr != nullptr);
+  assert(weights != nullptr);
+  (*a_separator->obj_ptr) = IRL::reconstructionWithLVIRA3D(
+      *a_neighborhood->obj_ptr, *a_separator->obj_ptr, weights);
 }
 
 void c_reconstructLVIRA2D_Hex(const c_LVIRANeigh_Hex* a_neighborhood,

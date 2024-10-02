@@ -114,7 +114,7 @@ class ELVIRA_3D {
   /// the neighboring geoemtry
   PlanarSeparator solve(const ELVIRANeighborhood* a_neighborhood_pointer);
 
-  void setWeights(std::vector<double> w);
+  void setWeights(double* w);
 
   /// \brief Default destructor.
   ~ELVIRA_3D(void) = default;

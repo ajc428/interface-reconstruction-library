@@ -110,11 +110,18 @@ module f_ReconstructionInterface
   interface reconstructLVIRA3D
     ! 3D LVIRA on a RectCub mesh
     module procedure reconstructLVIRA3D_RectCub
+    module procedure reconstructLVIRA3D_RectCub_weights
     ! 3D LVIRA on a Hex mesh
     module procedure reconstructLVIRA3D_Hex
     ! 3D LVIRA on a Tet mesh
     module procedure reconstructLVIRA3D_Tet        
   end interface reconstructLVIRA3D  
+
+  interface reconstructELVIRA3D
+    ! 3D ELVIRA on a RectCub mesh
+    module procedure reconstructELVIRA3D
+    module procedure reconstructELVIRA3D_weights     
+  end interface reconstructELVIRA3D 
 
   interface
     subroutine F_reconstructELVIRA2D(a_ELVIRANeigh, a_planar_separator) &
@@ -136,6 +143,18 @@ module f_ReconstructionInterface
       type(c_ELVIRANeigh) :: a_ELVIRANeigh ! Pointer to a ELVIRANeigh object
       type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
     end subroutine F_reconstructELVIRA3D
+  end interface
+
+  interface
+    subroutine F_reconstructELVIRA3D_weights(a_ELVIRANeigh, a_planar_separator, weights) &
+    bind(C, name="c_reconstructELVIRA3D_weights")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_ELVIRANeigh) :: a_ELVIRANeigh ! Pointer to a ELVIRANeigh object
+      type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep to set
+      real(C_DOUBLE), dimension(0:26), intent(in) :: weights
+    end subroutine F_reconstructELVIRA3D_weights
   end interface
 
   interface
@@ -458,6 +477,18 @@ module f_ReconstructionInterface
   end interface
 
   interface
+    subroutine F_reconstructLVIRA3D_RectCub_weights(a_neighborhood, a_planar_separator, weights) &
+    bind(C, name="c_reconstructLVIRA3D_RectCub_weights")
+      use, intrinsic :: iso_c_binding
+      import
+      implicit none
+      type(c_LVIRANeigh_RectCub) :: a_neighborhood ! Pointer to a LVIRANeigh<RectCub>
+      type(c_PlanarSep) :: a_planar_separator ! Pointer for PlanarSep
+      real(C_DOUBLE), dimension(0:26) :: weights
+    end subroutine F_reconstructLVIRA3D_RectCub_weights
+  end interface
+
+  interface
     subroutine F_reconstructLVIRA2D_Hex(a_neighborhood, a_planar_separator) &
     bind(C, name="c_reconstructLVIRA2D_Hex")
       use, intrinsic :: iso_c_binding
@@ -511,6 +542,17 @@ module f_ReconstructionInterface
       call F_reconstructELVIRA3D(a_elvira_neighborhood%c_object, a_planar_separator%c_object)
 
   end subroutine reconstructELVIRA3D
+
+  subroutine reconstructELVIRA3D_weights(a_elvira_neighborhood, a_planar_separator, weights)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(ELVIRANeigh_type), intent(in) :: a_elvira_neighborhood
+      type(PlanarSep_type), intent(inout) :: a_planar_separator
+      real(C_DOUBLE), dimension(0:26), intent(in) :: weights
+
+      call F_reconstructELVIRA3D_weights(a_elvira_neighborhood%c_object, a_planar_separator%c_object, weights)
+
+  end subroutine reconstructELVIRA3D_weights
 
   subroutine reconstructML3(a_lvira, a_r2p, a_centroids, a_g_centroids, a_separator, flag)
     use, intrinsic :: iso_c_binding
@@ -797,6 +839,15 @@ module f_ReconstructionInterface
       type(PlanarSep_type), intent(inout) :: a_planar_separator
       call F_reconstructLVIRA3D_RectCub(a_neighborhood%c_object, a_planar_separator%c_object)
   end subroutine reconstructLVIRA3D_RectCub
+
+  subroutine reconstructLVIRA3D_RectCub_weights(a_neighborhood, a_planar_separator, weights)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(LVIRANeigh_RectCub_type), intent(in) :: a_neighborhood
+      type(PlanarSep_type), intent(inout) :: a_planar_separator
+      real(C_DOUBLE), dimension(0:26), intent(in) :: weights
+      call F_reconstructLVIRA3D_RectCub_weights(a_neighborhood%c_object, a_planar_separator%c_object, weights)
+  end subroutine reconstructLVIRA3D_RectCub_weights
 
   subroutine reconstructLVIRA2D_Hex(a_neighborhood, a_planar_separator)
     use, intrinsic :: iso_c_binding

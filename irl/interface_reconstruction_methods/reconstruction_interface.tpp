@@ -108,7 +108,7 @@ PlanarSeparator reconstructionWithELVIRA3D(
 }
 
 PlanarSeparator reconstructionWithELVIRA3D(
-    const ELVIRANeighborhood& a_neighborhood_geometry, std::vector<double> weights) {
+    const ELVIRANeighborhood& a_neighborhood_geometry, double* weights) {
   ELVIRA_3D elvira_system;
   elvira_system.setWeights(weights);
   return elvira_system.solve(&a_neighborhood_geometry);
@@ -118,117 +118,117 @@ template <class CellType>
 PlanarSeparator reconstructionWithML3(/*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag) 
 {
   auto n = IRL::Normal();
-  auto n2 = IRL::Normal();
-  std::vector<double> fractions;
-  auto sm = IRL::spatial_moments();
+  // auto n2 = IRL::Normal();
+  // std::vector<double> fractions;
+  // auto sm = IRL::spatial_moments();
 
-  bool flip = false;
-  if (a_neighborhood_geometry.getCenterCellStoredMoments() > 0.5)
-  {
-    flip = true;
-  }
-  for (int i = 0; i < 3; ++i)
-  {
-    for (int j = 0; j < 3; ++j)
-    {
-      for (int k = 0; k < 3; ++k)
-      {
-        double dx = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(0);
-        double dy = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(1);
-        double dz = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(2);
-        if (!flip)
-        {
-          fractions.push_back(a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-          //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-        }
-        else
-        {
-          fractions.push_back(1 - a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-          //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-        }
-      }
-    }
-  }
+  // bool flip = false;
+  // if (a_neighborhood_geometry.getCenterCellStoredMoments() > 0.5)
+  // {
+  //   flip = true;
+  // }
+  // for (int i = 0; i < 3; ++i)
+  // {
+  //   for (int j = 0; j < 3; ++j)
+  //   {
+  //     for (int k = 0; k < 3; ++k)
+  //     {
+  //       double dx = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(0);
+  //       double dy = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(1);
+  //       double dz = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(2);
+  //       if (!flip)
+  //       {
+  //         fractions.push_back(a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //         //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         //fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //       }
+  //       else
+  //       {
+  //         fractions.push_back(1 - a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //         //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         //fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //       }
+  //     }
+  //   }
+  // }
 
-  IRL::data_gen gen(3,1);
-  std::vector<double> center = sm.get_mass_centers(fractions);
-  int direction = gen.rotateFractions(&fractions,center);
+  // IRL::data_gen gen(3,1);
+  // std::vector<double> center = sm.get_mass_centers(fractions);
+  // int direction = gen.rotateFractions(&fractions,center);
    
-  //double inter = b.get_normal_loss(fractions);
-  //if ((flag[0] != 2) || (inter > 0.015 && flag[0] == 2))
-  {
-    flag[0] = 1;
-    //return reconstructionWithLVIRA3D(a_neighborhood_geometry, p);
-    //return reconstructionWithR2P3D(r2pnh, p);
-  }
+  // //double inter = b.get_normal_loss(fractions);
+  // //if ((flag[0] != 2) || (inter > 0.015 && flag[0] == 2))
+  // {
+  //   flag[0] = 1;
+  //   //return reconstructionWithLVIRA3D(a_neighborhood_geometry, p);
+  //   //return reconstructionWithR2P3D(r2pnh, p);
+  // }
 
-  flag[0] = 0;
-  //n = t.get_normal(&fractions);
-  n.normalize();
-  /*if (n[1] > 0.9995)
-  {
-    n[0] = 0;
-    n[1] = 1;
-    n[2] = 0;
-  }
-  else if (-n[1] > 0.9995)
-  {
-    n[0] = 0;
-    n[1] = -1;
-    n[2] = 0;
-  }*/
-  switch (direction)
-  {
-    case 1:
-      n[0] = -n[0];
-      break;
-    case 2:
-      n[1] = -n[1];
-      break;
-    case 3:
-      n[2] = -n[2];
-      break;
-    case 4:
-      n[0] = -n[0];
-      n[1] = -n[1];
-      break;
-    case 5:
-      n[0] = -n[0];
-      n[2] = -n[2];
-      break;
-    case 6:
-      n[1] = -n[1];
-      n[2] = -n[2];
-      break;
-    case 7:
-      n[0] = -n[0];
-      n[1] = -n[1];
-      n[2] = -n[2];
-      break;
-  }
+  // flag[0] = 0;
+  // //n = t.get_normal(&fractions);
+  // n.normalize();
+  // /*if (n[1] > 0.9995)
+  // {
+  //   n[0] = 0;
+  //   n[1] = 1;
+  //   n[2] = 0;
+  // }
+  // else if (-n[1] > 0.9995)
+  // {
+  //   n[0] = 0;
+  //   n[1] = -1;
+  //   n[2] = 0;
+  // }*/
+  // switch (direction)
+  // {
+  //   case 1:
+  //     n[0] = -n[0];
+  //     break;
+  //   case 2:
+  //     n[1] = -n[1];
+  //     break;
+  //   case 3:
+  //     n[2] = -n[2];
+  //     break;
+  //   case 4:
+  //     n[0] = -n[0];
+  //     n[1] = -n[1];
+  //     break;
+  //   case 5:
+  //     n[0] = -n[0];
+  //     n[2] = -n[2];
+  //     break;
+  //   case 6:
+  //     n[1] = -n[1];
+  //     n[2] = -n[2];
+  //     break;
+  //   case 7:
+  //     n[0] = -n[0];
+  //     n[1] = -n[1];
+  //     n[2] = -n[2];
+  //     break;
+  // }
 
-  if (!flip)
-  {
-    n[0] = -n[0];
-    n[1] = -n[1];
-    n[2] = -n[2];
-  }
+  // if (!flip)
+  // {
+  //   n[0] = -n[0];
+  //   n[1] = -n[1];
+  //   n[2] = -n[2];
+  // }
 
-  previous = n;
-  const IRL::Normal& n1 = n;
-  const double d = a_neighborhood_geometry.getCenterCellStoredMoments();
-  const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCenterCell();
-  double distance = IRL::findDistanceOnePlane(cube, d, n1);
+  // previous = n;
+  // const IRL::Normal& n1 = n;
+  // const double d = a_neighborhood_geometry.getCenterCellStoredMoments();
+  // const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCenterCell();
+  double distance;// = IRL::findDistanceOnePlane(cube, d, n1);
   return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
 }
 
@@ -236,102 +236,102 @@ template <class CellType>
 PlanarSeparator reconstructionWithML2(/*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag) 
 {
   auto n = IRL::Normal();
-  auto n2 = IRL::Normal();
-  std::vector<double> fractions;
-  auto sm = IRL::spatial_moments();
+  // auto n2 = IRL::Normal();
+  // std::vector<double> fractions;
+  // auto sm = IRL::spatial_moments();
 
-  bool flip = false;
-  if (a_neighborhood_geometry.getCenterCellStoredMoments() > 0.5)
-  {
-    flip = true;
-  }
-  for (int i = 0; i < 3; ++i)
-  {
-    for (int j = 0; j < 3; ++j)
-    {
-      for (int k = 0; k < 3; ++k)
-      {
-        double dx = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(0);
-        double dy = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(1);
-        double dz = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(2);
-        if (!flip)
-        {
-          fractions.push_back(a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-        }
-        else
-        {
-          fractions.push_back(1 - a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
-          fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
-        }
-      }
-    }
-  }
+  // bool flip = false;
+  // if (a_neighborhood_geometry.getCenterCellStoredMoments() > 0.5)
+  // {
+  //   flip = true;
+  // }
+  // for (int i = 0; i < 3; ++i)
+  // {
+  //   for (int j = 0; j < 3; ++j)
+  //   {
+  //     for (int k = 0; k < 3; ++k)
+  //     {
+  //       double dx = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(0);
+  //       double dy = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(1);
+  //       double dz = a_neighborhood_geometry.getCell(k*9+j*3+i).calculateSideLength(2);
+  //       if (!flip)
+  //       {
+  //         fractions.push_back(a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //       }
+  //       else
+  //       {
+  //         fractions.push_back(1 - a_neighborhood_geometry.getStoredMoments(k*9+j*3+i));
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         fractions.push_back((a_gas_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+0] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[0])/dx);
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+1] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[1])/dy);
+  //         fractions.push_back((a_liquid_centroids[3*i+9*j+27*k+2] - a_neighborhood_geometry.getCell(k*9+j*3+i).calculateCentroid()[2])/dz);
+  //       }
+  //     }
+  //   }
+  // }
 
-  IRL::data_gen gen(3,1);
-  std::vector<double> center = sm.get_mass_centers_all(&fractions);
-  int direction = gen.rotateFractions_all(&fractions,center);
+  // IRL::data_gen gen(3,1);
+  // std::vector<double> center = sm.get_mass_centers_all(&fractions);
+  // int direction = gen.rotateFractions_all(&fractions,center);
 
-  flag[0] = 0;
-  auto start = std::chrono::system_clock::now();
-  //n = t2.get_normal(&fractions);
-  auto stop = std::chrono::system_clock::now();
-  std::chrono::duration<double> runtime = stop - start;
-  //printf("Total run time: %20f \n\n", runtime.count());
-  n.normalize();
+  // flag[0] = 0;
+  // auto start = std::chrono::system_clock::now();
+  // //n = t2.get_normal(&fractions);
+  // auto stop = std::chrono::system_clock::now();
+  // std::chrono::duration<double> runtime = stop - start;
+  // //printf("Total run time: %20f \n\n", runtime.count());
+  // n.normalize();
 
-  switch (direction)
-  {
-    case 1:
-      n[0] = -n[0];
-      break;
-    case 2:
-      n[1] = -n[1];
-      break;
-    case 3:
-      n[2] = -n[2];
-      break;
-    case 4:
-      n[0] = -n[0];
-      n[1] = -n[1];
-      break;
-    case 5:
-      n[0] = -n[0];
-      n[2] = -n[2];
-      break;
-    case 6:
-      n[1] = -n[1];
-      n[2] = -n[2];
-      break;
-    case 7:
-      n[0] = -n[0];
-      n[1] = -n[1];
-      n[2] = -n[2];
-      break;
-  }
+  // switch (direction)
+  // {
+  //   case 1:
+  //     n[0] = -n[0];
+  //     break;
+  //   case 2:
+  //     n[1] = -n[1];
+  //     break;
+  //   case 3:
+  //     n[2] = -n[2];
+  //     break;
+  //   case 4:
+  //     n[0] = -n[0];
+  //     n[1] = -n[1];
+  //     break;
+  //   case 5:
+  //     n[0] = -n[0];
+  //     n[2] = -n[2];
+  //     break;
+  //   case 6:
+  //     n[1] = -n[1];
+  //     n[2] = -n[2];
+  //     break;
+  //   case 7:
+  //     n[0] = -n[0];
+  //     n[1] = -n[1];
+  //     n[2] = -n[2];
+  //     break;
+  // }
 
-  if (!flip)
-  {
-    n[0] = -n[0];
-    n[1] = -n[1];
-    n[2] = -n[2];
-  }
+  // if (!flip)
+  // {
+  //   n[0] = -n[0];
+  //   n[1] = -n[1];
+  //   n[2] = -n[2];
+  // }
 
-  previous = n;
-  const IRL::Normal& n1 = n;
-  const double d = a_neighborhood_geometry.getCenterCellStoredMoments();
-  const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCenterCell();
-  double distance = IRL::findDistanceOnePlane(cube, d, n1);
+  // previous = n;
+  // const IRL::Normal& n1 = n;
+  // const double d = a_neighborhood_geometry.getCenterCellStoredMoments();
+  // const IRL::RectangularCuboid& cube = a_neighborhood_geometry.getCenterCell();
+  double distance;// = IRL::findDistanceOnePlane(cube, d, n1);
   return IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
 }
 
@@ -379,20 +379,20 @@ PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction) {
   LVIRA_3D<CellType> lvira_system;  
-  std::vector<double> w;
+  double* w = new double[27];
   for (int i = 0; i < a_neighborhood_geometry.size(); ++i)
   {
-    w.push_back(1.0/a_neighborhood_geometry.size());
+    w[i] = (1.0/a_neighborhood_geometry.size());
   }
-  lvira_system.setWeights(w);
-  auto temp = lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction);
+  auto temp = lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction, w);
+  delete w;
   return temp;
 }
 
 template <class CellType>
 PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
-    PlanarSeparator a_initial_reconstruction, std::vector<double> weights) {
+    PlanarSeparator a_initial_reconstruction, double* weights) {
   LVIRA_3D<CellType> lvira_system;  
   auto temp = lvira_system.solve(a_neighborhood_geometry, a_initial_reconstruction, weights);
   return temp;

@@ -1,6 +1,5 @@
 #List of files from this directory and its subdirectores.
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/neural_network.h)
-target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/binary_neural_network.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/trainer.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/trainer_cuda.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/trainer.tpp)

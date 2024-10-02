@@ -21,7 +21,7 @@ PlanarSeparator LVIRACommon<CellType, kColumns>::runOptimization(
   neighborhood_m = &a_neighborhood_geometry;
   for (int i = 0; i < neighborhood_m->size(); ++i)
   {
-    weights.push_back(1.0/neighborhood_m->size());
+    weights.push_back(1.0/sqrt(neighborhood_m->size()));
   }
   a_ptr_to_LVIRA_object->setup(a_reconstruction);
   LevenbergMarquardt<LVIRAType, -1, static_cast<int>(LVIRAType::columns_m)>
@@ -309,8 +309,9 @@ PlanarSeparator LVIRA_3D<CellType>::solve(
 template <class CellType>
 PlanarSeparator LVIRA_3D<CellType>::solve(
     const LVIRANeighborhood<CellType>& a_neighborhood,
-    const PlanarSeparator& a_reconstruction, std::vector<double> w) {
-  return this->runOptimization(this, a_neighborhood, a_reconstruction, w);
+    const PlanarSeparator& a_reconstruction, double* w) {
+  std::vector<double> w1 = {w[0],w[1],w[2],w[3],w[4],w[5],w[6],w[7],w[8],w[9],w[10],w[11],w[12],w[13],w[14],w[15],w[16],w[17],w[18],w[19],w[20],w[21],w[22],w[23],w[24],w[25],w[26]};
+  return this->runOptimization(this, a_neighborhood, a_reconstruction, w1);
 }
 
 template <class CellType>

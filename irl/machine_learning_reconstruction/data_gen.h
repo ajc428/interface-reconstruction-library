@@ -11,6 +11,7 @@
 #define IRL_MACHINE_LEARNING_RECONSTRUCTION_DATA_GEN_H_
 
 #include "irl/machine_learning_reconstruction/fractions.h"
+#include "irl/machine_learning_reconstruction/spatial_moments.h"
 #include <iostream>
 #include <cstdlib>
 

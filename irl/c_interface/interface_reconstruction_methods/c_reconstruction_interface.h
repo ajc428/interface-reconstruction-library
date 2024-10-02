@@ -46,6 +46,9 @@ void c_reconstructELVIRA2D(const c_ELVIRANeigh* a_elvira_neighborhood,
 void c_reconstructELVIRA3D(const c_ELVIRANeigh* a_elvira_neighborhood,
                            c_PlanarSep* a_separator);
 
+void c_reconstructELVIRA3D_weights(const c_ELVIRANeigh* a_elvira_neighborhood,
+                           c_PlanarSep* a_separator, double* weights);
+
 void c_reconstructML3(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const c_R2PNeigh_RectCub* a_r2p_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
                            c_PlanarSep* a_separator, int* flag);
 
@@ -143,6 +146,9 @@ void c_reconstructLVIRA2D_RectCub(const c_LVIRANeigh_RectCub* a_neighborhood,
 
 void c_reconstructLVIRA3D_RectCub(const c_LVIRANeigh_RectCub* a_neighborhood,
                                   c_PlanarSep* a_separator);
+
+void c_reconstructLVIRA3D_RectCub_weights(const c_LVIRANeigh_RectCub* a_neighborhood,
+            c_PlanarSep* a_separator, double* weights);
 
 void c_reconstructLVIRA2D_Hex(const c_LVIRANeigh_Hex* a_neighborhood,
                                   c_PlanarSep* a_separator);

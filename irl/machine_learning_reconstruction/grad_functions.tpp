@@ -87,11 +87,11 @@ namespace IRL
 
         double e = 0.01;//std::sqrt(DBL_EPSILON);
         torch::Tensor weights = torch::zeros({27,27});
-        std::vector<double> w;
+        double* w = new double[27];
 
         for (int i = 0; i < 27; ++i)
         {
-            w.push_back(y_pred[i].item<double>());
+            w[i] = (y_pred[i].item<double>());
             weights.index_put_({i,torch::indexing::Slice()},y_pred);
             weights[i][i] += e;
         }
@@ -107,10 +107,9 @@ namespace IRL
 
         for (int i = 0; i < 27; ++i)
         {
-            w.clear();
             for (int j = 0; j < 27; ++j)
             {
-                w.push_back(weights[i][j].item<double>());
+                w[i] = weights[i][j].item<double>();
             }
             a_interface = IRL::reconstructionWithLVIRA3D(neighborhood,a_interface,w);
             result_grad[0] = -a_interface[0].normal()[0];
@@ -132,6 +131,7 @@ namespace IRL
             grad_fn->y_pred = y_pred;
             set_history(flatten_tensor_args(result), grad_fn);
         }
+        delete w;
         return result;
     }
 
@@ -163,11 +163,11 @@ namespace IRL
 
         double e = 0.01;//std::sqrt(DBL_EPSILON);
         torch::Tensor weights = torch::zeros({27,27});
-        std::vector<double> w;
+        double* w = new double[27];
 
         for (int i = 0; i < 27; ++i)
         {
-            w.push_back(y_pred[i].item<double>());
+            w[i] = y_pred[i].item<double>();
             weights.index_put_({i,torch::indexing::Slice()},y_pred);
             weights[i][i] += e;
         }
@@ -183,10 +183,9 @@ namespace IRL
 
         for (int i = 0; i < 27; ++i)
         {
-            w.clear();
             for (int j = 0; j < 27; ++j)
             {
-                w.push_back(weights[i][j].item<double>());
+                w[i] = weights[i][j].item<double>();
             }
             a_interface = IRL::reconstructionWithELVIRA3D(neighborhood,w);
             result_grad[0] = -a_interface[0].normal()[0];
@@ -208,6 +207,7 @@ namespace IRL
             grad_fn->y_pred = y_pred;
             set_history(flatten_tensor_args(result), grad_fn);
         }
+        delete w;
         return result;
     }
 

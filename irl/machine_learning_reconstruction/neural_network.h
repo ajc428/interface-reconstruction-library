@@ -47,6 +47,9 @@ namespace IRL
                 case 2:
                     x = torch::nn::functional::softmax(lo(x),-1);
                 break;
+                case 3:
+                    x = torch::nn::functional::normalize(torch::square(lo(x)),torch::nn::functional::NormalizeFuncOptions().p(2).dim(-1));
+                break;
                 default:
                     x = lo(x);
                 break;
