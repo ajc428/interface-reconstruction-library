@@ -19,7 +19,6 @@
 #include <string>
 #include "irl/machine_learning_reconstruction/neural_network.h"
 #include "irl/machine_learning_reconstruction/grad_functions.h"
-#include "irl/machine_learning_reconstruction/classification_neural_network.h"
 #include "data_set.h"
 
 using namespace std;
