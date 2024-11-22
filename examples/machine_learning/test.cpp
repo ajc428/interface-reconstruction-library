@@ -37,9 +37,9 @@ void create_surface(string name, double x, double y, double z, double alpha, dou
 void data_generate(int num, double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
 {
     IRL::data_gen gen(3,num);
-    gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
+    //gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_with_disturbance2(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-    //gen.generate_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
+    gen.generate_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_two_paraboloids(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_two_paraboloids_with_disturbance(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
     //gen.generate_two_paraboloids_in_cell(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, true);
@@ -62,27 +62,28 @@ void data_generate_planes(int num, double rota1_l, double rota1_h, double rotb1_
 trainer(epochs, data size, learning rate, OPTION)
 Trainer options:
 0: Predict paraboloid, training with coefficients
-1: Classification
-2: Predict surface normal
-3: Predict R2P
+1: Predict surface normal
+2: Predict R2P
+3: Classification
 ************************/
 
 int main(int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
 
-    //create_surface("test_surface_", 0.276306,-0.192727,0.28876,0.699365,0.0853489,2.97228,0.452093,1.70223);
+    //create_surface("test_surface_", -22.7285,23.6557,-33.7081,0.608029,3.67144,5.9367,27.3659,25.7638);
     //create_surface("test_surface2_", 0, 0, 0, M_PI/2, M_PI/2, 0, 1, 1);
     //create_surface("test_surface2",0,0,0,0,0,0,0.11,0.11);
     
-    //data_generate(1000,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0009765625,0.0009765625,0.0009765625,0.0009765625,-0.5,0.5,-0.5,0.5,-0.5,0.5);
-    //data_generate_planes(50000,0,2*M_PI,-M_PI/2,M_PI/2,0,2*M_PI,-M_PI/2,M_PI/2,-2,2,-2,2,true, true, true);
+    //data_generate(140000,0,2*M_PI,0,2*M_PI,0,2*M_PI,-2,2,-2,2,-0.5,0.5,-0.5,0.5,-0.5,0.5);
+    //data_generate_planes(1000,0,2*M_PI,0,2*M_PI,0,2*M_PI,0,2*M_PI,-1,1,-1,1,true, false, true);
+    //data_generate_planes(1000,0,2*M_PI,0,2*M_PI,0,2*M_PI,0,2*M_PI,-1,1,-1,1,true, true, true);
 
-    auto t = IRL::trainer(10000, 120000, 0.0001, 1);
+    auto t = IRL::cnn_trainer(10000, 2000, 0.0001, 6);
     t.load_train_data("fractions.txt", "type.txt");
-    t.load_validation_data("fractions_val.txt", "type_val.txt", 10000);
-    t.load_test_data("fractions_test.txt", "type_test.txt");
+    t.load_validation_data("fractions.txt", "type.txt", 2000);
+    t.load_test_data("fractions.txt", "type.txt");
     t.train_model(false, "model.pt", "model.pt");
-    //t.load_model("model.pt",0);
-    t.test_model(1);
+    //t.load_model("model.pt");
+    t.test_model(3);
 }

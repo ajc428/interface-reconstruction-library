@@ -281,7 +281,6 @@ namespace IRL
                 {
                     fractions.push_back(result[i].item<double>());
                 }
-                
 
                 int direction = 0;
                 std::vector<double> center;
@@ -307,8 +306,15 @@ namespace IRL
                 {
                     mod = 7;
                 }
+                int ii = 0;
+                int jj = 0;
+                int kk = 0;
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
+                    if (fractions[i] > 9)
+                    {
+                        fractions[i] = -10;
+                    }
                     if (p == 0)
                     {
                         output << fractions[i] << ",";
@@ -333,7 +339,7 @@ namespace IRL
                             }
                         }*/
                         double c = (rand() % 201 - 100) / 1000.0;
-                        if (i % mod != 0)
+                        if (i % mod != 0 && fractions[i] > -9)
                         {
                             if (fractions[i] + c > 0.5)
                             {
@@ -2300,13 +2306,13 @@ namespace IRL
                 IRL::PlanarSeparator plane = gen->new_random_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
                 //IRL::PlanarSeparator plane = gen->new_step_R2P(inter, n, Ntests);
                 torch::Tensor result;
-                result = gen->get_fractions_all(plane);
-                while (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5/* && result[((result.sizes()[0]-7)/2)].item<double>() < 0.85*/)
+                result = gen->get_fractions_only(plane);
+                while (result[((result.sizes()[0]/*-7*/)/2)].item<double>() > 0.5/* && result[((result.sizes()[0]-7)/2)].item<double>() < 0.85*/)
                 {
                     //IRL::PlanarSeparator plane = gen->new_step_R2P(inter, n, Ntests);
                     plane = gen->new_random_R2P(rota1_l, rota1_h, rotb1_l, rotb1_h, rota2_l, rota2_h, rotb2_l, rotb2_h, d1_l, d1_h, d2_l, d2_h, inter, same);
                     //IRL::PlanarSeparator plane = gen->new_step_R2P(inter, n, Ntests);
-                    result = gen->get_fractions_all(plane);
+                    result = gen->get_fractions_only(plane);
                 }
                 //std::cout << result[((result.sizes()[0]-7)/2)].item<double>() << std::endl;
                 //result_all.index_put_({torch::indexing::Slice(), n}, result);
@@ -2374,11 +2380,11 @@ namespace IRL
                 //     {
                 //         for (int k = 0; k < number_of_cells; ++k)
                 //         {
-                //             vol = vol + result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>();
+                //             vol = vol + result[/*7**/(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>();
                 //             track[i][j][k] = 0;
                 //             if ((i == 0 || i == number_of_cells-1) || (j == 0 || j == number_of_cells-1) || (k == 0 || k == number_of_cells-1))
                 //             {
-                //                 if (result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() > IRL::global_constants::VF_LOW && result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() < IRL::global_constants::VF_HIGH)
+                //                 if (result[/*7**/(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() > IRL::global_constants::VF_LOW && result[/*7**/(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() < IRL::global_constants::VF_HIGH)
                 //                 {
                 //                     track[i][j][k] = 1;
                 //                 }
@@ -2426,10 +2432,10 @@ namespace IRL
                 //             for (int kk = 0; kk < lim2; ++kk)
                 //             {
                 //                 track[ii][jj][kk] = 0;
-                //                 result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 result[/*7**/(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
                 //                 for (int n = 1; n <= 6; ++n)
                 //                 {
-                //                     result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                     //result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
                 //                 }
                 //             }
                 //         }
@@ -2456,10 +2462,10 @@ namespace IRL
                 //             for (int kk = 0; kk < lim2; ++kk)
                 //             {
                 //                 track[ii][jj][kk] = 0;
-                //                 result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 result[/*7**/(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
                 //                 for (int n = 1; n <= 6; ++n)
                 //                 {
-                //                     result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                     //result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
                 //                 }
                 //             }
                 //         }
@@ -2486,10 +2492,10 @@ namespace IRL
                 //             for (int ii = 0; ii < lim2; ++ii)
                 //             {
                 //                 track[ii][jj][kk] = 0;
-                //                 result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
+                //                 result[/*7**/(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
                 //                 for (int n = 1; n <= 6; ++n)
                 //                 {
-                //                     result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
+                //                     //result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
                 //                 }
                 //             }
                 //         }
@@ -2507,44 +2513,44 @@ namespace IRL
                 int direction = 0;
                 std::vector<double> center;
                 //std::vector<double> eigenvectors;
-                auto sm = IRL::spatial_moments();
-                IRL::Normal dir = plane[0].normal() - plane[1].normal();
-                dir.normalize();
-                auto moments = sm.calculate_moments(fractions, dir, number_of_cells);
+                // auto sm = IRL::spatial_moments();
+                // IRL::Normal dir = plane[0].normal() - plane[1].normal();
+                // dir.normalize();
+                // auto moments = sm.calculate_moments(fractions, dir, number_of_cells);
 
-                std::ofstream moments_out;
-                std::string moments_name = "moments.txt";
-                moments_out.open(moments_name, std::ios_base::app);
-                IRL::RectangularCuboid cell;
-                double area = 0;
-                track[1][1][1] = 1;
-                for (int i = 0; i < number_of_cells; ++i)
-                {
-                    for (int j = 0; j < number_of_cells; ++j)
-                    {
-                        for (int k = 0; k < number_of_cells; ++k)
-                        {
-                            if (track[i][j][k] == 1)
-                            {
-                                cell = IRL::RectangularCuboid::fromBoundingPts(
-                                            IRL::Pt(-number_of_cells/2.0+i,-number_of_cells/2.0+j,-number_of_cells/2.0+k),
-                                            IRL::Pt(-number_of_cells/2.0+1+i,-number_of_cells/2.0+1+j,-number_of_cells/2.0+1+k));
-                                area = area + getReconstructionSurfaceArea(cell,plane);
-                            }
-                        }
-                    }
-                }
-                moments[0] = moments[0] / pow(area,(1.0));
-                // moments[1] = moments[1] / pow(area,(5.0));
-                // moments[2] = moments[2] / pow(area,(15.0/2.0));
-                //moments[moments.sizes()[0]-1] = moments[moments.sizes()[0]-1] / area;
-                for (int i = 0; i < moments.sizes()[0]; ++i)
-                {
-                    moments_out << moments[i].item<double>() << ",";
-                }
-                //moments_out << 0 << ",";
-                moments_out << "\n";
-                moments_out.close();  
+                // std::ofstream moments_out;
+                // std::string moments_name = "moments.txt";
+                // moments_out.open(moments_name, std::ios_base::app);
+                // IRL::RectangularCuboid cell;
+                // double area = 0;
+                // track[1][1][1] = 1;
+                // for (int i = 0; i < number_of_cells; ++i)
+                // {
+                //     for (int j = 0; j < number_of_cells; ++j)
+                //     {
+                //         for (int k = 0; k < number_of_cells; ++k)
+                //         {
+                //             if (track[i][j][k] == 1)
+                //             {
+                //                 cell = IRL::RectangularCuboid::fromBoundingPts(
+                //                             IRL::Pt(-number_of_cells/2.0+i,-number_of_cells/2.0+j,-number_of_cells/2.0+k),
+                //                             IRL::Pt(-number_of_cells/2.0+1+i,-number_of_cells/2.0+1+j,-number_of_cells/2.0+1+k));
+                //                 area = area + getReconstructionSurfaceArea(cell,plane);
+                //             }
+                //         }
+                //     }
+                // }
+                // moments[0] = moments[0] / pow(area,(1.0));
+                // // moments[1] = moments[1] / pow(area,(5.0));
+                // // moments[2] = moments[2] / pow(area,(15.0/2.0));
+                // //moments[moments.sizes()[0]-1] = moments[moments.sizes()[0]-1] / area;
+                // for (int i = 0; i < moments.sizes()[0]; ++i)
+                // {
+                //     moments_out << moments[i].item<double>() << ",";
+                // }
+                // //moments_out << 0 << ",";
+                // moments_out << "\n";
+                // moments_out.close();  
 
                 //center = sm.get_mass_centers_all(&fractions);
                 //eigenvectors = sm.get_moment_of_intertia(&fractions);

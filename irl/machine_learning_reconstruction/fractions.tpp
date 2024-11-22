@@ -169,8 +169,8 @@ namespace IRL
         double nz1 = randomNz1(a_eng);
 
         IRL::Normal n1 = IRL::Normal(0,0,0);
-        n1[0] = 1;//cos(b1) * cos(a1);
-        n1[1] = 0.0000000001;//cos(b1) * sin(a1);
+        n1[0] = 0.0000000001;//cos(b1) * cos(a1);
+        n1[1] = 1;//cos(b1) * sin(a1);
         n1[2] = 0.0000000001;//sin(b1);
         //if (inter)
         {
@@ -192,7 +192,7 @@ namespace IRL
             std::uniform_real_distribution<double> randomd2(d2_l, d2_h);
             d2 = randomd2(a_eng);
             IRL::Normal n2 = -n1;
-            //if(inter)
+            if(inter)
             {
                 // n2[0] = cos(b2) * cos(a2);
                 // n2[1] = cos(b2) * sin(a2);
@@ -208,7 +208,7 @@ namespace IRL
             p = IRL::PlanarSeparator::fromTwoPlanes(p1,p2,s);
             if (!inter)
             {
-                intersect = doPlanesIntersect(p,liquid_volume_fraction, 0.5);////////////////////////////////////////////////////IMPORTANT
+                intersect = doPlanesIntersect(p,liquid_volume_fraction, 1.5);////////////////////////////////////////////////////IMPORTANT
             }
             else
             {
@@ -669,6 +669,31 @@ namespace IRL
                         f.push_back(centroid_gas[1] - mesh.ym(j));
                         f.push_back(centroid_gas[2] - mesh.zm(k));    
                     }
+                }
+            }
+        }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_fractions_only(IRL::PlanarSeparator p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas<IRL::VolumeMoments>(p, liquid_volume_fraction, i, j, k);   
+                    auto& volume = volumes.volume();      
+                    auto& centroid = volumes.centroid();  
+                    auto& volume_gas = volumes_gas.volume();      
+                    auto& centroid_gas = volumes_gas.centroid(); 
+                   
+                    f.push_back(volume);
                 }
             }
         }

@@ -41,6 +41,30 @@ class MyDataset : public torch::data::Dataset<MyDataset>
         };
 };
 
+class MyDataset_cnn : public torch::data::Dataset<MyDataset>
+{
+    private:
+        vector<torch::Tensor> data_in;
+        vector<torch::Tensor> data_out;
+
+    public:
+        explicit MyDataset_cnn(string in_file, string out_file, int data_size, int m)
+        {
+            data_in = read_data_in(in_file, data_size, m);
+            data_out = read_data_out(out_file, data_size, 0);
+        };
+
+        vector<torch::Tensor> read_data_in(string, int, int);
+        vector<torch::Tensor> read_data_out(string, int, int);
+        torch::data::Example<> get(size_t index) override;
+        torch::Tensor get_data();
+        torch::Tensor get_target();
+        torch::optional<size_t> size() const override 
+        {
+            return data_out.size();
+        };
+};
+
 #include "data_set.tpp"
 
 #endif

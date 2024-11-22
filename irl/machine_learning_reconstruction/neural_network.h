@@ -69,4 +69,54 @@ namespace IRL
             return out;
         }
     };
+
+    struct model_cnn : torch::nn::Module 
+    {
+        int size;
+        int out;
+        int depth;
+        int width;
+        int type;
+        model_cnn(int o, int d, int w) 
+        {
+            out = o;
+            depth = d;
+            width = w;
+            c1 = register_module("c1", torch::nn::Conv3d(torch::nn::Conv3dOptions(1, 1, 3).padding(1)));
+            c2 = register_module("c2", torch::nn::Conv3d(torch::nn::Conv3dOptions(1, 1, 3).padding(1)));
+            p1 = register_module("p1", torch::nn::MaxPool3d(torch::nn::MaxPool3dOptions(2).padding(0).stride(1)));
+            for (int i = 0; i < d-1; ++i)
+            {
+                layers.push_back(register_module("l" + std::to_string(i+2), torch::nn::Linear(width, width)));
+            }
+            lo = register_module("l" + std::to_string(d+1), torch::nn::Linear(width, out));
+        }
+        torch::Tensor forward(torch::Tensor x) 
+        {
+            x = p2(torch::nn::functional::relu(c1(x)));
+            x = p2(torch::nn::functional::relu(c2(x)));
+            x = torch::nn::functional::relu(l1(x));
+            for (int i = 0; i < depth-1; ++i)
+            {
+                x = torch::nn::functional::relu(layers[i](x));
+            }
+            x = torch::sigmoid(lo(x));
+            return x;
+        }
+        std::vector<torch::nn::Linear> layers;
+        torch::nn::Linear l1{nullptr}, lo{nullptr};
+        torch::nn::Conv3d c1{nullptr}, c2{nullptr};
+        torch::nn::MaxPool3d p1{nullptr};
+        torch::nn::AvgPool3d p2{nullptr};
+
+        int getSize()
+        {
+            return size;
+        }
+
+        int getOutput()
+        {
+            return out;
+        }
+    };
 }

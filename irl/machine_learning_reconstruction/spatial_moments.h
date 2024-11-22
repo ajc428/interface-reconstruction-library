@@ -53,6 +53,7 @@ namespace IRL
         torch::Tensor calculate_moments(vector<double>, IRL::Normal, int);
         vector<double> get_mass_centers(vector<double> fractions);
         vector<double> get_mass_centers_all(vector<double>* fractions);
+        vector<double> get_mass_centers_all_with_track(vector<double>* fractions, int track[3][3][3]);
         vector<double> get_moment_of_intertia(vector<double>* fractions);
 
         vector<double> getMoments()

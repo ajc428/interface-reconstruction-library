@@ -77,6 +77,7 @@ namespace IRL
         torch::Tensor get_fractions_all(IRL::Paraboloid);
         torch::Tensor get_fractions_gas_all(IRL::Paraboloid);
         torch::Tensor get_fractions_all(IRL::PlanarSeparator);
+        torch::Tensor get_fractions_only(IRL::PlanarSeparator);
         torch::Tensor get_fractions_gas_all(IRL::PlanarSeparator);
         torch::Tensor get_barycenters(IRL::PlanarSeparator);
         torch::Tensor get_barycenters_gas(IRL::PlanarSeparator);
