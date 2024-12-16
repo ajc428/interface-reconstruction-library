@@ -234,26 +234,26 @@ namespace IRL
 
                 std::ofstream classification;
                 std::string data_name = "type.txt";
-                classification.open(data_name, std::ios_base::app);
+                //classification.open(data_name, std::ios_base::app);
                 if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
                 {
-                    classification << "0,1,0" << " \n";
+                    //classification << "0,1,0" << " \n";
                 }
                 else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
                 {
-                    classification << "1,0,0" << " \n";
+                    //classification << "1,0,0" << " \n";
                 }
                 else
                 {
-                    classification << "0,0,1" << " \n";
+                    //classification << "0,0,1" << " \n";
                 }
-                classification.close();
+                //classification.close();
 
                 std::ofstream inter;
                 std::string interface_name = "interface.txt";
-                inter.open(interface_name, std::ios_base::app);
-                inter << "1,0" << " \n";
-                inter.close();
+                //inter.open(interface_name, std::ios_base::app);
+                //inter << "1,0" << " \n";
+                //inter.close();
 
                 torch::Tensor result;
                 bool flip = false;
@@ -282,6 +282,112 @@ namespace IRL
                     fractions.push_back(result[i].item<double>());
                 }
 
+                int p1 = rand() % 10;
+                int track[3][3][3] = {0};
+                // bool flag = false;
+                // if (p1 == 0)
+                // {
+                //     int p2 = rand() % 18;
+                //     int ii = 10;
+                //     int jj = 10;
+                //     int kk = 10;
+                //     switch (p2)
+                //     {
+                //         case 0:
+                //         kk = 0;
+                //         break;
+                //         case 1:
+                //         kk = 2;
+                //         break;
+                //         case 2:
+                //         jj = 0;
+                //         break;
+                //         case 3:
+                //         jj = 2;
+                //         break;
+                //         case 4:
+                //         ii = 0;
+                //         break;
+                //         case 5:
+                //         ii = 2;
+                //         break;
+                //         case 6:
+                //         kk = 0;
+                //         jj = 0;
+                //         break;
+                //         case 7:
+                //         kk = 2;
+                //         jj = 0;
+                //         break;
+                //         case 8:
+                //         jj = 0;
+                //         ii = 0;
+                //         break;
+                //         case 9:
+                //         jj = 2;
+                //         ii = 0;
+                //         break;
+                //         case 10:
+                //         ii = 0;
+                //         kk = 0;
+                //         break;
+                //         case 11:
+                //         ii = 2;
+                //         kk = 0;
+                //         break;
+                //         case 12:
+                //         kk = 0;
+                //         jj = 2;
+                //         break;
+                //         case 13:
+                //         kk = 2;
+                //         jj = 2;
+                //         break;
+                //         case 14:
+                //         jj = 0;
+                //         ii = 2;
+                //         break;
+                //         case 15:
+                //         jj = 2;
+                //         ii = 2;
+                //         break;
+                //         case 16:
+                //         ii = 0;
+                //         kk = 2;
+                //         break;
+                //         case 17:
+                //         ii = 2;
+                //         kk = 2;
+                //         break;
+                //     }
+                //     while (!flag)
+                //     {
+                //         for (int i = 0; i < 3; ++i)
+                //         {
+                //             for (int j = 0; j < 3; ++j)
+                //             {
+                //                 for (int k = 0; k < 3; ++k)
+                //                 {
+                //                     //if (kk == k || jj == j || ii == i)
+                //                     if (rand() % 5 == 0)
+                //                     {
+                //                         track[i][j][k] = 1;
+                //                         fractions[7*(i*9+j*3+k)] = -10;
+                //                         fractions[7*(i*9+j*3+k)+1] = -10;
+                //                         fractions[7*(i*9+j*3+k)+2] = -10;
+                //                         fractions[7*(i*9+j*3+k)+3] = -10;
+                //                         fractions[7*(i*9+j*3+k)+4] = -10;
+                //                         fractions[7*(i*9+j*3+k)+5] = -10;
+                //                         fractions[7*(i*9+j*3+k)+6] = -10;
+                //                         flag = true;
+                //                     }
+                //                 }   
+                //             }
+                //         }
+                //     }
+                // }
+                
+
                 int direction = 0;
                 std::vector<double> center;
                 auto sm = IRL::spatial_moments();
@@ -292,6 +398,7 @@ namespace IRL
                 }
                 else
                 {
+                    //center = sm.get_mass_centers_all_with_track(&fractions, track);
                     center = sm.get_mass_centers_all(&fractions);
                     direction = rotateFractions_all(&fractions,center);
                 }
@@ -365,39 +472,72 @@ namespace IRL
 
                 std::ofstream normals;
                 std::string normals_name = "normals.txt";
-                normals.open(normals_name, std::ios_base::app);
+                //normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
                 auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
 
+                double origin[3];
+                IRL::Normal axis;
+                origin[0] = paraboloid.getDatum().x();
+                origin[1] = paraboloid.getDatum().y();
+                origin[2] = paraboloid.getDatum().z();
+                axis = paraboloid.getReferenceFrame()[2];
+                double co_a = paraboloid.getAlignedParaboloid().a();
+                double co_b = paraboloid.getAlignedParaboloid().b();
+
                 switch (direction)
                 {
                     case 1:
                     normal[0] = -normal[0];
+                    axis[0] = -axis[0];
+                    origin[0] = -origin[0];
                     break;
                     case 2:
                     normal[1] = -normal[1];
+                    axis[1] = -axis[1];
+                    origin[1] = -origin[1];
                     break;
                     case 3:
                     normal[2] = -normal[2];
+                    axis[2] = -axis[2];
+                    origin[2] = -origin[2];
                     break;
                     case 4:
                     normal[0] = -normal[0];
                     normal[1] = -normal[1];
+                    axis[0] = -axis[0];
+                    axis[1] = -axis[1];
+                    origin[0] = -origin[0];
+                    origin[1] = -origin[1];
                     break;
                     case 5:
                     normal[0] = -normal[0];
                     normal[2] = -normal[2];
+                    axis[0] = -axis[0];
+                    axis[2] = -axis[2];
+                    origin[0] = -origin[0];
+                    origin[2] = -origin[2];
                     break;
                     case 6:
                     normal[1] = -normal[1];
                     normal[2] = -normal[2];
+                    axis[1] = -axis[1];
+                    axis[2] = -axis[2];
+                    origin[1] = -origin[1];
+                    origin[2] = -origin[2];
                     break;
                     case 7:
                     normal[0] = -normal[0];
                     normal[1] = -normal[1];
                     normal[2] = -normal[2];
+                    axis[0] = -axis[0];
+                    axis[1] = -axis[1];
+                    axis[2] = -axis[2];
+                    origin[0] = -origin[0];
+                    origin[1] = -origin[1];
+                    origin[2] = -origin[2];
                     break;
                 }
                 if (!flip)
@@ -405,10 +545,41 @@ namespace IRL
                     normal[0] = -normal[0];
                     normal[1] = -normal[1];
                     normal[2] = -normal[2];
+                    axis[0] = -axis[0];
+                    axis[1] = -axis[1];
+                    axis[2] = -axis[2];
+                    co_a = -co_a;
+                    co_b = -co_b;
                 }
 
-                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
-                normals.close();                  
+                //normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                //normals.close();   
+
+                double n2 = axis[0]/(sqrt(axis[1]*axis[1]+axis[0]*axis[0]));
+                double n1 = (-n2*axis[1])/axis[0];
+
+                double theta = acos(n1*paraboloid.getReferenceFrame()[0][0]+n2*paraboloid.getReferenceFrame()[0][1]);
+                IRL::UnitQuaternion rot(theta,axis);
+                IRL::Normal v1;
+                v1[0] = n1; v1[1] = n2; v1[2] = 0;
+                IRL::Normal v = rot*v1;
+                if (abs(v[0]-paraboloid.getReferenceFrame()[0][0]) >= 1e-8 && abs(v[1]-paraboloid.getReferenceFrame()[0][1]) >= 1e-8)
+                {
+                    theta = -theta;
+                } 
+
+                std::ofstream input;
+                name = "input.txt";
+                input.open(name, std::ios_base::app);
+                input << origin[0] << "," << origin[1] << "," << origin[2]
+                << "," << axis[0] << "," << axis[1] << "," << axis[2]
+                << "," << theta << "," <<  co_a << "," << co_b << "\n";
+
+                // double n2 = (-2*theta*axis[2]*axis[1]+sqrt(pow(2*theta*axis[2]*axis[1],2.0)-4*(axis[1]*axis[1]+axis[0]*axis[0])*(theta*theta*axis[2]*axis[2]+theta*theta*axis[0]*axis[0]-axis[0]*axis[0])))/(2*(axis[1]*axis[1]+axis[0]*axis[0]));
+                // double n22 = (-2*theta*axis[2]*axis[1]-sqrt(pow(2*theta*axis[2]*axis[1],2.0)-4*(axis[1]*axis[1]+axis[0]*axis[0])*(theta*theta*axis[2]*axis[2]+theta*theta*axis[0]*axis[0]-axis[0]*axis[0])))/(2*(axis[1]*axis[1]+axis[0]*axis[0]));
+                // double n1 = (-theta*axis[2]-n2*axis[1])/axis[0];
+                // double n12 = (-theta*axis[2]-n22*axis[1])/axis[0];
+                input.close();              
             }           
         };
 

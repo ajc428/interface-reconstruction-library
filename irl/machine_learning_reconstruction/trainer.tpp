@@ -48,9 +48,10 @@ namespace IRL
         switch (type)
         {
             case 0:
-                nn = make_shared<model>(189,8,3,100,0);
+                nn = make_shared<model>(189,9,3,100,0);
                 optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
+            break;
             case 1:
                 nn = make_shared<model>(189,3,3,100,0);
                 optimizer = new torch::optim::Adam(nn->parameters(), learning_rate);
