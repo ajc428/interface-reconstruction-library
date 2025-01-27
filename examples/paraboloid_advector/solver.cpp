@@ -68,11 +68,21 @@ void setPhaseQuantities(const Data<IRL::Paraboloid>& a_interface,
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-        auto moments = IRL::getNormalizedVolumeMoments<IRL::VolumeMoments>(
+        auto moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(
             cell, a_interface(i, j, k));
         (*a_liquid_volume_fraction)(i, j, k) =
-            moments.volume() / cell.calculateVolume();
-        (*a_liquid_centroid)(i, j, k) = moments.centroid();
+            moments[0].volume() / cell.calculateVolume();
+        (*a_liquid_centroid)(i, j, k) = moments[0].centroid();
+        (*a_gas_centroid)(i, j, k) = moments[1].centroid();
+        if ((*a_liquid_volume_fraction)(i, j, k) < IRL::global_constants::VF_LOW) {
+          (*a_liquid_volume_fraction)(i, j, k) = 0.0;
+          (*a_liquid_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+          (*a_gas_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+        } else if ((*a_liquid_volume_fraction)(i, j, k) > IRL::global_constants::VF_HIGH) {
+          (*a_liquid_volume_fraction)(i, j, k) = 1.0;
+          (*a_liquid_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+          (*a_gas_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+        }
       }
     }
   }

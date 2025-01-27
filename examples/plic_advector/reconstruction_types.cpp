@@ -26,25 +26,27 @@
 #include "examples/plic_advector/data.h"
 #include "examples/plic_advector/vof_advection.h"
 
-auto t = IRL::trainer(4);
+#include "irl/machine_learning_reconstruction/trainer.h"
+
+auto t = IRL::trainer(1);
 auto t2 = IRL::trainer(5);
 auto t3 = IRL::trainer(6);
 auto t4 = IRL::trainer(3);
 
 void load()
 {
-  t.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", 0);
+  t.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt");
 };
 
 void load2()
 {
-  t2.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", 0);
+  t2.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt");
 };
 
 void load3()
 {
-  t3.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt", 0);
-  t4.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model_class.pt", 1);
+  t3.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model.pt");
+  t4.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/plic_advector/model_class.pt");
 };
 
 void getReconstruction(

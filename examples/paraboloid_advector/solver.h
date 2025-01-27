@@ -126,6 +126,10 @@ int runSimulation(const std::string& a_advection_method,
   if (rank == 0) {
     vtk_io.writeVTKFile(simulation_time);
   }
+  if (a_reconstruction_method == "ML_QUAD")
+  {
+    load();
+  }
   getReconstruction(a_reconstruction_method, liquid_volume_fraction,
                     liquid_centroid, gas_centroid, link_localized_paraboloids,
                     0.0, velU, velV, velW, &interface);

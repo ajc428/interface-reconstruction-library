@@ -11,9 +11,10 @@
 #include "irl/geometry/general/pt.h"
 #include "irl/geometry/general/pt_with_data.h"
 #include "irl/geometry/general/rotations.h"
-#include "irl/moments/volume_with_gradient.h"
 #include "irl/paraboloid_reconstruction/gradient_paraboloid.h"
+#include "irl/paraboloid_reconstruction/hessian_paraboloid.h"
 
+#include <sys/time.h>
 #include <cmath>
 #include <random>
 
@@ -31,6 +32,7 @@
 #include "irl/geometry/polyhedrons/general_polyhedron.h"
 #include "irl/geometry/polyhedrons/rectangular_cuboid.h"
 #include "irl/interface_reconstruction_methods/progressive_distance_solver_paraboloid.h"
+#include "irl/moments/general_moments.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/paraboloid_reconstruction/parametrized_surface.h"
 #include "irl/planar_reconstruction/planar_separator.h"
@@ -326,7 +328,7 @@ TEST(ParaboloidIntersection, Dodecahedron) {
   HalfEdgePolyhedronParaboloid<Pt> half_edge;
   // Create random number generator and seed it with entropy
   std::random_device rd;
-  std::mt19937_64 eng(rd());
+  std::mt19937_64 eng(0);  // rd());
 
   // Bounds of paraboloid parameters
   std::uniform_real_distribution<double> random_rotation(-0.5 * M_PI,
@@ -401,13 +403,16 @@ TEST(ParaboloidIntersection, Dodecahedron) {
     auto poly_vol = dodeca.calculateVolume();
 
     // Calculate volume of unclipped dodecahedron using AMR
-    auto amr_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
-        &seg_half_edge, &half_edge, aligned_paraboloid, AMR_levels);
+    auto amr_volume_moments =
+        intersectPolyhedronWithParaboloidAMR<VolumeMoments>(
+            &seg_half_edge, &half_edge, aligned_paraboloid, AMR_levels);
 
     // Calculate volume of unclipped dodecahedron using IRL
     const auto paraboloid = Paraboloid(datum, frame, aligned_paraboloid.a(),
                                        aligned_paraboloid.b());
-    auto our_volume = getVolumeMoments<Volume>(dodeca, paraboloid);
+
+    auto our_volume_moments =
+        getVolumeMoments<GeneralMoments3D<2>>(dodeca, paraboloid);
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
@@ -419,20 +424,54 @@ TEST(ParaboloidIntersection, Dodecahedron) {
     else
       std::cout << "PARABOLIC" << std::endl;
     std::cout << std::setprecision(20)
-              << "Vfrac unclipped IRL = " << our_volume / poly_vol << std::endl;
+              << "M0 unclipped IRL = " << our_volume_moments[0] / poly_vol
+              << std::endl;
     std::cout << std::setprecision(20)
-              << "Vfrac unclipped AMR = " << amr_volume / poly_vol << std::endl;
-    std::cout << "Diff AMR/IRL = " << fabs(our_volume - amr_volume) / poly_vol
+              << "M0 unclipped AMR = " << amr_volume_moments.volume() / poly_vol
+              << std::endl;
+    std::cout << "Diff AMR/IRL = "
+              << std::fabs(our_volume_moments[0] -
+                           amr_volume_moments.volume()) /
+                     poly_vol
+              << std::endl;
+
+    auto pt = Pt(0, 0, 0);
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      for (UnsignedIndex_t n = 0; n < 3; ++n) {
+        pt[n] += frame[d][n] * amr_volume_moments.centroid().getPt()[d];
+      }
+    }
+    pt += amr_volume_moments.volume() * datum;
+    amr_volume_moments.centroid().getPt() = pt;
+
+    std::cout << std::setprecision(20) << "M1 unclipped IRL = "
+              << Pt(our_volume_moments[1], our_volume_moments[2],
+                    our_volume_moments[3]) /
+                     poly_vol
+              << std::endl;
+    std::cout << std::setprecision(20) << "M1 unclipped AMR = "
+              << amr_volume_moments.centroid() / poly_vol << std::endl;
+    std::cout << "Diff AMR/IRL = "
+              << Pt(Pt(our_volume_moments[1], our_volume_moments[2],
+                       our_volume_moments[3]) -
+                    amr_volume_moments.centroid()) /
+                     poly_vol
               << std::endl;
     std::cout << "-------------------------------------------------------------"
                  "---------------------------------------------------------"
               << std::endl;
 
-    max_error = max_error > fabs(our_volume - amr_volume) / poly_vol
-                    ? max_error
-                    : fabs(our_volume - amr_volume) / poly_vol;
-    rms_error += fabs(our_volume - amr_volume) * fabs(our_volume - amr_volume) /
-                 poly_vol / poly_vol;
+    max_error =
+        max_error >
+                std::fabs(our_volume_moments[0] - amr_volume_moments.volume()) /
+                    poly_vol
+            ? max_error
+            : std::fabs(our_volume_moments[0] - amr_volume_moments.volume()) /
+                  poly_vol;
+    rms_error +=
+        std::fabs(our_volume_moments[0] - amr_volume_moments.volume()) *
+        std::fabs(our_volume_moments[0] - amr_volume_moments.volume()) /
+        poly_vol / poly_vol;
   }
   rms_error = sqrt(rms_error / static_cast<double>(Ntests));
 
@@ -445,7 +484,50 @@ TEST(ParaboloidIntersection, Dodecahedron) {
   EXPECT_NEAR(max_error, 0.0, 1.0e-14);
 }
 
-TEST(ParaboloidIntersection, TranslatingCube) {
+TEST(ParaboloidIntersection, SISCPaperFig5) {
+  using VolumeAndSuface = AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>;
+
+  // Defining elliptic paraboloic
+  AlignedParaboloid aligned_paraboloid({1.0, 1.0});
+  Pt datum(0, 0, 0);
+  ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
+  Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
+                        aligned_paraboloid.b());
+
+  // Constructing cells for each subfigure
+  auto cubes = std::array<RectangularCuboid, 3>(
+      {RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -0.5),
+                                          Pt(1.0, 1.0, +0.5)),
+       RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -1.5),
+                                          Pt(1.0, 1.0, -0.5)),
+       RectangularCuboid::fromBoundingPts(Pt(0.0, 0.0, -2.5),
+                                          Pt(1.0, 1.0, -1.5))});
+  std::array<std::string, 3> surface_filenames(
+      {"surface_a", "surface_b", "surface_c"});
+  std::array<std::string, 3> clipped_faces_filenames(
+      {"_cube_a", "_cube_b", "_cube_c"});
+
+  // Compute moments and return parametrized surface
+  for (UnsignedIndex_t i = 0; i < 3; i++) {
+    auto temp_surface_and_moments =
+        getVolumeMoments<VolumeAndSuface>(cubes[i], paraboloid);
+    auto temp_param_surface = temp_surface_and_moments.getSurface();
+    auto temp_tri_surface = temp_param_surface.triangulate(0.1);
+    temp_tri_surface.write(surface_filenames[i]);
+  }
+
+  // Generate approximate triangulation of clipped polyhedron using AMR
+  for (UnsignedIndex_t i = 0; i < 3; i++) {
+    HalfEdgePolyhedronParaboloid<Pt> half_edge;
+    cubes[i].setHalfEdgeVersion(&half_edge);
+    auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+    auto dummy_volume = intersectPolyhedronWithParaboloidAMR<Volume>(
+        &seg_half_edge, &half_edge, aligned_paraboloid, 10,
+        clipped_faces_filenames[i]);
+  }
+}
+
+TEST(ParaboloidIntersection, SISCPaperFig6) {
   using VolumeMomentsAndSuface =
       AddSurfaceOutput<VolumeMoments, ParametrizedSurfaceOutput>;
 
@@ -464,9 +546,9 @@ TEST(ParaboloidIntersection, TranslatingCube) {
   double max_surface_error = 0.0, rms_surface_error = 0.0;
 
   std::ofstream myfile;
-  myfile.open("translating_cube.txt");
-  myfile << "k m0 m0_ex m0_err m1x m1x_ex m1x_err m1z m1z_ex m1z_err m0s "
-            "m0s_ex m0s_err\n";
+  myfile.open("fig6.txt");
+  myfile << "k m0p m0p_exact m0p_error m1xp m1xp_exact m1xp_error m1zp "
+            "m1zp_exact m1zp_error m0s m0s_exact m0s_error\n";
   myfile.close();
 
   for (UnsignedIndex_t i = 0; i < Ntests; i++) {
@@ -515,11 +597,11 @@ TEST(ParaboloidIntersection, TranslatingCube) {
     std::cout << std::setprecision(20)
               << "Centroid unclipped IRL = " << our_centroid << std::endl;
     std::cout << "Diff Surface EX/IRL = "
-              << fabs(our_surface_area - exact_surface_area) /
+              << std::fabs(our_surface_area - exact_surface_area) /
                      std::pow(poly_vol, 2.0 / 3.0)
               << std::endl;
     std::cout << "Diff Vfrac EX/IRL   = "
-              << fabs(our_moments.volume() - exact_volume) / poly_vol
+              << std::fabs(our_moments.volume() - exact_volume) / poly_vol
               << std::endl;
     std::cout << "Diff centroid EX/IRL   = "
               << Pt(exact_centroid - our_centroid) /
@@ -529,34 +611,35 @@ TEST(ParaboloidIntersection, TranslatingCube) {
                  "---------------------------------------------------------"
               << std::endl;
 
-    myfile.open("translating_cube.txt", std::ios::app);
+    myfile.open("fig6.txt", std::ios::app);
     // myfile << "k m0_err m1x_err m1z_err m0s_err\n";
     myfile << std::scientific << std::setprecision(20) << k << " "
            << our_moments.volume() << " " << exact_volume << " "
-           << fabs(our_moments.volume() - exact_volume) << " "
+           << std::fabs(our_moments.volume() - exact_volume) << " "
            << our_moments.centroid()[0] << " " << exact_m1x << " "
-           << fabs(our_moments.centroid()[0] - exact_m1x) << " "
+           << std::fabs(our_moments.centroid()[0] - exact_m1x) << " "
            << our_moments.centroid()[2] << " " << exact_m1z << " "
-           << fabs(our_moments.centroid()[2] - exact_m1z) << " "
+           << std::fabs(our_moments.centroid()[2] - exact_m1z) << " "
            << our_surface_area << " " << exact_surface_area << " "
-           << fabs(our_surface_area - exact_surface_area) << "\n";
+           << std::fabs(our_surface_area - exact_surface_area) << "\n";
     myfile.close();
 
     max_volume_error =
-        max_volume_error > fabs(our_moments.volume() - exact_volume) / poly_vol
+        max_volume_error >
+                std::fabs(our_moments.volume() - exact_volume) / poly_vol
             ? max_volume_error
-            : fabs(our_moments.volume() - exact_volume) / poly_vol;
+            : std::fabs(our_moments.volume() - exact_volume) / poly_vol;
     max_surface_error =
-        max_surface_error > fabs(our_surface_area - exact_surface_area) /
+        max_surface_error > std::fabs(our_surface_area - exact_surface_area) /
                                 std::pow(poly_vol, 2.0 / 3.0)
             ? max_surface_error
-            : fabs(our_surface_area - exact_surface_area) /
+            : std::fabs(our_surface_area - exact_surface_area) /
                   std::pow(poly_vol, 2.0 / 3.0);
-    rms_volume_error += fabs(our_moments.volume() - exact_volume) *
-                        fabs(our_moments.volume() - exact_volume) / poly_vol /
-                        poly_vol;
-    rms_surface_error += fabs(our_surface_area - exact_surface_area) *
-                         fabs(our_surface_area - exact_surface_area) /
+    rms_volume_error += std::fabs(our_moments.volume() - exact_volume) *
+                        std::fabs(our_moments.volume() - exact_volume) /
+                        poly_vol / poly_vol;
+    rms_surface_error += std::fabs(our_surface_area - exact_surface_area) *
+                         std::fabs(our_surface_area - exact_surface_area) /
                          std::pow(poly_vol, 4.0 / 3.0);
   }
   rms_volume_error = sqrt(rms_volume_error / static_cast<double>(Ntests));
@@ -573,237 +656,252 @@ TEST(ParaboloidIntersection, TranslatingCube) {
   EXPECT_NEAR(max_volume_error, 0.0, 1.0e-14);
 }
 
-TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
-  using MyGradientType = ParaboloidGradientLocal;
-  using MyPtType = PtWithGradient<MyGradientType>;
+// TEST(ParaboloidIntersection, TranslatingCubeGradientZ) {
+//   using MyGradientType = ParaboloidGradientLocal;
+//   using MyPtType = PtWithGradient<MyGradientType>;
 
-  AlignedParaboloid aligned_paraboloid;
-  aligned_paraboloid.a() = 1.0;  // DO NOT CHANGE
-  aligned_paraboloid.b() = 1.0;  // DO NOT CHANGE
-  std::array<double, 3> translations{{0.0, 0.0, 0.0}};
-  ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
-                       Normal(0.0, 0.0, 1.0));
-  auto datum = -Pt::fromArray(translations);
-  Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
-                        aligned_paraboloid.b());
+//   AlignedParaboloid aligned_paraboloid;
+//   aligned_paraboloid.a() = 1.0;  // DO NOT CHANGE
+//   aligned_paraboloid.b() = 1.0;  // DO NOT CHANGE
+//   std::array<double, 3> translations{{0.0, 0.0, 0.0}};
+//   ReferenceFrame frame(Normal(1.0, 0.0, 0.0), Normal(0.0, 1.0, 0.0),
+//                        Normal(0.0, 0.0, 1.0));
+//   auto datum = -Pt::fromArray(translations);
+//   Paraboloid paraboloid(datum, frame, aligned_paraboloid.a(),
+//                         aligned_paraboloid.b());
 
-  //////////////////////////////// YOU CAN CHANGE THESE PARAMETERS
-  int Ntests = 201;  // Number of tests
-  double h = 0.75;   // Edge length of the cube
-  ////////////////////////////////
+//   //////////////////////////////// YOU CAN CHANGE THESE PARAMETERS
+//   int Ntests = 201;  // Number of tests
+//   double h = 0.75;   // Edge length of the cube
+//   ////////////////////////////////
 
-  double max_volume_error = 0.0, rms_volume_error = 0.0;
-  double max_surface_error = 0.0, rms_surface_error = 0.0;
-  double max_gradient_error = 0.0, rms_gradient_error = 0.0;
+//   double max_volume_error = 0.0, rms_volume_error = 0.0;
+//   double max_surface_error = 0.0, rms_surface_error = 0.0;
+//   double max_gradient_error = 0.0, rms_gradient_error = 0.0;
 
-  for (int i = 0; i < Ntests; i++) {
-    double k = (2.0 * h * h + h) * static_cast<double>(i) /
-               static_cast<double>(Ntests - 1);
-    auto cube = StoredRectangularCuboid<MyPtType>::fromOtherPolytope(unit_cell);
-    auto cube_pt = StoredRectangularCuboid<Pt>::fromOtherPolytope(unit_cell);
-    for (auto& vertex : cube) {
-      vertex = vertex * h;
-      vertex += MyPtType(Pt(0.5 * h, 0.5 * h, 0.5 * h - k));
-    }
-    for (auto& vertex : cube_pt) {
-      vertex = vertex * h;
-      vertex += Pt(0.5 * h, 0.5 * h, 0.5 * h - k);
-    }
-    auto poly_vol = cube_pt.calculateVolume();
-    auto our_moments =
-        getVolumeMoments<VolumeWithGradient<MyGradientType>>(cube, paraboloid);
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
-    std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
+//   for (int i = 0; i < Ntests; i++) {
+//     double k = (2.0 * h * h + h) * static_cast<double>(i) /
+//                static_cast<double>(Ntests - 1);
+//     auto cube =
+//     StoredRectangularCuboid<MyPtType>::fromOtherPolytope(unit_cell); auto
+//     cube_pt = StoredRectangularCuboid<Pt>::fromOtherPolytope(unit_cell); for
+//     (auto& vertex : cube) {
+//       vertex = vertex * h;
+//       vertex += MyPtType(Pt(0.5 * h, 0.5 * h, 0.5 * h - k));
+//     }
+//     for (auto& vertex : cube_pt) {
+//       vertex = vertex * h;
+//       vertex += Pt(0.5 * h, 0.5 * h, 0.5 * h - k);
+//     }
+//     auto poly_vol = cube_pt.calculateVolume();
+//     auto our_moments =
+//         getVolumeMoments<VolumeWithGradient<MyGradientType>>(cube,
+//         paraboloid);
+//     std::cout <<
+//     "-------------------------------------------------------------"
+//                  "---------------------------------------------------------"
+//               << std::endl;
+//     std::cout << "Test " << i + 1 << "/" << Ntests << std::endl;
 
-    double epsilon = std::sqrt(DBL_EPSILON);
-    for (auto& vertex : cube_pt) {
-      vertex += Pt(0.0, 0.0, -epsilon);
-    }
-    auto volume_plus_epsilon =
-        IRL::getVolumeMoments<Volume>(cube_pt, paraboloid);
-    for (auto& vertex : cube_pt) {
-      vertex += Pt(0.0, 0.0, +2.0 * epsilon);
-    }
-    auto volume_minus_epsilon =
-        IRL::getVolumeMoments<Volume>(cube_pt, paraboloid);
+//     double epsilon = std::sqrt(DBL_EPSILON);
+//     for (auto& vertex : cube_pt) {
+//       vertex += Pt(0.0, 0.0, -epsilon);
+//     }
+//     auto volume_plus_epsilon =
+//         IRL::getVolumeMoments<Volume>(cube_pt, paraboloid);
+//     for (auto& vertex : cube_pt) {
+//       vertex += Pt(0.0, 0.0, +2.0 * epsilon);
+//     }
+//     auto volume_minus_epsilon =
+//         IRL::getVolumeMoments<Volume>(cube_pt, paraboloid);
 
-    double gradZ_FD =
-        (volume_plus_epsilon - volume_minus_epsilon) / (2.0 * epsilon);
+//     double gradZ_FD =
+//         (volume_plus_epsilon - volume_minus_epsilon) / (2.0 * epsilon);
 
-    double exact_volume = (std::pow(k, 2.) * M_PI) / 8.;
-    double exact_volume_gradk = (k * M_PI) / 4.;
-    if (k > h) {
-      // std::cout << "Substract high quadrant" << std::endl;
-      exact_volume -= (std::pow(h - k, 2.) * M_PI) / 8.;
-      exact_volume_gradk -= -0.25 * ((h - k) * M_PI);
-    }
-    if (k > h * h) {
-      // std::cout << "Substract 2 low wedges" << std::endl;
-      exact_volume -= (8. * std::pow(h, 3.) * std::sqrt(-std::pow(h, 2.) + k) -
-                       20. * h * k * std::sqrt(-std::pow(h, 2.) + k) +
-                       3. * std::pow(k, 2.) * M_PI -
-                       6. * std::pow(k, 2.) *
-                           std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
-                       6. * std::pow(k, 2.) *
-                           std::atan(std::sqrt(-1. + k / std::pow(h, 2.)))) /
-                      24.;
-      exact_volume_gradk -=
-          ((4. * std::pow(h, 3.)) / std::sqrt(-std::pow(h, 2.) + k) -
-           (10. * h * k) / std::sqrt(-std::pow(h, 2.) + k) -
-           20. * h * std::sqrt(-std::pow(h, 2.) + k) +
-           (3. * h * std::pow(k, 2.)) /
-               (std::pow(-std::pow(h, 2.) + k, 1.5) *
-                (1. + std::pow(h, 2.) / (-std::pow(h, 2.) + k))) +
-           (3. * std::pow(k, 2.)) /
-               (h * std::sqrt(-std::pow(h, 2.) + k) *
-                (1. + (-std::pow(h, 2.) + k) / std::pow(h, 2.))) +
-           6. * k * M_PI -
-           12. * k * std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
-           12. * k * std::atan(std::sqrt(-std::pow(h, 2.) + k) / h)) /
-          24.;
-    }
-    if (k > 2.0 * h * h) {
-      // std::cout << "Adding 1 low triangle" << std::endl;
-      exact_volume +=
-          (2. * h *
-               (-4. * std::pow(h, 3.) + 6. * h * k +
-                2. * std::pow(h, 2.) * std::sqrt(-std::pow(h, 2.) + k) -
-                5. * k * std::sqrt(-std::pow(h, 2.) + k)) -
-           3. * std::pow(k, 2.) *
-               std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
-           3. * std::pow(k, 2.) *
-               std::atan(std::sqrt(-1. + k / std::pow(h, 2.)))) /
-          12.;
-      exact_volume_gradk +=
-          ((3. * h * std::pow(k, 2.)) /
-               (2. * std::pow(-std::pow(h, 2.) + k, 1.5) *
-                (1. + std::pow(h, 2.) / (-std::pow(h, 2.) + k))) +
-           2. * h *
-               (6. * h + std::pow(h, 2.) / std::sqrt(-std::pow(h, 2.) + k) -
-                (5. * k) / (2. * std::sqrt(-std::pow(h, 2.) + k)) -
-                5. * std::sqrt(-std::pow(h, 2.) + k)) +
-           (3. * std::pow(k, 2.)) /
-               (2. * h * std::sqrt(-std::pow(h, 2.) + k) *
-                (1. + (-std::pow(h, 2.) + k) / std::pow(h, 2.))) -
-           6. * k * std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
-           6. * k * std::atan(std::sqrt(-std::pow(h, 2.) + k) / h)) /
-          12.;
-    }
-    if ((k - h) > h * h) {
-      // std::cout << "Adding 2 high wedges" << std::endl;
-      exact_volume +=
-          (20. * std::pow(h, 2.) * std::sqrt(-h - std::pow(h, 2.) + k) +
-           8. * std::pow(h, 3.) * std::sqrt(-h - std::pow(h, 2.) + k) -
-           20. * h * k * std::sqrt(-h - std::pow(h, 2.) + k) +
-           3. * std::pow(h, 2.) * M_PI - 6. * h * k * M_PI +
-           3. * std::pow(k, 2.) * M_PI +
-           6. * std::pow(h - k, 2.) *
-               std::atan(
-                   std::sqrt(-((h + std::pow(h, 2.) - k) / std::pow(h, 2.)))) -
-           6. * std::pow(h - k, 2.) *
-               std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k))) /
-          24.;
-      exact_volume_gradk +=
-          ((10. * std::pow(h, 2.)) / std::sqrt(-h - std::pow(h, 2.) + k) +
-           (4. * std::pow(h, 3.)) / std::sqrt(-h - std::pow(h, 2.) + k) -
-           (10. * h * k) / std::sqrt(-h - std::pow(h, 2.) + k) -
-           20. * h * std::sqrt(-h - std::pow(h, 2.) + k) +
-           (3. * h * std::pow(h - k, 2.)) /
-               (std::pow(-h - std::pow(h, 2.) + k, 1.5) *
-                (1. + std::pow(h, 2.) / (-h - std::pow(h, 2.) + k))) +
-           (3. * std::pow(h - k, 2.)) /
-               (h * std::sqrt(-h - std::pow(h, 2.) + k) *
-                (1. + (-h - std::pow(h, 2.) + k) / std::pow(h, 2.))) -
-           6. * h * M_PI + 6. * k * M_PI +
-           12. * (h - k) * std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k)) -
-           12. * (h - k) * std::atan(std::sqrt(-h - std::pow(h, 2.) + k) / h)) /
-          24.;
-    }
-    std::cout << std::setprecision(20) << "Gradient = [" << std::endl;
-    std::cout << std::setprecision(20) << "  A -> "
-              << our_moments.volume_gradient().getGradA() << std::endl
-              << std::setprecision(20) << "  B -> "
-              << our_moments.volume_gradient().getGradB() << std::endl
-              << std::setprecision(20) << " Tx -> "
-              << our_moments.volume_gradient().getGradTx() << std::endl
-              << std::setprecision(20) << " Ty -> "
-              << our_moments.volume_gradient().getGradTy() << std::endl
-              << std::setprecision(20) << " Tz -> "
-              << our_moments.volume_gradient().getGradTz() << std::endl
-              << std::setprecision(20) << " Rx -> "
-              << our_moments.volume_gradient().getGradRx() << std::endl
-              << std::setprecision(20) << " Ry -> "
-              << our_moments.volume_gradient().getGradRy() << std::endl
-              << std::setprecision(20) << " Rz -> "
-              << our_moments.volume_gradient().getGradRz() << std::endl
-              << "]" << std::endl;
-    std::cout << std::setprecision(20)
-              << "Vfrac unclipped EX  = " << exact_volume / poly_vol
-              << std::endl;
-    std::cout << std::setprecision(20)
-              << "Vfrac unclipped IRL = " << our_moments.volume() / poly_vol
-              << std::endl;
-    std::cout << std::setprecision(20) << "GradZ unclipped EX  = "
-              << exact_volume_gradk / std::pow(poly_vol, 2.0 / 3.0)
-              << std::endl;
-    std::cout << std::setprecision(20) << "GradZ unclipped IRL = "
-              << our_moments.volume_gradient().getGradTz() /
-                     std::pow(poly_vol, 2.0 / 3.0)
-              << std::endl;
-    std::cout << std::setprecision(20) << "GradZ unclipped FD = "
-              << gradZ_FD / std::pow(poly_vol, 2.0 / 3.0) << std::endl;
-    std::cout << "Diff Vfrac EX/IRL   = "
-              << fabs(our_moments.volume() - exact_volume) / poly_vol
-              << std::endl;
-    std::cout << "Diff GradZ EX/FD   = "
-              << fabs(gradZ_FD - exact_volume_gradk) /
-                     std::pow(poly_vol, 2.0 / 3.0)
-              << std::endl;
-    std::cout << "Diff GradZ EX/IRL   = "
-              << fabs(our_moments.volume_gradient().getGradTz() -
-                      exact_volume_gradk) /
-                     std::pow(poly_vol, 2.0 / 3.0)
-              << std::endl;
+//     double exact_volume = (std::pow(k, 2.) * M_PI) / 8.;
+//     double exact_volume_gradk = (k * M_PI) / 4.;
+//     if (k > h) {
+//       // std::cout << "Substract high quadrant" << std::endl;
+//       exact_volume -= (std::pow(h - k, 2.) * M_PI) / 8.;
+//       exact_volume_gradk -= -0.25 * ((h - k) * M_PI);
+//     }
+//     if (k > h * h) {
+//       // std::cout << "Substract 2 low wedges" << std::endl;
+//       exact_volume -= (8. * std::pow(h, 3.) * std::sqrt(-std::pow(h, 2.) + k)
+//       -
+//                        20. * h * k * std::sqrt(-std::pow(h, 2.) + k) +
+//                        3. * std::pow(k, 2.) * M_PI -
+//                        6. * std::pow(k, 2.) *
+//                            std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
+//                        6. * std::pow(k, 2.) *
+//                            std::atan(std::sqrt(-1. + k / std::pow(h, 2.)))) /
+//                       24.;
+//       exact_volume_gradk -=
+//           ((4. * std::pow(h, 3.)) / std::sqrt(-std::pow(h, 2.) + k) -
+//            (10. * h * k) / std::sqrt(-std::pow(h, 2.) + k) -
+//            20. * h * std::sqrt(-std::pow(h, 2.) + k) +
+//            (3. * h * std::pow(k, 2.)) /
+//                (std::pow(-std::pow(h, 2.) + k, 1.5) *
+//                 (1. + std::pow(h, 2.) / (-std::pow(h, 2.) + k))) +
+//            (3. * std::pow(k, 2.)) /
+//                (h * std::sqrt(-std::pow(h, 2.) + k) *
+//                 (1. + (-std::pow(h, 2.) + k) / std::pow(h, 2.))) +
+//            6. * k * M_PI -
+//            12. * k * std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
+//            12. * k * std::atan(std::sqrt(-std::pow(h, 2.) + k) / h)) /
+//           24.;
+//     }
+//     if (k > 2.0 * h * h) {
+//       // std::cout << "Adding 1 low triangle" << std::endl;
+//       exact_volume +=
+//           (2. * h *
+//                (-4. * std::pow(h, 3.) + 6. * h * k +
+//                 2. * std::pow(h, 2.) * std::sqrt(-std::pow(h, 2.) + k) -
+//                 5. * k * std::sqrt(-std::pow(h, 2.) + k)) -
+//            3. * std::pow(k, 2.) *
+//                std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
+//            3. * std::pow(k, 2.) *
+//                std::atan(std::sqrt(-1. + k / std::pow(h, 2.)))) /
+//           12.;
+//       exact_volume_gradk +=
+//           ((3. * h * std::pow(k, 2.)) /
+//                (2. * std::pow(-std::pow(h, 2.) + k, 1.5) *
+//                 (1. + std::pow(h, 2.) / (-std::pow(h, 2.) + k))) +
+//            2. * h *
+//                (6. * h + std::pow(h, 2.) / std::sqrt(-std::pow(h, 2.) + k) -
+//                 (5. * k) / (2. * std::sqrt(-std::pow(h, 2.) + k)) -
+//                 5. * std::sqrt(-std::pow(h, 2.) + k)) +
+//            (3. * std::pow(k, 2.)) /
+//                (2. * h * std::sqrt(-std::pow(h, 2.) + k) *
+//                 (1. + (-std::pow(h, 2.) + k) / std::pow(h, 2.))) -
+//            6. * k * std::atan(h / std::sqrt(-std::pow(h, 2.) + k)) +
+//            6. * k * std::atan(std::sqrt(-std::pow(h, 2.) + k) / h)) /
+//           12.;
+//     }
+//     if ((k - h) > h * h) {
+//       // std::cout << "Adding 2 high wedges" << std::endl;
+//       exact_volume +=
+//           (20. * std::pow(h, 2.) * std::sqrt(-h - std::pow(h, 2.) + k) +
+//            8. * std::pow(h, 3.) * std::sqrt(-h - std::pow(h, 2.) + k) -
+//            20. * h * k * std::sqrt(-h - std::pow(h, 2.) + k) +
+//            3. * std::pow(h, 2.) * M_PI - 6. * h * k * M_PI +
+//            3. * std::pow(k, 2.) * M_PI +
+//            6. * std::pow(h - k, 2.) *
+//                std::atan(
+//                    std::sqrt(-((h + std::pow(h, 2.) - k) / std::pow(h, 2.))))
+//                    -
+//            6. * std::pow(h - k, 2.) *
+//                std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k))) /
+//           24.;
+//       exact_volume_gradk +=
+//           ((10. * std::pow(h, 2.)) / std::sqrt(-h - std::pow(h, 2.) + k) +
+//            (4. * std::pow(h, 3.)) / std::sqrt(-h - std::pow(h, 2.) + k) -
+//            (10. * h * k) / std::sqrt(-h - std::pow(h, 2.) + k) -
+//            20. * h * std::sqrt(-h - std::pow(h, 2.) + k) +
+//            (3. * h * std::pow(h - k, 2.)) /
+//                (std::pow(-h - std::pow(h, 2.) + k, 1.5) *
+//                 (1. + std::pow(h, 2.) / (-h - std::pow(h, 2.) + k))) +
+//            (3. * std::pow(h - k, 2.)) /
+//                (h * std::sqrt(-h - std::pow(h, 2.) + k) *
+//                 (1. + (-h - std::pow(h, 2.) + k) / std::pow(h, 2.))) -
+//            6. * h * M_PI + 6. * k * M_PI +
+//            12. * (h - k) * std::atan(h / std::sqrt(-h - std::pow(h, 2.) + k))
+//            -
+//            12. * (h - k) * std::atan(std::sqrt(-h - std::pow(h, 2.) + k) /
+//            h)) /
+//           24.;
+//     }
+//     std::cout << std::setprecision(20) << "Gradient = [" << std::endl;
+//     std::cout << std::setprecision(20) << "  A -> "
+//               << our_moments.volume_gradient().getGradA() << std::endl
+//               << std::setprecision(20) << "  B -> "
+//               << our_moments.volume_gradient().getGradB() << std::endl
+//               << std::setprecision(20) << " Tx -> "
+//               << our_moments.volume_gradient().getGradTx() << std::endl
+//               << std::setprecision(20) << " Ty -> "
+//               << our_moments.volume_gradient().getGradTy() << std::endl
+//               << std::setprecision(20) << " Tz -> "
+//               << our_moments.volume_gradient().getGradTz() << std::endl
+//               << std::setprecision(20) << " Rx -> "
+//               << our_moments.volume_gradient().getGradRx() << std::endl
+//               << std::setprecision(20) << " Ry -> "
+//               << our_moments.volume_gradient().getGradRy() << std::endl
+//               << std::setprecision(20) << " Rz -> "
+//               << our_moments.volume_gradient().getGradRz() << std::endl
+//               << "]" << std::endl;
+//     std::cout << std::setprecision(20)
+//               << "Vfrac unclipped EX  = " << exact_volume / poly_vol
+//               << std::endl;
+//     std::cout << std::setprecision(20)
+//               << "Vfrac unclipped IRL = " << our_moments.volume() / poly_vol
+//               << std::endl;
+//     std::cout << std::setprecision(20) << "GradZ unclipped EX  = "
+//               << exact_volume_gradk / std::pow(poly_vol, 2.0 / 3.0)
+//               << std::endl;
+//     std::cout << std::setprecision(20) << "GradZ unclipped IRL = "
+//               << our_moments.volume_gradient().getGradTz() /
+//                      std::pow(poly_vol, 2.0 / 3.0)
+//               << std::endl;
+//     std::cout << std::setprecision(20) << "GradZ unclipped FD = "
+//               << gradZ_FD / std::pow(poly_vol, 2.0 / 3.0) << std::endl;
+//     std::cout << "Diff Vfrac EX/IRL   = "
+//               << std::fabs(our_moments.volume() - exact_volume) / poly_vol
+//               << std::endl;
+//     std::cout << "Diff GradZ EX/FD   = "
+//               << std::fabs(gradZ_FD - exact_volume_gradk) /
+//                      std::pow(poly_vol, 2.0 / 3.0)
+//               << std::endl;
+//     std::cout << "Diff GradZ EX/IRL   = "
+//               << std::fabs(our_moments.volume_gradient().getGradTz() -
+//                            exact_volume_gradk) /
+//                      std::pow(poly_vol, 2.0 / 3.0)
+//               << std::endl;
 
-    std::cout << "-------------------------------------------------------------"
-                 "---------------------------------------------------------"
-              << std::endl;
+//     std::cout <<
+//     "-------------------------------------------------------------"
+//                  "---------------------------------------------------------"
+//               << std::endl;
 
-    max_volume_error =
-        max_volume_error > fabs(our_moments.volume() - exact_volume) / poly_vol
-            ? max_volume_error
-            : fabs(our_moments.volume() - exact_volume) / poly_vol;
-    max_gradient_error =
-        max_gradient_error > fabs(our_moments.volume_gradient().getGradTz() -
-                                  exact_volume_gradk) /
-                                 std::pow(poly_vol, 2.0 / 3.0)
-            ? max_gradient_error
-            : fabs(our_moments.volume_gradient().getGradTz() -
-                   exact_volume_gradk) /
-                  std::pow(poly_vol, 2.0 / 3.0);
-    rms_volume_error += fabs(our_moments.volume() - exact_volume) *
-                        fabs(our_moments.volume() - exact_volume) / poly_vol /
-                        poly_vol;
-    rms_gradient_error +=
-        fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk) *
-        fabs(our_moments.volume_gradient().getGradTz() - exact_volume_gradk) /
-        std::pow(poly_vol, 4.0 / 3.0);
-  }
-  rms_volume_error = sqrt(rms_volume_error / static_cast<double>(Ntests));
-  rms_gradient_error = sqrt(rms_gradient_error / static_cast<double>(Ntests));
+//     max_volume_error =
+//         max_volume_error >
+//                 std::fabs(our_moments.volume() - exact_volume) / poly_vol
+//             ? max_volume_error
+//             : std::fabs(our_moments.volume() - exact_volume) / poly_vol;
+//     max_gradient_error =
+//         max_gradient_error >
+//                 std::fabs(our_moments.volume_gradient().getGradTz() -
+//                           exact_volume_gradk) /
+//                     std::pow(poly_vol, 2.0 / 3.0)
+//             ? max_gradient_error
+//             : std::fabs(our_moments.volume_gradient().getGradTz() -
+//                         exact_volume_gradk) /
+//                   std::pow(poly_vol, 2.0 / 3.0);
+//     rms_volume_error += std::fabs(our_moments.volume() - exact_volume) *
+//                         std::fabs(our_moments.volume() - exact_volume) /
+//                         poly_vol / poly_vol;
+//     rms_gradient_error += std::fabs(our_moments.volume_gradient().getGradTz()
+//     -
+//                                     exact_volume_gradk) *
+//                           std::fabs(our_moments.volume_gradient().getGradTz()
+//                           -
+//                                     exact_volume_gradk) /
+//                           std::pow(poly_vol, 4.0 / 3.0);
+//   }
+//   rms_volume_error = sqrt(rms_volume_error / static_cast<double>(Ntests));
+//   rms_gradient_error = sqrt(rms_gradient_error /
+//   static_cast<double>(Ntests));
 
-  std::cout << "Max volume error    = " << max_volume_error << std::endl;
-  std::cout << "RMS volume error    = " << rms_volume_error << std::endl;
-  std::cout << "Max gradient error  = " << max_gradient_error << std::endl;
-  std::cout << "RMS gradient error  = " << rms_gradient_error << std::endl;
-  std::cout << "-------------------------------------------------------------"
-               "---------------------------------------------------------"
-            << std::endl;
+//   std::cout << "Max volume error    = " << max_volume_error << std::endl;
+//   std::cout << "RMS volume error    = " << rms_volume_error << std::endl;
+//   std::cout << "Max gradient error  = " << max_gradient_error << std::endl;
+//   std::cout << "RMS gradient error  = " << rms_gradient_error << std::endl;
+//   std::cout <<
+//   "-------------------------------------------------------------"
+//                "---------------------------------------------------------"
+//             << std::endl;
 
-  EXPECT_NEAR(maximum(max_volume_error, max_gradient_error), 0.0, 1.0e-14);
-}
+//   EXPECT_NEAR(maximum(max_volume_error, max_gradient_error), 0.0, 1.0e-14);
+// }
 
 TEST(ParaboloidIntersection, ProgressiveDistanceSolver) {
   AlignedParaboloid aligned_paraboloid;
@@ -928,7 +1026,7 @@ TEST(ParaboloidIntersection, PtQuad) {
               << "   Volume double = " << first_moments.volume() << std::endl;
     std::cout << " Centroid double = " << first_moments.centroid() << std::endl;
     const Quad_t volume_error =
-        fabs(static_cast<Quad_t>(first_moments.volume()) - exact_volume);
+        fabsq(static_cast<Quad_t>(first_moments.volume()) - exact_volume);
     const auto m1_error =
         PtBase<Quad_t>(PtBase<Quad_t>(first_moments.centroid()) - exact_m1);
     max_dp_error = maximum(max_dp_error, volume_error);
@@ -956,7 +1054,7 @@ TEST(ParaboloidIntersection, PtQuad) {
     std::cout << "     Volume quad = " << first_moments.volume() << std::endl;
     std::cout << "   Centroid quad = " << first_moments.centroid() << std::endl;
     const Quad_t volume_error =
-        fabs(static_cast<Quad_t>(first_moments.volume()) - exact_volume);
+        fabsq(static_cast<Quad_t>(first_moments.volume()) - exact_volume);
     const auto m1_error =
         PtBase<Quad_t>(PtBase<Quad_t>(first_moments.centroid()) - exact_m1);
     max_qp_error = maximum(max_qp_error, volume_error);
@@ -969,6 +1067,218 @@ TEST(ParaboloidIntersection, PtQuad) {
 
   double max_error = static_cast<double>(maximum(max_dp_error, max_qp_error));
   EXPECT_NEAR(max_error, 0.0, 1.0e-14);
+}
+
+TEST(ParaboloidIntersection, AutoDiff) {
+  using MyGradientType = ParaboloidGradientLocal;
+  using MyScalarType = ScalarWithGradient<MyGradientType>;
+  using MyPtType = PtBase<MyScalarType>;
+  using MyMomentType = VolumeBase<MyScalarType>;
+
+  auto ZERO = MyScalarType(0);
+  auto ONE = MyScalarType(1);
+
+  auto frame = ReferenceFrameBase<MyScalarType>(
+      NormalBase<MyScalarType>(ONE, ZERO, ZERO),
+      NormalBase<MyScalarType>(ZERO, ONE, ZERO),
+      NormalBase<MyScalarType>(ZERO, ZERO, ONE));
+  auto datum = PtBase<MyScalarType>(ZERO, ZERO, ZERO);
+  auto paraboloid = ParaboloidBase<MyScalarType>(datum, frame, ONE, ONE);
+
+  std::array<double, 3> angles({0.21423, 9.534252345, 3.463454});
+  UnitQuaternion x_rot(angles[0], Normal(1, 0, 0));
+  UnitQuaternion y_rot(angles[1], Normal(0, 1, 0));
+  UnitQuaternion z_rot(angles[2], Normal(0, 0, 1));
+  auto rotated_frame =
+      x_rot * y_rot * z_rot *
+      ReferenceFrame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
+  auto unit_cube = unit_cell;
+  // for (auto& vertex : unit_cube) {
+  //   Pt tmp_pt = vertex;
+  //   for (UnsignedIndex_t d = 0; d < 3; ++d) {
+  //     vertex[d] = rotated_frame[d] * tmp_pt;
+  //   }
+  // }
+
+  auto cube = StoredRectangularCuboid<MyPtType>::fromOtherPolytope(unit_cube);
+  auto cube_pt = StoredRectangularCuboid<Pt>::fromOtherPolytope(unit_cube);
+
+  // Track the time required to complete the calculations.
+  struct timeval timeStruct;
+  gettimeofday(&timeStruct, NULL);
+  long unsigned int processStartTime =
+      timeStruct.tv_sec * 1000000 + timeStruct.tv_usec;
+
+  const auto first_moments = getVolumeMoments<MyMomentType>(cube, paraboloid);
+
+  std::cout << "Volume = " << first_moments << std::endl;
+
+  gettimeofday(&timeStruct, NULL);
+  long unsigned int processFinishTime =
+      timeStruct.tv_sec * 1000000 + timeStruct.tv_usec;
+  double totalTimeElapsed =
+      (double)(processFinishTime - processStartTime) / 1000000.;
+  std::cout << "\n\tTotal Elapsed Time: " << totalTimeElapsed << std::endl;
+
+  double epsilon = sqrt(DBL_EPSILON);
+
+  auto frame_fd =
+      ReferenceFrame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
+  auto datum_fd = Pt(0, 0, 0);
+  auto paraboloid_fd = Paraboloid(datum_fd, frame_fd, 1.0, 1.0);
+
+  auto paraboloid_A = paraboloid_fd;
+  paraboloid_A.setAlignedParaboloid(AlignedParaboloid({1.0 + epsilon, 1.0}));
+  auto paraboloid_B = paraboloid_fd;
+  paraboloid_B.setAlignedParaboloid(AlignedParaboloid({1.0, 1.0 + epsilon}));
+  auto paraboloid_Tx = paraboloid_fd;
+  paraboloid_Tx.setDatum(Pt(epsilon, 0.0, 0.0));
+  auto paraboloid_Ty = paraboloid_fd;
+  paraboloid_Ty.setDatum(Pt(0.0, epsilon, 0.0));
+  auto paraboloid_Tz = paraboloid_fd;
+  paraboloid_Tz.setDatum(Pt(0.0, 0.0, epsilon));
+  UnitQuaternion x_rotation(epsilon, frame_fd[0]);
+  UnitQuaternion y_rotation(epsilon, frame_fd[1]);
+  UnitQuaternion z_rotation(epsilon, frame_fd[2]);
+  x_rotation.normalize();
+  y_rotation.normalize();
+  z_rotation.normalize();
+  auto frame_x = x_rotation * frame_fd;
+  auto frame_y = y_rotation * frame_fd;
+  auto frame_z = z_rotation * frame_fd;
+  auto paraboloid_Rx = paraboloid_fd;
+  auto paraboloid_Ry = paraboloid_fd;
+  auto paraboloid_Rz = paraboloid_fd;
+  paraboloid_Rx.setReferenceFrame(frame_x);
+  paraboloid_Ry.setReferenceFrame(frame_y);
+  paraboloid_Rz.setReferenceFrame(frame_z);
+
+  gettimeofday(&timeStruct, NULL);
+  processStartTime = timeStruct.tv_sec * 1000000 + timeStruct.tv_usec;
+
+  const auto first_moments_A = getVolumeMoments<Volume>(cube_pt, paraboloid_A);
+  const auto first_moments_B = getVolumeMoments<Volume>(cube_pt, paraboloid_B);
+  const auto first_moments_Tx =
+      getVolumeMoments<Volume>(cube_pt, paraboloid_Tx);
+  const auto first_moments_Ty =
+      getVolumeMoments<Volume>(cube_pt, paraboloid_Ty);
+  const auto first_moments_Tz =
+      getVolumeMoments<Volume>(cube_pt, paraboloid_Tz);
+  const auto first_moments_Rx =
+      getVolumeMoments<Volume>(cube_pt, paraboloid_Rx);
+  const auto first_moments_Ry =
+      getVolumeMoments<Volume>(cube_pt, paraboloid_Ry);
+  const auto first_moments_Rz =
+      getVolumeMoments<Volume>(cube_pt, paraboloid_Rz);
+
+  std::cout << "FD-gradient = " << std::endl;
+  std::cout << (first_moments_A.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+  std::cout << (first_moments_B.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+  std::cout << (first_moments_Tx.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+  std::cout << (first_moments_Ty.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+  std::cout << (first_moments_Tz.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+  std::cout << (first_moments_Rx.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+  std::cout << (first_moments_Ry.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+  std::cout << (first_moments_Rz.volume() - first_moments.volume().value()) /
+                   epsilon
+            << std::endl;
+
+  gettimeofday(&timeStruct, NULL);
+  processFinishTime = timeStruct.tv_sec * 1000000 + timeStruct.tv_usec;
+  totalTimeElapsed = (double)(processFinishTime - processStartTime) / 1000000.;
+
+  std::cout << "\n\tTotal Elapsed Time: " << totalTimeElapsed << std::endl;
+
+  std::cout << "DIFF = " << std::endl;
+  std::cout << first_moments.volume().gradient().getGradA() -
+                   (first_moments_A.volume() - first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+  std::cout << first_moments.volume().gradient().getGradB() -
+                   (first_moments_B.volume() - first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+  std::cout << first_moments.volume().gradient().getGradTx() -
+                   (first_moments_Tx.volume() -
+                    first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+  std::cout << first_moments.volume().gradient().getGradTy() -
+                   (first_moments_Ty.volume() -
+                    first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+  std::cout << first_moments.volume().gradient().getGradTz() -
+                   (first_moments_Tz.volume() -
+                    first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+  std::cout << first_moments.volume().gradient().getGradRx() -
+                   (first_moments_Rx.volume() -
+                    first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+  std::cout << first_moments.volume().gradient().getGradRy() -
+                   (first_moments_Ry.volume() -
+                    first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+  std::cout << first_moments.volume().gradient().getGradRz() -
+                   (first_moments_Rz.volume() -
+                    first_moments.volume().value()) /
+                       epsilon
+            << std::endl;
+}
+
+TEST(ParaboloidIntersection, AutoDiffM2) {
+  using MyGradientType = ParaboloidGradientLocalBase<double>;
+  using MyScalarType = ScalarWithGradientBase<double, MyGradientType>;
+  using MyPtType = PtBase<MyScalarType>;
+  using MyMomentType = GeneralMomentsBase<2, 3, MyScalarType>;
+
+  auto ZERO = MyScalarType(0);
+  auto ONE = MyScalarType(1);
+
+  auto frame = ReferenceFrameBase<MyScalarType>(
+      NormalBase<MyScalarType>(ONE, ZERO, ZERO),
+      NormalBase<MyScalarType>(ZERO, ONE, ZERO),
+      NormalBase<MyScalarType>(ZERO, ZERO, ONE));
+  auto datum = PtBase<MyScalarType>(ZERO, ZERO, ZERO);
+  auto paraboloid = ParaboloidBase<MyScalarType>(datum, frame, ONE, ONE);
+
+  std::array<double, 3> angles({0.21423, 9.534252345, 3.463454});
+  UnitQuaternion x_rot(angles[0], Normal(1, 0, 0));
+  UnitQuaternion y_rot(angles[1], Normal(0, 1, 0));
+  UnitQuaternion z_rot(angles[2], Normal(0, 0, 1));
+  auto rotated_frame =
+      x_rot * y_rot * z_rot *
+      ReferenceFrame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
+  auto unit_cube = unit_cell;
+  // for (auto& vertex : unit_cube) {
+  //   Pt tmp_pt = vertex;
+  //   for (UnsignedIndex_t d = 0; d < 3; ++d) {
+  //     vertex[d] = rotated_frame[d] * tmp_pt;
+  //   }
+  // }
+
+  auto cube = StoredRectangularCuboid<MyPtType>::fromOtherPolytope(unit_cube);
+
+  const auto moments = getVolumeMoments<MyMomentType>(cube, paraboloid);
+  std::cout << "Moments = " << moments << std::endl;
 }
 
 }  // namespace

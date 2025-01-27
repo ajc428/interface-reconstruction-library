@@ -130,7 +130,7 @@ int runSimulation(const std::string& a_advection_method,
   }
   else if (a_reconstruction_method == "ML_PLIC2")
   {
-    load2();
+    load();
   }
   else if (a_reconstruction_method == "R2PNet")
   {

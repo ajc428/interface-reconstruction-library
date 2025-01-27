@@ -831,97 +831,97 @@ namespace IRL
 
     torch::Tensor fractions::get_fractions_with_gradients(IRL::Paraboloid p, bool centroids)
     {
-        DataMesh<double> liquid_volume_fraction(mesh);
+        // DataMesh<double> liquid_volume_fraction(mesh);
         vector<double> f;
-        for (int i = 0; i < 8; ++i)
-        {
-            gradients[i].clear();
-        }
+        // for (int i = 0; i < 8; ++i)
+        // {
+        //     gradients[i].clear();
+        // }
 
-        for (int i = 0; i < a_number_of_cells; ++i)
-        {
-            for (int j = 0; j < a_number_of_cells; ++j)
-            {
-                for (int k = 0; k < a_number_of_cells; ++k)
-                {
-                    const auto volumesWithGradients = getCellMomentsWithGradients<IRL::VolumeMomentsWithGradient<IRL::ParaboloidGradientLocal>>(p, liquid_volume_fraction, i, j, k);    
-                    auto& volumeWithGradients = volumesWithGradients.volume();      
-                    auto& centroidWithGradients = volumesWithGradients.centroid();  
+        // for (int i = 0; i < a_number_of_cells; ++i)
+        // {
+        //     for (int j = 0; j < a_number_of_cells; ++j)
+        //     {
+        //         for (int k = 0; k < a_number_of_cells; ++k)
+        //         {
+        //             const auto volumesWithGradients = getCellMomentsWithGradients<IRL::VolumeMomentsWithGradient<IRL::ParaboloidGradientLocal>>(p, liquid_volume_fraction, i, j, k);    
+        //             auto& volumeWithGradients = volumesWithGradients.volume();      
+        //             auto& centroidWithGradients = volumesWithGradients.centroid();  
 
-                    gradients[0].push_back(volumesWithGradients.volume_gradient().getGradTx());
-                    if (centroids)
-                    {
-                        gradients[0].push_back(volumesWithGradients.centroid().getData()[0].getGradTx());
-                        gradients[0].push_back(volumesWithGradients.centroid().getData()[1].getGradTx());
-                        gradients[0].push_back(volumesWithGradients.centroid().getData()[2].getGradTx());
-                    }
+        //             gradients[0].push_back(volumesWithGradients.volume_gradient().getGradTx());
+        //             if (centroids)
+        //             {
+        //                 gradients[0].push_back(volumesWithGradients.centroid().getData()[0].getGradTx());
+        //                 gradients[0].push_back(volumesWithGradients.centroid().getData()[1].getGradTx());
+        //                 gradients[0].push_back(volumesWithGradients.centroid().getData()[2].getGradTx());
+        //             }
 
-                    gradients[1].push_back(volumesWithGradients.volume_gradient().getGradTy()); 
-                    if (centroids)
-                    {
-                        gradients[1].push_back(volumesWithGradients.centroid().getData()[0].getGradTy()); 
-                        gradients[1].push_back(volumesWithGradients.centroid().getData()[1].getGradTy()); 
-                        gradients[1].push_back(volumesWithGradients.centroid().getData()[2].getGradTy()); 
-                    }
+        //             gradients[1].push_back(volumesWithGradients.volume_gradient().getGradTy()); 
+        //             if (centroids)
+        //             {
+        //                 gradients[1].push_back(volumesWithGradients.centroid().getData()[0].getGradTy()); 
+        //                 gradients[1].push_back(volumesWithGradients.centroid().getData()[1].getGradTy()); 
+        //                 gradients[1].push_back(volumesWithGradients.centroid().getData()[2].getGradTy()); 
+        //             }
 
-                    gradients[2].push_back(volumesWithGradients.volume_gradient().getGradTz()); 
-                    if (centroids)
-                    {
-                        gradients[2].push_back(volumesWithGradients.centroid().getData()[0].getGradTz());
-                        gradients[2].push_back(volumesWithGradients.centroid().getData()[1].getGradTz());
-                        gradients[2].push_back(volumesWithGradients.centroid().getData()[2].getGradTz());
-                    }
+        //             gradients[2].push_back(volumesWithGradients.volume_gradient().getGradTz()); 
+        //             if (centroids)
+        //             {
+        //                 gradients[2].push_back(volumesWithGradients.centroid().getData()[0].getGradTz());
+        //                 gradients[2].push_back(volumesWithGradients.centroid().getData()[1].getGradTz());
+        //                 gradients[2].push_back(volumesWithGradients.centroid().getData()[2].getGradTz());
+        //             }
 
-                    gradients[3].push_back(volumesWithGradients.volume_gradient().getGradRx()); 
-                    if (centroids)
-                    {
-                        gradients[3].push_back(volumesWithGradients.centroid().getData()[0].getGradRx()); 
-                        gradients[3].push_back(volumesWithGradients.centroid().getData()[1].getGradRx()); 
-                        gradients[3].push_back(volumesWithGradients.centroid().getData()[2].getGradRx()); 
-                    }
+        //             gradients[3].push_back(volumesWithGradients.volume_gradient().getGradRx()); 
+        //             if (centroids)
+        //             {
+        //                 gradients[3].push_back(volumesWithGradients.centroid().getData()[0].getGradRx()); 
+        //                 gradients[3].push_back(volumesWithGradients.centroid().getData()[1].getGradRx()); 
+        //                 gradients[3].push_back(volumesWithGradients.centroid().getData()[2].getGradRx()); 
+        //             }
 
-                    gradients[4].push_back(volumesWithGradients.volume_gradient().getGradRy()); 
-                    if (centroids)
-                    {
-                        gradients[4].push_back(volumesWithGradients.centroid().getData()[0].getGradRy()); 
-                        gradients[4].push_back(volumesWithGradients.centroid().getData()[1].getGradRy()); 
-                        gradients[4].push_back(volumesWithGradients.centroid().getData()[2].getGradRy()); 
-                    }
+        //             gradients[4].push_back(volumesWithGradients.volume_gradient().getGradRy()); 
+        //             if (centroids)
+        //             {
+        //                 gradients[4].push_back(volumesWithGradients.centroid().getData()[0].getGradRy()); 
+        //                 gradients[4].push_back(volumesWithGradients.centroid().getData()[1].getGradRy()); 
+        //                 gradients[4].push_back(volumesWithGradients.centroid().getData()[2].getGradRy()); 
+        //             }
 
-                    gradients[5].push_back(volumesWithGradients.volume_gradient().getGradRz()); 
-                    if (centroids)
-                    {
-                        gradients[5].push_back(volumesWithGradients.centroid().getData()[0].getGradRz()); 
-                        gradients[5].push_back(volumesWithGradients.centroid().getData()[1].getGradRz()); 
-                        gradients[5].push_back(volumesWithGradients.centroid().getData()[2].getGradRz()); 
-                    }
+        //             gradients[5].push_back(volumesWithGradients.volume_gradient().getGradRz()); 
+        //             if (centroids)
+        //             {
+        //                 gradients[5].push_back(volumesWithGradients.centroid().getData()[0].getGradRz()); 
+        //                 gradients[5].push_back(volumesWithGradients.centroid().getData()[1].getGradRz()); 
+        //                 gradients[5].push_back(volumesWithGradients.centroid().getData()[2].getGradRz()); 
+        //             }
 
-                    gradients[6].push_back(volumesWithGradients.volume_gradient().getGradA()); 
-                    if (centroids)
-                    {
-                        gradients[6].push_back(volumesWithGradients.centroid().getData()[0].getGradA()); 
-                        gradients[6].push_back(volumesWithGradients.centroid().getData()[1].getGradA()); 
-                        gradients[6].push_back(volumesWithGradients.centroid().getData()[2].getGradA()); 
-                    }
+        //             gradients[6].push_back(volumesWithGradients.volume_gradient().getGradA()); 
+        //             if (centroids)
+        //             {
+        //                 gradients[6].push_back(volumesWithGradients.centroid().getData()[0].getGradA()); 
+        //                 gradients[6].push_back(volumesWithGradients.centroid().getData()[1].getGradA()); 
+        //                 gradients[6].push_back(volumesWithGradients.centroid().getData()[2].getGradA()); 
+        //             }
 
-                    gradients[7].push_back(volumesWithGradients.volume_gradient().getGradB()); 
-                    if (centroids)
-                    {
-                        gradients[7].push_back(volumesWithGradients.centroid().getData()[0].getGradB()); 
-                        gradients[7].push_back(volumesWithGradients.centroid().getData()[1].getGradB()); 
-                        gradients[7].push_back(volumesWithGradients.centroid().getData()[2].getGradB()); 
-                    }
+        //             gradients[7].push_back(volumesWithGradients.volume_gradient().getGradB()); 
+        //             if (centroids)
+        //             {
+        //                 gradients[7].push_back(volumesWithGradients.centroid().getData()[0].getGradB()); 
+        //                 gradients[7].push_back(volumesWithGradients.centroid().getData()[1].getGradB()); 
+        //                 gradients[7].push_back(volumesWithGradients.centroid().getData()[2].getGradB()); 
+        //             }
 
-                    f.push_back(volumeWithGradients);
-                    if (centroids)
-                    {
-                        f.push_back(centroidWithGradients[0]);
-                        f.push_back(centroidWithGradients[1]);
-                        f.push_back(centroidWithGradients[2]);    
-                    }
-                }
-            }
-        }
+        //             f.push_back(volumeWithGradients);
+        //             if (centroids)
+        //             {
+        //                 f.push_back(centroidWithGradients[0]);
+        //                 f.push_back(centroidWithGradients[1]);
+        //                 f.push_back(centroidWithGradients[2]);    
+        //             }
+        //         }
+        //     }
+        // }
         return torch::tensor(f);  
     }
 
@@ -1027,9 +1027,9 @@ namespace IRL
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-        using MyPtType = IRL::PtWithGradient<IRL::ParaboloidGradientLocal>;
-        auto cube = IRL::StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
-        return IRL::getVolumeMoments<IRL::AddSurfaceOutput<MomentType, SurfaceType>, IRL::HalfEdgeCutting>(cube, a_interface);
+        //using MyPtType = IRL::PtWithGradient<IRL::ParaboloidGradientLocal>;
+        //auto cube = IRL::StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
+        return IRL::getVolumeMoments<IRL::AddSurfaceOutput<MomentType, SurfaceType>, IRL::HalfEdgeCutting>(/*cube*/cell, a_interface);
     }
 
     template <class MomentType>
@@ -1041,9 +1041,9 @@ namespace IRL
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
             IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-        using MyPtType = IRL::PtWithGradient<IRL::ParaboloidGradientLocal>;
-        auto cube = IRL::StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
-        const auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(cube, a_interface);
+        //using MyPtType = IRL::PtWithGradient<IRL::ParaboloidGradientLocal>;
+        //auto cube = IRL::StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
+        const auto moments = IRL::getVolumeMoments<MomentType, IRL::HalfEdgeCutting>(/*cube*/cell, a_interface);
 
         return moments;
     }

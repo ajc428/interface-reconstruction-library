@@ -1,5 +1,6 @@
 // This file is part of the Interface Reconstruction Library (IRL),
-// a library for interface reconstruction and computational geometry operations.
+// a library for interface reconstruction and computational geometry
+// operations.
 //
 // Copyright (C) 2022 Fabien Evrard <fa.evrard@gmail.com>
 //
@@ -12,8 +13,6 @@
 #include "irl/interface_reconstruction_methods/constrained_optimization_behavior.h"
 #include "irl/interface_reconstruction_methods/plvira_neighborhood.h"
 #include "irl/interface_reconstruction_methods/reconstruction_interface.h"
-#include "irl/moments/volume_moments_with_gradient.h"
-#include "irl/moments/volume_with_gradient.h"
 #include "irl/optimization/constrained_levenberg_marquardt.h"
 #include "irl/paraboloid_reconstruction/gradient_paraboloid.h"
 #include "irl/paraboloid_reconstruction/hessian_paraboloid.h"
@@ -116,6 +115,8 @@ class PLVIRA_test {
     ref_volume_m = neighborhood_m->getConstrainedCell().calculateVolume();
     ref_length_m = std::pow(ref_volume_m, 1.0 / 3.0);
     ref_moment_m = ref_length_m * ref_volume_m;
+    m0_constraint_m = 1.0 / neighborhood_m->getConstraints().volume();
+    m1_constraint_m = m0_constraint_m;
     best_reconstruction_m = a_reconstruction;
     for (UnsignedIndex_t i = 0; i < kMeasures; ++i) {
       correct_values_m(i) = neighborhood_m->getStoredMoments(i) / ref_volume_m;
@@ -124,18 +125,18 @@ class PLVIRA_test {
     for (UnsignedIndex_t i = kMeasures; i < kMeasures + kConstraints; ++i) {
       weights_m.diagonal()[i] = 1.0;
     }
-    correct_constraints_m(0) =
-        neighborhood_m->getConstraints().volume() / ref_volume_m;
-    // correct_constraints_m(1) =
-    //     neighborhood_m->getConstraints().centroid()[0] / ref_moment_m;
-    // correct_constraints_m(2) =
-    //     neighborhood_m->getConstraints().centroid()[1] / ref_moment_m;
-    // correct_constraints_m(3) =
-    //     neighborhood_m->getConstraints().centroid()[2] / ref_moment_m;
-    // correct_constraints_m(0) = 0.0;
-    correct_constraints_m(1) = 0.0;
-    correct_constraints_m(2) = 0.0;
-    correct_constraints_m(3) = 0.0;
+    correct_constraints_m(0) = m0_constraint_m *
+                               neighborhood_m->getConstraints().volume() /
+                               ref_volume_m;
+    correct_constraints_m(1) = m1_constraint_m *
+                               neighborhood_m->getConstraints().centroid()[0] /
+                               ref_moment_m;
+    correct_constraints_m(2) = m1_constraint_m *
+                               neighborhood_m->getConstraints().centroid()[1] /
+                               ref_moment_m;
+    correct_constraints_m(3) = m1_constraint_m *
+                               neighborhood_m->getConstraints().centroid()[2] /
+                               ref_moment_m;
     for (UnsignedIndex_t i = 0; i < kConstraints; ++i) {
       correct_values_m(kMeasures + i) = correct_constraints_m(i);
     }
@@ -193,11 +194,13 @@ class PLVIRA_test {
     UnitQuaternion x_rotation((*a_delta)(3), frame[0]);
     UnitQuaternion y_rotation((*a_delta)(4), frame[1]);
     UnitQuaternion z_rotation((*a_delta)(5), frame[2]);
-    auto total_rotation = x_rotation * y_rotation * z_rotation;
+    // auto total_rotation = x_rotation * y_rotation * z_rotation;
+    auto total_rotation = z_rotation;
     total_rotation.normalize();
     // Shift datum
-    const Pt new_datum = datum + (*a_delta)(0) * frame[0] +
-                         (*a_delta)(1) * frame[1] + (*a_delta)(2) * frame[2];
+    // const Pt new_datum = datum + (*a_delta)(0) * frame[0] +
+    //                      (*a_delta)(1) * frame[1] + (*a_delta)(2) * frame[2];
+    const Pt new_datum = datum + (*a_delta)(2) * frame[2];
     // Rotate frame
     const ReferenceFrame new_frame = total_rotation * frame;
     // Update curvatures
@@ -211,14 +214,48 @@ class PLVIRA_test {
                                                    guess_reconstruction_m) /
                           ref_volume_m;
     }
-    auto moments_constrained_cell = getVolumeMoments<VolumeMoments>(
-        neighborhood_m->getConstrainedCell(), guess_reconstruction_m);
-    guess_values_m(kMeasures) =
-        moments_constrained_cell.volume() / ref_volume_m;
-    // for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    //   guess_values_m(kMeasures + 1 + d) =
-    //       moments_constrained_cell.centroid()[d] / ref_moment_m;
-    // }
+    const auto& true_constrained_cell = neighborhood_m->getConstrainedCell();
+    auto constrained_cell = true_constrained_cell;
+    auto constrained_moments = getVolumeMoments<VolumeMoments>(
+        constrained_cell, guess_reconstruction_m);
+    auto vf_constraint = constrained_moments.volume() / ref_volume_m;
+    if (vf_constraint < global_constants::VF_LOW ||
+        vf_constraint > global_constants::VF_HIGH) {
+      // Find vertex closest to the paraboloid
+      double min_dist = DBL_MAX;
+      const auto& datum = guess_reconstruction_m.getDatum();
+      const auto& frame = guess_reconstruction_m.getReferenceFrame();
+      const auto& algnd_para = guess_reconstruction_m.getAlignedParaboloid();
+      for (auto& vertex : constrained_cell) {
+        Pt tmp_pt = vertex.getPt() - datum;
+        for (UnsignedIndex_t d = 0; d < 3; ++d) {
+          vertex.getPt()[d] = frame[d] * tmp_pt;
+        }
+      }
+      auto closest_pt = Pt(0, 0, 0);
+      for (auto& vertex : constrained_cell) {
+        const double dist =
+            fabs(signedDistance<double>(vertex.getPt(), algnd_para));
+        if (dist < min_dist) {
+          min_dist = dist;
+          closest_pt = vertex.getPt();
+        }
+      }
+      // Add (normalized) signed distance to the volume
+      const auto volume_add_on =
+          -(algnd_para.a() * closest_pt[0] * closest_pt[0] +
+            algnd_para.b() * closest_pt[1] * closest_pt[1] + closest_pt[2]);
+      if (vf_constraint < global_constants::VF_LOW) {
+        vf_constraint = -fabs(volume_add_on / ref_length_m);
+      } else {
+        vf_constraint = +fabs(volume_add_on / ref_length_m);
+      }
+    }
+    guess_values_m(kMeasures) = m0_constraint_m * vf_constraint;
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      guess_values_m(kMeasures + 1 + d) =
+          m1_constraint_m * constrained_moments.centroid()[d] / ref_moment_m;
+    }
   }
 
   void updateBestGuess(void) {
@@ -266,18 +303,18 @@ class PLVIRA_test {
   void clipChange(Eigen::Matrix<double, kParameters, 1>* a_delta) {
     double scale = 1.0;
     for (UnsignedIndex_t d = 0; d < 3; ++d) {
-      if (std::fabs((*a_delta)(d)) > 0.5 * ref_length_m) {
-        scale = std::min(scale, 0.5 * ref_length_m / std::fabs((*a_delta)(d)));
+      if (std::fabs((*a_delta)(d)) > 0.1 * ref_length_m) {
+        scale = std::min(scale, 0.1 * ref_length_m / std::fabs((*a_delta)(d)));
       }
-      if (std::fabs((*a_delta)(3 + d)) > 0.1 * M_PI) {
-        scale = std::min(scale, 0.1 * M_PI / std::fabs((*a_delta)(3 + d)));
+      if (std::fabs((*a_delta)(3 + d)) > 0.05 * M_PI) {
+        scale = std::min(scale, 0.05 * M_PI / std::fabs((*a_delta)(3 + d)));
       }
     }
-    if (std::fabs((*a_delta)(6)) > 0.1 / ref_length_m) {
-      scale = std::min(scale, 0.1 / ref_length_m / std::fabs((*a_delta)(6)));
+    if (std::fabs((*a_delta)(6)) > 0.05 / ref_length_m) {
+      scale = std::min(scale, 0.05 / ref_length_m / std::fabs((*a_delta)(6)));
     }
-    if (std::fabs((*a_delta)(7)) > 0.1 / ref_length_m) {
-      scale = std::min(scale, 0.1 / ref_length_m / std::fabs((*a_delta)(7)));
+    if (std::fabs((*a_delta)(7)) > 0.05 / ref_length_m) {
+      scale = std::min(scale, 0.05 / ref_length_m / std::fabs((*a_delta)(7)));
     }
     if (scale != 1.0) {
       for (UnsignedIndex_t d = 0; d < kParameters; ++d) {
@@ -297,12 +334,20 @@ class PLVIRA_test {
   //       (correct_constraints_m(0) - constrained_moments.volume()) /
   //       ref_volume_m;
   //   (*a_constraints)(1) = =
-  //       correct_constraints_m(1, 0) - moments_with_gradients.centroid()[0];
+  //       correct_constraints_m(1, 0) -
+  //   moments_with_gradients.centroid()[0];
   //   (*a_constraints)(2) =
-  //       correct_constraints_m(2, 0) - moments_with_gradients.centroid()[1];
+  //       correct_constraints_m(2, 0) -
+  //   moments_with_gradients.centroid()[1];
   //   (*a_constraints)(3) =
-  //       correct_constraints_m(3, 0) - moments_with_gradients.centroid()[2];
+  //       correct_constraints_m(3, 0) -
+  //   moments_with_gradients.centroid()[2];
   // }
+
+  Eigen::Matrix<double, kMeasures + kConstraints, 1> calculateChangeInGuess(
+      void) {
+    return guess_values_m - best_values_m;
+  }
 
   void calculateVectorErrorAndJacobian(
       Eigen::Matrix<double, kMeasures + kConstraints, 1>* a_error_vector,
@@ -315,111 +360,86 @@ class PLVIRA_test {
     (*a_error_vector).setZero();
     (*a_constraints).setZero();
     (*a_jacobian_transpose).setZero();
-    // using MyGradientType =
-    //     ParaboloidGradientAndHessianLocal<ParaboloidGradientLocal>;
-    using MyGradientType = ParaboloidGradientLocal;
-    using MyPtType = PtWithGradient<MyGradientType>;
-    // Jacobian of unconstrained measure
+
+    // Errors of neighbour cells
     for (UnsignedIndex_t i = 0; i < neighborhood_m->size(); ++i) {
       const auto& cell = neighborhood_m->getCell(i);
-      const auto cell_with_data =
-          StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
-      const auto moments_with_gradients =
-          getVolumeMoments<VolumeWithGradient<MyGradientType>>(
-              cell_with_data, best_reconstruction_m);
-      const auto& gradient = moments_with_gradients.volume_gradient();
-      const double vf = moments_with_gradients.volume() / ref_volume_m;
+      const auto moments =
+          getVolumeMoments<VolumeMoments>(cell, best_reconstruction_m);
+      const double vf = moments.volume() / ref_volume_m;
       if ((vf < global_constants::VF_LOW &&
            correct_values_m(i) < global_constants::VF_LOW) ||
           (vf > global_constants::VF_HIGH &&
            correct_values_m(i) > global_constants::VF_HIGH)) {
         // We are good
       } else {
-        (*a_error_vector)(i) = (correct_values_m(i) -
-                                moments_with_gradients.volume() / ref_volume_m);
-        (*a_jacobian_transpose)(0, i) = gradient.getGrad()(2) / ref_volume_m;
-        (*a_jacobian_transpose)(1, i) = gradient.getGrad()(3) / ref_volume_m;
-        (*a_jacobian_transpose)(2, i) = gradient.getGrad()(4) / ref_volume_m;
-        (*a_jacobian_transpose)(3, i) = gradient.getGrad()(5) / ref_volume_m;
-        (*a_jacobian_transpose)(4, i) = gradient.getGrad()(6) / ref_volume_m;
-        (*a_jacobian_transpose)(5, i) = gradient.getGrad()(7) / ref_volume_m;
-        (*a_jacobian_transpose)(6, i) = gradient.getGrad()(0) / ref_volume_m;
-        (*a_jacobian_transpose)(7, i) = gradient.getGrad()(1) / ref_volume_m;
+        (*a_error_vector)(i) = (correct_values_m(i) - vf);
       }
     }
-    // Jacobian of constraints
-    const auto& constrained_cell = neighborhood_m->getConstrainedCell();
-    const auto constrained_moments = getVolumeMoments<VolumeMoments>(
+    // Errors of constrained cell
+    const auto& true_constrained_cell = neighborhood_m->getConstrainedCell();
+    auto constrained_cell = true_constrained_cell;
+    auto constrained_moments = getVolumeMoments<VolumeMoments>(
         constrained_cell, best_reconstruction_m);
-    const auto constrained_cell_with_data =
-        StoredRectangularCuboid<MyPtType>::fromOtherPolytope(constrained_cell);
-    const auto constrained_moments_with_gradients =
-        getVolumeMoments<VolumeMomentsWithGradient<MyGradientType>>(
-            constrained_cell_with_data, best_reconstruction_m);
-
-    // if (constrained_moments_with_gradients.volume() / ref_volume_m < -100.0)
-    // {
-    //   exit(-1);
-    // }
-
-    const auto& constrained_volume_gradient =
-        constrained_moments_with_gradients.volume_gradient();
-    const auto& constrained_centroid_gradient =
-        constrained_moments_with_gradients.centroid().getData();
+    auto vf_constraint = constrained_moments.volume() / ref_volume_m;
+    if (vf_constraint < global_constants::VF_LOW ||
+        vf_constraint > global_constants::VF_HIGH) {
+      // Find vertex closest to the paraboloid
+      double min_dist = DBL_MAX;
+      const auto& datum = guess_reconstruction_m.getDatum();
+      const auto& frame = guess_reconstruction_m.getReferenceFrame();
+      const auto& algnd_para = guess_reconstruction_m.getAlignedParaboloid();
+      for (auto& vertex : constrained_cell) {
+        Pt tmp_pt = vertex.getPt() - datum;
+        for (UnsignedIndex_t d = 0; d < 3; ++d) {
+          vertex.getPt()[d] = frame[d] * tmp_pt;
+        }
+      }
+      auto closest_pt = Pt(0, 0, 0);
+      for (auto& vertex : constrained_cell) {
+        const double dist =
+            fabs(signedDistance<double>(vertex.getPt(), algnd_para));
+        if (dist < min_dist) {
+          min_dist = dist;
+          closest_pt = vertex.getPt();
+        }
+      }
+      // Add (normalized) signed distance to the volume
+      const auto volume_add_on =
+          -(algnd_para.a() * closest_pt[0] * closest_pt[0] +
+            algnd_para.b() * closest_pt[1] * closest_pt[1] + closest_pt[2]);
+      //   std::cout << "Closest point  = " << closest_pt << std::endl;
+      //   std::cout << "ADDON = " << volume_add_on / ref_length_m << std::endl;
+      if (vf_constraint < global_constants::VF_LOW) {
+        vf_constraint = -fabs(volume_add_on / ref_length_m);
+      } else {
+        vf_constraint = +fabs(volume_add_on / ref_length_m);
+      }
+    }
     (*a_constraints)(0) =
-        correct_constraints_m(0) -
-        constrained_moments_with_gradients.volume() / ref_volume_m;
-    (*a_jacobian_transpose)(0, kMeasures) =
-        constrained_volume_gradient.getGrad()(2) / ref_volume_m;
-    (*a_jacobian_transpose)(1, kMeasures) =
-        constrained_volume_gradient.getGrad()(3) / ref_volume_m;
-    (*a_jacobian_transpose)(2, kMeasures) =
-        constrained_volume_gradient.getGrad()(4) / ref_volume_m;
-    (*a_jacobian_transpose)(3, kMeasures) =
-        constrained_volume_gradient.getGrad()(5) / ref_volume_m;
-    (*a_jacobian_transpose)(4, kMeasures) =
-        constrained_volume_gradient.getGrad()(6) / ref_volume_m;
-    (*a_jacobian_transpose)(5, kMeasures) =
-        constrained_volume_gradient.getGrad()(7) / ref_volume_m;
-    (*a_jacobian_transpose)(6, kMeasures) =
-        constrained_volume_gradient.getGrad()(0) / ref_volume_m;
-    (*a_jacobian_transpose)(7, kMeasures) =
-        constrained_volume_gradient.getGrad()(1) / ref_volume_m;
-    // double norm_grad = 0.0;
-    // for (int i = 0; i < 8; i++) {
-    //   norm_grad += (constrained_volume_gradient.getGrad()[i] +
-    //                 constrained_centroid_gradient[0].getGrad()[i] +
-    //                 constrained_centroid_gradient[1].getGrad()[i] +
-    //                 constrained_centroid_gradient[2].getGrad()[i]) *
-    //                (constrained_volume_gradient.getGrad()[i] +
-    //                 constrained_centroid_gradient[0].getGrad()[i] +
-    //                 constrained_centroid_gradient[1].getGrad()[i] +
-    //                 constrained_centroid_gradient[2].getGrad()[i]);
-    // }
-    // std::cout << "Constrained grad norm = " << std::sqrt(norm_grad)
-    //           << std::endl;
-    // for (UnsignedIndex_t d = 0; d < 3; ++d) {
-    //   (*a_constraints)(1 + d) =
-    //       correct_constraints_m(1 + d, 0) -
-    //       constrained_moments_with_gradients.centroid().getPt()[d] /
-    //           ref_moment_m;
-    //   (*a_jacobian_transpose)(0, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(2) / ref_moment_m;
-    //   (*a_jacobian_transpose)(1, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(3) / ref_moment_m;
-    //   (*a_jacobian_transpose)(2, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(4) / ref_moment_m;
-    //   (*a_jacobian_transpose)(3, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(5) / ref_moment_m;
-    //   (*a_jacobian_transpose)(4, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(6) / ref_moment_m;
-    //   (*a_jacobian_transpose)(5, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(7) / ref_moment_m;
-    //   (*a_jacobian_transpose)(6, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(0) / ref_moment_m;
-    //   (*a_jacobian_transpose)(7, kMeasures + 1 + d) =
-    //       constrained_centroid_gradient[d].getGrad()(1) / ref_moment_m;
-    // }
+        correct_constraints_m(0) - m0_constraint_m * vf_constraint;
+    for (UnsignedIndex_t d = 0; d < 3; ++d) {
+      (*a_constraints)(1 + d) = correct_constraints_m(1 + d, 0) -
+                                m1_constraint_m *
+                                    constrained_moments.centroid().getPt()[d] /
+                                    ref_moment_m;
+    }
+
+    // Jacobian
+    const auto delta = sqrt(DBL_EPSILON);
+    Eigen::Matrix<double, kParameters, 1> solo_delta;
+    for (UnsignedIndex_t parameter = 0; parameter < kParameters; ++parameter) {
+      solo_delta = Eigen::Matrix<double, kParameters, 1>::Zero();
+      solo_delta(parameter) = delta;
+      this->updateGuess(&solo_delta, a_penalty, a_multipliers);
+      Eigen::Matrix<double, kMeasures + kConstraints, 1> change_in_guess =
+          this->calculateChangeInGuess();
+      for (int elem = 0; elem < kMeasures + kConstraints; ++elem) {
+        (*a_jacobian_transpose)(parameter, elem) =
+            change_in_guess(elem) / safelyEpsilon(delta);
+      }
+    }
+
     for (UnsignedIndex_t i = 0; i < kConstraints; ++i) {
       (*a_error_vector)(kMeasures + i) =
           std::sqrt(a_penalty) *
@@ -443,9 +463,8 @@ class PLVIRA_test {
   Eigen::DiagonalMatrix<double, kMeasures + kConstraints> weights_m;
   Eigen::Matrix<double, kMeasures + kConstraints, 1> correct_values_m;
   Eigen::Matrix<double, kConstraints, 1> correct_constraints_m;
-  double ref_length_m;
-  double ref_volume_m;
-  double ref_moment_m;
+  double ref_length_m, ref_volume_m, ref_moment_m, m1_constraint_m,
+      m0_constraint_m;
   ConstrainedOptimizationBehavior optimization_behavior_m;
   Eigen::Matrix<double, kMeasures + kConstraints, 1> guess_values_m;
   Eigen::Matrix<double, kMeasures + kConstraints, 1> best_values_m;
@@ -536,7 +555,13 @@ TEST(ParaboloidLVIRA, PLVIRA) {
           liquid_vf(i, j, k) = std::max(liquid_vf(i, j, k), 0.0);
           liquid_vf(i, j, k) = std::min(liquid_vf(i, j, k), 1.0);
 
-          Normal normal = cell.calculateCentroid() - center;
+          //   Normal normal = cell.calculateCentroid() - center;
+          const auto centroid = Pt(liquid_moments(i, j, k).centroid()[0],
+                                   liquid_moments(i, j, k).centroid()[1],
+                                   liquid_moments(i, j, k).centroid()[2]) /
+                                safelyEpsilon(liquid_moments(i, j, k).volume());
+
+          Normal normal = centroid - center;
           normal.normalize();
           if (i == 1 && j == 1 & k == 1) normal[0] += 0.0;
           normal.normalize();
@@ -607,14 +632,20 @@ TEST(ParaboloidLVIRA, PLVIRA) {
 
   surfaces.clear();
 
+  global_constants::VF_LOW = 1.0e-8;
+  global_constants::VF_HIGH = 1.0 - global_constants::VF_LOW;
+
   double total_surface = 0.0;
   double avg_mean_curv = 0.0;
+  double rms_curv_error = 0.0, max_curv_error = 0.0;
+  double rms_counter = 0.0;
+  double exact_curv = 2.0 / radius;
   for (int i = mesh.imin() + 1; i <= mesh.imax() - 1; ++i) {
     for (int j = mesh.jmin() + 1; j <= mesh.jmax() - 1; ++j) {
       for (int k = mesh.kmin() + 1; k <= mesh.kmax() - 1; ++k) {
         if (liquid_vf(i, j, k) >= global_constants::VF_LOW &&
             liquid_vf(i, j, k) <= global_constants::VF_HIGH) {
-          std::cout << "Creating PLVIRA neighborhood " << std::endl;
+          //   std::cout << "Creating PLVIRA neighborhood " << std::endl;
           // Intialize LVIRA 3x3x3 neighbourhood
           Paraboloid paraboloid_guess = liquid_gas_interface(i, j, k);
           RectangularCuboid stencil_cells[27];
@@ -637,7 +668,8 @@ TEST(ParaboloidLVIRA, PLVIRA) {
                 double weight = 1.0 / static_cast<double>(1 + std::abs(ii - 1) +
                                                           std::abs(jj - 1) +
                                                           std::abs(kk - 1));
-                // weight *= 2.0 * std::fabs(liquid_vf(i + ii - 1, j + jj - 1,
+                // weight *= 2.0 * std::fabs(liquid_vf(i + ii - 1, j + jj -
+                // 1,
                 //                                     k + kk - 1) -
                 //                           0.5);
                 if (ii == 1 && jj == 1 && kk == 1) {
@@ -655,30 +687,16 @@ TEST(ParaboloidLVIRA, PLVIRA) {
 
           PLVIRA_type plvira_object(&neighborhood_VF, paraboloid_guess);
           ConstrainedLevenbergMarquardt<PLVIRA_type, 26, 8, 4> solver;
-          std::cout << "Solving... " << std::endl;
+          //   std::cout << "Solving... " << std::endl;
           solver.solve(&plvira_object);
-          std::cout << "Solved in   : " << solver.getIterationCount()
-                    << " multiplier updates" << std::endl;
-          std::cout << "              " << solver.getSubIterationCount()
-                    << " sub-iterations" << std::endl;
-          std::cout << " with error : " << std::endl
-                    << solver.getConstraintErrorVector() << std::endl;
-
-          // PLVIRA_type plvira_object_refinement(
-          //     &neighborhood_VF, plvira_object.getBestReconstruction());
-          // ConstrainedLevenbergMarquardt<PLVIRA_type, 26, 8, 4>
-          //     solver_refinement;
-          // std::cout << "Refining... " << std::endl;
-          // solver_refinement.solve(&plvira_object);
-          // std::cout << "Refined in   : "
-          //           << solver_refinement.getIterationCount()
-          //           << " multiplier updates" << std::endl;
-          // std::cout << "              "
-          //           << solver_refinement.getSubIterationCount()
-          //           << " sub-iterations" << std::endl;
-          // std::cout << " with error : " << std::endl
-          //           << solver_refinement.getConstraintErrorVector()
-          //           << std::endl;
+          if (solver.getConstraintError() > 1.0e-4) {
+            std::cout << "Solved in   : " << solver.getIterationCount()
+                      << " multiplier updates" << std::endl;
+            std::cout << "              " << solver.getSubIterationCount()
+                      << " sub-iterations" << std::endl;
+            std::cout << " with error : " << std::endl
+                      << solver.getConstraintErrorVector() << std::endl;
+          }
 
           const auto cell = neighborhood_VF.getConstrainedCell();
           Paraboloid paraboloid = plvira_object.getBestReconstruction();
@@ -695,8 +713,15 @@ TEST(ParaboloidLVIRA, PLVIRA) {
               AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>>(
               cell, new_paraboloid);
           auto& surface = volume_and_surface.getSurface();
-          total_surface += surface.getSurfaceArea();
-          avg_mean_curv += surface.getMeanCurvatureIntegral();
+          auto area = surface.getSurfaceArea();
+          auto curv_int = surface.getMeanCurvatureIntegral();
+          total_surface += area;
+          avg_mean_curv += curv_int;
+          auto curv = curv_int / safelyEpsilon(area);
+          auto curv_error = std::fabs(curv - exact_curv) / exact_curv;
+          max_curv_error = std::max(max_curv_error, curv_error);
+          rms_curv_error += curv_error * curv_error;
+          rms_counter += 1.0;
           surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0 / 3.0) /
                                  15.0);
           surfaces.push_back(surface);
@@ -704,6 +729,8 @@ TEST(ParaboloidLVIRA, PLVIRA) {
       }
     }
   }
+
+  rms_curv_error = std::sqrt(rms_curv_error / rms_counter);
 
   avg_mean_curv /= total_surface;
   total_surface = std::sqrt(total_surface);
@@ -719,444 +746,467 @@ TEST(ParaboloidLVIRA, PLVIRA) {
             << std::fabs(avg_mean_curv - 2.0 / radius) / (2.0 / radius) << ")"
             << std::endl;
 
+  std::cout << std::scientific << std::setprecision(6)
+            << "CURV ERROR:\nRMS = " << rms_curv_error
+            << "\nMAX = " << max_curv_error << std::endl;
   std::cout << "Printing final solution " << std::endl;
+
   vtk_io.writeVTKInterface(time, surfaces, true);
 }
 
-void ComputeJacobianAndF(Paraboloid& paraboloid,
-                         Eigen::Matrix<double, 8, 27>& jacobian_transpose,
-                         Eigen::Matrix<double, 27, 1>& f,
-                         LVIRANeighborhood<RectangularCuboid> lvira_stencil);
+// void ComputeJacobianAndF(Paraboloid& paraboloid,
+//                          Eigen::Matrix<double, 8, 27>& jacobian_transpose,
+//                          Eigen::Matrix<double, 27, 1>& f,
+//                          LVIRANeighborhood<RectangularCuboid>
+//                          lvira_stencil);
 
-TEST(ParaboloidLVIRA, LVIRA) {
-  // Construct NxNxN mesh
-  int n_cells = 3;
-  constexpr const int number_of_ghost_cells = 0;
-  const double dx = 1.0 / static_cast<double>(n_cells);
-  Pt lower_domain(-0.5, -0.5, -0.5);
-  Pt upper_domain(0.5, 0.5, 0.5);
-  BasicMesh mesh(n_cells, n_cells, n_cells, number_of_ghost_cells);
-  mesh.setCellBoundaries(lower_domain, upper_domain);
+// TEST(ParaboloidLVIRA, LVIRA) {
+//   // Construct NxNxN mesh
+//   int n_cells = 3;
+//   constexpr const int number_of_ghost_cells = 0;
+//   const double dx = 1.0 / static_cast<double>(n_cells);
+//   Pt lower_domain(-0.5, -0.5, -0.5);
+//   Pt upper_domain(0.5, 0.5, 0.5);
+//   BasicMesh mesh(n_cells, n_cells, n_cells, number_of_ghost_cells);
+//   mesh.setCellBoundaries(lower_domain, upper_domain);
 
-  // Initialize VF from sphere
-  auto center = Pt(-0.4, -0.5, -0.52);
-  double radius = 0.5 * std::sqrt(3.0);
-  double curvature = 1.0 / radius;
+//   // Initialize VF from sphere
+//   auto center = Pt(-0.4, -0.5, -0.52);
+//   double radius = 0.5 * std::sqrt(3.0);
+//   double curvature = 1.0 / radius;
 
-  Data<double> liquid_volume_fraction(mesh);
-  Data<IRL::Paraboloid> liquid_gas_interface(mesh);
+//   Data<double> liquid_volume_fraction(mesh);
+//   Data<IRL::Paraboloid> liquid_gas_interface(mesh);
 
-  int sub_div = 10;
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-        double sub_dx =
-            (mesh.x(i + 1) - mesh.x(i)) / static_cast<double>(sub_div);
-        double sub_dy =
-            (mesh.y(j + 1) - mesh.y(j)) / static_cast<double>(sub_div);
-        double sub_dz =
-            (mesh.z(k + 1) - mesh.z(k)) / static_cast<double>(sub_div);
-        liquid_volume_fraction(i, j, k) = 0.0;
-        for (int kk = 0; kk < sub_div; ++kk) {
-          for (int jj = 0; jj < sub_div; ++jj) {
-            for (int ii = 0; ii < sub_div; ++ii) {
-              const Pt lower_cell_pt(
-                  mesh.x(i) + static_cast<double>(ii) * sub_dx,
-                  mesh.y(j) + static_cast<double>(jj) * sub_dy,
-                  mesh.z(k) + static_cast<double>(kk) * sub_dz);
-              const Pt upper_cell_pt(
-                  mesh.x(i) + static_cast<double>(ii + 1) * sub_dx,
-                  mesh.y(j) + static_cast<double>(jj + 1) * sub_dy,
-                  mesh.z(k) + static_cast<double>(kk + 1) * sub_dz);
-              const auto sub_cell = RectangularCuboid::fromBoundingPts(
-                  lower_cell_pt, upper_cell_pt);
-              Normal normal = sub_cell.calculateCentroid() - center;
-              normal.normalize();
-              int largest_dir = 0;
-              if (std::fabs(normal[largest_dir]) < std::fabs(normal[1]))
-                largest_dir = 1;
-              if (std::fabs(normal[largest_dir]) < std::fabs(normal[2]))
-                largest_dir = 2;
-              ReferenceFrame frame;
-              if (largest_dir == 0)
-                frame[0] = crossProduct(normal, Normal(0.0, 1.0, 0.0));
-              else if (largest_dir == 0)
-                frame[0] = crossProduct(normal, Normal(0.0, 0.0, 1.0));
-              else
-                frame[0] = crossProduct(normal, Normal(1.0, 0.0, 0.0));
-              frame[0].normalize();
-              frame[1] = crossProduct(normal, frame[0]);
-              frame[2] = normal;
-              Paraboloid paraboloid(Pt(center + radius * normal), frame,
-                                    0.5 * curvature, 0.5 * curvature);
-              liquid_volume_fraction(i, j, k) +=
-                  getVolumeFraction(sub_cell, paraboloid);
-            }
-          }
-        }
-        {
-          liquid_volume_fraction(i, j, k) /=
-              static_cast<double>(sub_div * sub_div * sub_div);
-          liquid_volume_fraction(i, j, k) =
-              std::min(liquid_volume_fraction(i, j, k), 1.0);
-          liquid_volume_fraction(i, j, k) =
-              std::max(liquid_volume_fraction(i, j, k), 0.0);
+//   int sub_div = 10;
+//   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+//     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+//       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+//         double sub_dx =
+//             (mesh.x(i + 1) - mesh.x(i)) / static_cast<double>(sub_div);
+//         double sub_dy =
+//             (mesh.y(j + 1) - mesh.y(j)) / static_cast<double>(sub_div);
+//         double sub_dz =
+//             (mesh.z(k + 1) - mesh.z(k)) / static_cast<double>(sub_div);
+//         liquid_volume_fraction(i, j, k) = 0.0;
+//         for (int kk = 0; kk < sub_div; ++kk) {
+//           for (int jj = 0; jj < sub_div; ++jj) {
+//             for (int ii = 0; ii < sub_div; ++ii) {
+//               const Pt lower_cell_pt(
+//                   mesh.x(i) + static_cast<double>(ii) * sub_dx,
+//                   mesh.y(j) + static_cast<double>(jj) * sub_dy,
+//                   mesh.z(k) + static_cast<double>(kk) * sub_dz);
+//               const Pt upper_cell_pt(
+//                   mesh.x(i) + static_cast<double>(ii + 1) * sub_dx,
+//                   mesh.y(j) + static_cast<double>(jj + 1) * sub_dy,
+//                   mesh.z(k) + static_cast<double>(kk + 1) * sub_dz);
+//               const auto sub_cell = RectangularCuboid::fromBoundingPts(
+//                   lower_cell_pt, upper_cell_pt);
+//               Normal normal = sub_cell.calculateCentroid() - center;
+//               normal.normalize();
+//               int largest_dir = 0;
+//               if (std::fabs(normal[largest_dir]) < std::fabs(normal[1]))
+//                 largest_dir = 1;
+//               if (std::fabs(normal[largest_dir]) < std::fabs(normal[2]))
+//                 largest_dir = 2;
+//               ReferenceFrame frame;
+//               if (largest_dir == 0)
+//                 frame[0] = crossProduct(normal, Normal(0.0, 1.0, 0.0));
+//               else if (largest_dir == 0)
+//                 frame[0] = crossProduct(normal, Normal(0.0, 0.0, 1.0));
+//               else
+//                 frame[0] = crossProduct(normal, Normal(1.0, 0.0, 0.0));
+//               frame[0].normalize();
+//               frame[1] = crossProduct(normal, frame[0]);
+//               frame[2] = normal;
+//               Paraboloid paraboloid(Pt(center + radius * normal), frame,
+//                                     0.5 * curvature, 0.5 * curvature);
+//               liquid_volume_fraction(i, j, k) +=
+//                   getVolumeFraction(sub_cell, paraboloid);
+//             }
+//           }
+//         }
+//         {
+//           liquid_volume_fraction(i, j, k) /=
+//               static_cast<double>(sub_div * sub_div * sub_div);
+//           liquid_volume_fraction(i, j, k) =
+//               std::min(liquid_volume_fraction(i, j, k), 1.0);
+//           liquid_volume_fraction(i, j, k) =
+//               std::max(liquid_volume_fraction(i, j, k), 0.0);
 
-          const Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
-          const Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1));
-          const auto cell = IRL::RectangularCuboid::fromBoundingPts(
-              lower_cell_pt, upper_cell_pt);
-          Normal normal = cell.calculateCentroid() - center;
-          normal.normalize();
-          if (i == 1 && j == 1 & k == 1) normal[0] += 10.0;
-          normal.normalize();
-          int largest_dir = 0;
-          if (std::fabs(normal[largest_dir]) < std::fabs(normal[1]))
-            largest_dir = 1;
-          if (std::fabs(normal[largest_dir]) < std::fabs(normal[2]))
-            largest_dir = 2;
-          ReferenceFrame frame;
-          if (largest_dir == 0)
-            frame[0] = crossProduct(normal, Normal(0.0, 1.0, 0.0));
-          else if (largest_dir == 0)
-            frame[0] = crossProduct(normal, Normal(0.0, 0.0, 1.0));
-          else
-            frame[0] = crossProduct(normal, Normal(1.0, 0.0, 0.0));
-          frame[0].normalize();
-          frame[1] = crossProduct(normal, frame[0]);
-          frame[2] = normal;
-          Paraboloid paraboloid(center + radius * normal, frame,
-                                0.5 * curvature, 0.5 * curvature);
-          ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
-              cell, liquid_volume_fraction(i, j, k), 1.0e-14, paraboloid);
-          Paraboloid new_paraboloid(
-              Pt(center + (radius + solver.getDistance()) * normal), frame,
-              0.5 * curvature, 0.5 * curvature);
-          liquid_gas_interface(i, j, k) = new_paraboloid;
-        }
-      }
-    }
-  }
+//           const Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+//           const Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k +
+//           1)); const auto cell = IRL::RectangularCuboid::fromBoundingPts(
+//               lower_cell_pt, upper_cell_pt);
+//           Normal normal = cell.calculateCentroid() - center;
+//           normal.normalize();
+//           if (i == 1 && j == 1 & k == 1) normal[0] += 10.0;
+//           normal.normalize();
+//           int largest_dir = 0;
+//           if (std::fabs(normal[largest_dir]) < std::fabs(normal[1]))
+//             largest_dir = 1;
+//           if (std::fabs(normal[largest_dir]) < std::fabs(normal[2]))
+//             largest_dir = 2;
+//           ReferenceFrame frame;
+//           if (largest_dir == 0)
+//             frame[0] = crossProduct(normal, Normal(0.0, 1.0, 0.0));
+//           else if (largest_dir == 0)
+//             frame[0] = crossProduct(normal, Normal(0.0, 0.0, 1.0));
+//           else
+//             frame[0] = crossProduct(normal, Normal(1.0, 0.0, 0.0));
+//           frame[0].normalize();
+//           frame[1] = crossProduct(normal, frame[0]);
+//           frame[2] = normal;
+//           Paraboloid paraboloid(center + radius * normal, frame,
+//                                 0.5 * curvature, 0.5 * curvature);
+//           ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
+//               cell, liquid_volume_fraction(i, j, k), 1.0e-14, paraboloid);
+//           Paraboloid new_paraboloid(
+//               Pt(center + (radius + solver.getDistance()) * normal), frame,
+//               0.5 * curvature, 0.5 * curvature);
+//           liquid_gas_interface(i, j, k) = new_paraboloid;
+//         }
+//       }
+//     }
+//   }
 
-  // Initialize folders/mesh for very simple I/O
-  int viz_output = 0;
-  double time = 0.0;
-  VTKOutput vtk_io("viz_out", "viz", mesh);
-  vtk_io.addData("VOF", liquid_volume_fraction);
-  vtk_io.writeVTKFile(time);
-  std::vector<ParametrizedSurfaceOutput> surfaces;
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-        if (liquid_volume_fraction(i, j, k) >= global_constants::VF_LOW &&
-            liquid_volume_fraction(i, j, k) <= global_constants::VF_HIGH) {
-          const Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
-          const Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1));
-          const auto cell = IRL::RectangularCuboid::fromBoundingPts(
-              lower_cell_pt, upper_cell_pt);
-          auto volume_and_surface = getVolumeMoments<
-              AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>>(
-              cell, liquid_gas_interface(i, j, k));
-          auto& surface = volume_and_surface.getSurface();
-          surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0 / 3.0) /
-                                 10.0);
-          surfaces.push_back(surface);
-        }
-      }
-    }
-  }
-  vtk_io.writeVTKInterface(time, surfaces, true);
-  ++viz_output;
+//   // Initialize folders/mesh for very simple I/O
+//   int viz_output = 0;
+//   double time = 0.0;
+//   VTKOutput vtk_io("viz_out", "viz", mesh);
+//   vtk_io.addData("VOF", liquid_volume_fraction);
+//   vtk_io.writeVTKFile(time);
+//   std::vector<ParametrizedSurfaceOutput> surfaces;
+//   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+//     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+//       for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+//         if (liquid_volume_fraction(i, j, k) >= global_constants::VF_LOW &&
+//             liquid_volume_fraction(i, j, k) <= global_constants::VF_HIGH) {
+//           const Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+//           const Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k +
+//           1)); const auto cell = IRL::RectangularCuboid::fromBoundingPts(
+//               lower_cell_pt, upper_cell_pt);
+//           auto volume_and_surface = getVolumeMoments<
+//               AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>>(
+//               cell, liquid_gas_interface(i, j, k));
+//           auto& surface = volume_and_surface.getSurface();
+//           surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0
+//           / 3.0)
+//           /
+//                                  10.0);
+//           surfaces.push_back(surface);
+//         }
+//       }
+//     }
+//   }
+//   vtk_io.writeVTKInterface(time, surfaces, true);
+//   ++viz_output;
 
-  // Intialize LVIRA 3x3x3 neighbourhood
-  Paraboloid paraboloid_to_fit = liquid_gas_interface(1, 1, 1);
-  RectangularCuboid stencil_cells[27];
-  std::array<double, 27> stencil_weights;
-  double cellVF[27];
-  LVIRANeighborhood<RectangularCuboid> neighborhood_VF;
-  neighborhood_VF.resize(27);
-  for (int k = 0; k < 3; ++k) {
-    for (int j = 0; j < 3; ++j) {
-      for (int i = 0; i < 3; ++i) {
-        const Pt lower_cell_pt(mesh.x(n_cells / 2 + i - 1),
-                               mesh.y(n_cells / 2 + j - 1),
-                               mesh.z(n_cells / 2 + k - 1));
-        const Pt upper_cell_pt(mesh.x(n_cells / 2 + i), mesh.y(n_cells / 2 + j),
-                               mesh.z(n_cells / 2 + k));
-        stencil_cells[i + j * 3 + k * 9] =
-            RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt);
-        cellVF[i + j * 3 + k * 9] = liquid_volume_fraction(
-            n_cells / 2 + i - 1, n_cells / 2 + j - 1, n_cells / 2 + k - 1);
-        neighborhood_VF.setMember(i + j * 3 + k * 9,
-                                  &stencil_cells[i + j * 3 + k * 9],
-                                  &cellVF[i + j * 3 + k * 9]);
-        // stencil_weights[i + j * 3 + k * 9] = 1.0;
-        // if (i == 1 && j == 1 && k == 1) {
-        //   stencil_weights[i + j * 3 + k * 9] = 1.0;
-        // }
-        // if ((i - 1) * (j - 1) * (k - 1) == 0) {
-        //   stencil_weights[i + j * 3 + k * 9] = 1.0;
-        // }
-        stencil_weights[i + j * 3 + k * 9] =
-            1.0 / static_cast<double>(1 + std::abs(i - 1) * std::abs(i - 1) +
-                                      std::abs(j - 1) * std::abs(j - 1) +
-                                      std::abs(k - 1) * std::abs(k - 1));
-      }
-    }
-  }
-  neighborhood_VF.setCenterOfStencil(13);
+//   // Intialize LVIRA 3x3x3 neighbourhood
+//   Paraboloid paraboloid_to_fit = liquid_gas_interface(1, 1, 1);
+//   RectangularCuboid stencil_cells[27];
+//   std::array<double, 27> stencil_weights;
+//   double cellVF[27];
+//   LVIRANeighborhood<RectangularCuboid> neighborhood_VF;
+//   neighborhood_VF.resize(27);
+//   for (int k = 0; k < 3; ++k) {
+//     for (int j = 0; j < 3; ++j) {
+//       for (int i = 0; i < 3; ++i) {
+//         const Pt lower_cell_pt(mesh.x(n_cells / 2 + i - 1),
+//                                mesh.y(n_cells / 2 + j - 1),
+//                                mesh.z(n_cells / 2 + k - 1));
+//         const Pt upper_cell_pt(mesh.x(n_cells / 2 + i), mesh.y(n_cells / 2
+//         + j),
+//                                mesh.z(n_cells / 2 + k));
+//         stencil_cells[i + j * 3 + k * 9] =
+//             RectangularCuboid::fromBoundingPts(lower_cell_pt,
+//             upper_cell_pt);
+//         cellVF[i + j * 3 + k * 9] = liquid_volume_fraction(
+//             n_cells / 2 + i - 1, n_cells / 2 + j - 1, n_cells / 2 + k - 1);
+//         neighborhood_VF.setMember(i + j * 3 + k * 9,
+//                                   &stencil_cells[i + j * 3 + k * 9],
+//                                   &cellVF[i + j * 3 + k * 9]);
+//         // stencil_weights[i + j * 3 + k * 9] = 1.0;
+//         // if (i == 1 && j == 1 && k == 1) {
+//         //   stencil_weights[i + j * 3 + k * 9] = 1.0;
+//         // }
+//         // if ((i - 1) * (j - 1) * (k - 1) == 0) {
+//         //   stencil_weights[i + j * 3 + k * 9] = 1.0;
+//         // }
+//         stencil_weights[i + j * 3 + k * 9] =
+//             1.0 / static_cast<double>(1 + std::abs(i - 1) * std::abs(i - 1)
+//             +
+//                                       std::abs(j - 1) * std::abs(j - 1) +
+//                                       std::abs(k - 1) * std::abs(k - 1));
+//       }
+//     }
+//   }
+//   neighborhood_VF.setCenterOfStencil(13);
 
-  // for (int n = 0; n < 10; n++) {
-  // Update normal
-  //      {
-  //        auto central_cell = neighborhood_VF.getCenterCell();
-  //        auto central_moment =
-  //        neighborhood_VF.getCenterCellStoredMoments(); auto
-  //        volume_and_surface =
-  //            getVolumeMoments<AddSurfaceOutput<Volume,
-  //    ParametrizedSurfaceOutput>>( central_cell, paraboloid_to_fit); auto&
-  //    surface = volume_and_surface.getSurface(); auto new_normal_local =
-  //    surface.getAverageNormal(); auto& ref_frame =
-  //    paraboloid_to_fit.getReferenceFrame(); auto new_normal = Normal(0.0,
-  //    0.0, 0.0); for (UnsignedIndex_t d = 0; d < 3; ++d) { for
-  //    (UnsignedIndex_t n = 0; n < 3; ++n) { new_normal[n] += ref_frame[d][n]
-  //    * new_normal_local[d];
-  //          }
-  //        }
-  //        int largest_dir = 0;
-  //        if (std::fabs(new_normal[largest_dir]) < std::fabs(new_normal[1]))
-  //          largest_dir = 1;
-  //        if (std::fabs(new_normal[largest_dir]) < std::fabs(new_normal[2]))
-  //          largest_dir = 2;
-  //        ReferenceFrame frame;
-  //        if (largest_dir == 0)
-  //          frame[0] = crossProduct(new_normal, Normal(0.0, 1.0, 0.0));
-  //        else if (largest_dir == 0)
-  //          frame[0] = crossProduct(new_normal, Normal(0.0, 0.0, 1.0));
-  //        else
-  //          frame[0] = crossProduct(new_normal, Normal(1.0, 0.0, 0.0));
-  //        frame[0].normalize();
-  //        frame[1] = crossProduct(new_normal, frame[0]);
-  //        frame[2] = new_normal;
-  //        auto& aligned_paraboloid =
-  //        paraboloid_to_fit.getAlignedParaboloid(); auto& datum =
-  //        paraboloid_to_fit.getDatum(); auto new_paraboloid =
-  //        Paraboloid(datum, frame, aligned_paraboloid.a(),
-  //                                         aligned_paraboloid.b());
-  //        ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
-  //            central_cell, central_moment, 1.0e-14, new_paraboloid);
-  //        paraboloid_to_fit =
-  //            Paraboloid(datum + solver.getDistance() * new_normal, frame,
-  //                       aligned_paraboloid.a(), aligned_paraboloid.b());
-  //      }
+//   // for (int n = 0; n < 10; n++) {
+//   // Update normal
+//   //      {
+//   //        auto central_cell = neighborhood_VF.getCenterCell();
+//   //        auto central_moment =
+//   //        neighborhood_VF.getCenterCellStoredMoments(); auto
+//   //        volume_and_surface =
+//   //            getVolumeMoments<AddSurfaceOutput<Volume,
+//   //    ParametrizedSurfaceOutput>>( central_cell, paraboloid_to_fit);
+//   auto&
+//   //    surface = volume_and_surface.getSurface(); auto new_normal_local =
+//   //    surface.getAverageNormal(); auto& ref_frame =
+//   //    paraboloid_to_fit.getReferenceFrame(); auto new_normal =
+//   Normal(0.0,
+//   //    0.0, 0.0); for (UnsignedIndex_t d = 0; d < 3; ++d) { for
+//   //    (UnsignedIndex_t n = 0; n < 3; ++n) { new_normal[n] +=
+//   ref_frame[d][n]
+//   //    * new_normal_local[d];
+//   //          }
+//   //        }
+//   //        int largest_dir = 0;
+//   //        if (std::fabs(new_normal[largest_dir]) <
+//   std::fabs(new_normal[1]))
+//   //          largest_dir = 1;
+//   //        if (std::fabs(new_normal[largest_dir]) <
+//   std::fabs(new_normal[2]))
+//   //          largest_dir = 2;
+//   //        ReferenceFrame frame;
+//   //        if (largest_dir == 0)
+//   //          frame[0] = crossProduct(new_normal, Normal(0.0, 1.0, 0.0));
+//   //        else if (largest_dir == 0)
+//   //          frame[0] = crossProduct(new_normal, Normal(0.0, 0.0, 1.0));
+//   //        else
+//   //          frame[0] = crossProduct(new_normal, Normal(1.0, 0.0, 0.0));
+//   //        frame[0].normalize();
+//   //        frame[1] = crossProduct(new_normal, frame[0]);
+//   //        frame[2] = new_normal;
+//   //        auto& aligned_paraboloid =
+//   //        paraboloid_to_fit.getAlignedParaboloid(); auto& datum =
+//   //        paraboloid_to_fit.getDatum(); auto new_paraboloid =
+//   //        Paraboloid(datum, frame, aligned_paraboloid.a(),
+//   //                                         aligned_paraboloid.b());
+//   //        ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
+//   //            central_cell, central_moment, 1.0e-14, new_paraboloid);
+//   //        paraboloid_to_fit =
+//   //            Paraboloid(datum + solver.getDistance() * new_normal,
+//   frame,
+//   //                       aligned_paraboloid.a(), aligned_paraboloid.b());
+//   //      }
 
-  // We assume 5 param: 3 translations and 2 curvatures
+//   // We assume 5 param: 3 translations and 2 curvatures
 
-  double penalty_param = 1.0;
-  double lag_param = 0.0;
-  for (int n = 0; n < 100; ++n) {
-    // Initialize Jacobian
-    Eigen::Matrix<double, 8, 27> jacobian_transpose;
-    Eigen::Matrix<double, 27, 1> f;
-    Eigen::Matrix<double, 27, 27> W;
-    W.setZero();
-    for (int i = 0; i < 27; i++) W(i, i) = stencil_weights[i];
-    Eigen::Matrix<double, 8, 1> x = {
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        paraboloid_to_fit.getAlignedParaboloid().a(),
-        paraboloid_to_fit.getAlignedParaboloid().b()};
-    std::cout << "x0 = " << x << std::endl;
-    ComputeJacobianAndF(paraboloid_to_fit, jacobian_transpose, f,
-                        neighborhood_VF);
-    //   std::cout << "Initial Jacobian = " << jacobian_transpose <<
-    //   std::endl;
-    double constraint = f(13, 0);
-    double old_constraint = constraint;
-    f(13, 0) *= std::sqrt(penalty_param);
-    f(13, 0) += lag_param / (2.0 * std::sqrt(penalty_param));
-    for (int i = 0; i < 8; ++i) {
-      jacobian_transpose(i, 13) *= std::sqrt(penalty_param);
-    }
+//   double penalty_param = 1.0;
+//   double lag_param = 0.0;
+//   for (int n = 0; n < 100; ++n) {
+//     // Initialize Jacobian
+//     Eigen::Matrix<double, 8, 27> jacobian_transpose;
+//     Eigen::Matrix<double, 27, 1> f;
+//     Eigen::Matrix<double, 27, 27> W;
+//     W.setZero();
+//     for (int i = 0; i < 27; i++) W(i, i) = stencil_weights[i];
+//     Eigen::Matrix<double, 8, 1> x = {
+//         0.0,
+//         0.0,
+//         0.0,
+//         0.0,
+//         0.0,
+//         0.0,
+//         paraboloid_to_fit.getAlignedParaboloid().a(),
+//         paraboloid_to_fit.getAlignedParaboloid().b()};
+//     std::cout << "x0 = " << x << std::endl;
+//     ComputeJacobianAndF(paraboloid_to_fit, jacobian_transpose, f,
+//                         neighborhood_VF);
+//     //   std::cout << "Initial Jacobian = " << jacobian_transpose <<
+//     //   std::endl;
+//     double constraint = f(13, 0);
+//     double old_constraint = constraint;
+//     f(13, 0) *= std::sqrt(penalty_param);
+//     f(13, 0) += lag_param / (2.0 * std::sqrt(penalty_param));
+//     for (int i = 0; i < 8; ++i) {
+//       jacobian_transpose(i, 13) *= std::sqrt(penalty_param);
+//     }
 
-    // Levenberg-Marquardt algo
-    double epsilon_1 = 1.0e-6;
-    double epsilon_2 = 1.0e-6;
-    double epsilon_3 = 1.0e-6;
-    double tau = 1.0e-3;
-    int k = 0, k_max = 100;
-    double nu = 2.0;
-    Eigen::Matrix<double, 8, 8> A =
-        jacobian_transpose * W * jacobian_transpose.transpose();
-    Eigen::Matrix<double, 8, 1> g = jacobian_transpose * W * f;
-    bool found = g.lpNorm<Eigen::Infinity>() < epsilon_1;
-    double mu = -1.0e15;
-    for (int i = 0; i < 8; ++i) mu = std::max(mu, A(i, i));
-    mu *= tau;
-    while (!found && k < k_max) {
-      k++;
-      for (int i = 0; i < 8; ++i) {
-        A(i, i) += mu;
-      }
-      auto h = A.llt().solve(g);
-      if (h.norm() < (epsilon_2 * x.norm() + epsilon_2)) {
-        found = true;
-      } else {
-        double F = f.transpose() * W * f;
-        Eigen::Matrix<double, 8, 1> x_new = x + h;
-        auto& datum = paraboloid_to_fit.getDatum();
-        auto& frame = paraboloid_to_fit.getReferenceFrame();
-        auto& aligned_paraboloid = paraboloid_to_fit.getAlignedParaboloid();
-        Pt new_datum = datum + x_new(0, 0) * frame[0] + x_new(1, 0) * frame[1] +
-                       x_new(2, 0) * frame[2];
-        UnitQuaternion x_rotation(x_new(3, 0), frame[0]);
-        UnitQuaternion y_rotation(x_new(4, 0), frame[1]);
-        UnitQuaternion z_rotation(x_new(5, 0), frame[2]);
-        auto total_rotation = x_rotation * y_rotation * z_rotation;
-        total_rotation.normalize();
-        const ReferenceFrame new_frame = total_rotation * frame;
-        auto new_paraboloid =
-            Paraboloid(new_datum, new_frame, x_new(6, 0), x_new(7, 0));
-        // ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
-        //     neighborhood_VF.getCenterCell(),
-        //     neighborhood_VF.getCenterCellStoredMoments(), 1.0e-14,
-        //     new_paraboloid);
-        // Pt new_corrected_datum =
-        //     new_datum + solver.getDistance() * new_frame[2];
-        Pt new_corrected_datum = new_datum;
-        auto new_corrected_paraboloid = Paraboloid(
-            new_corrected_datum, new_frame, x_new(6, 0), x_new(7, 0));
-        ComputeJacobianAndF(new_corrected_paraboloid, jacobian_transpose, f,
-                            neighborhood_VF);
-        constraint = f(13, 0);
-        f(13, 0) *= std::sqrt(penalty_param);
-        f(13, 0) += lag_param / (2.0 * std::sqrt(penalty_param));
-        for (int i = 0; i < 8; ++i) {
-          jacobian_transpose(i, 13) *= std::sqrt(penalty_param);
-        }
-        F -= f.transpose() * W * f;
-        double rho = F / (h.transpose() * (mu * h + g));
-        if (rho > 0.0) {
-          paraboloid_to_fit = Paraboloid(new_corrected_datum, new_frame,
-                                         x_new(6, 0), x_new(7, 0));
-          x(6, 0) = x_new(6, 0);
-          x(7, 0) = x_new(7, 0);
-          A = jacobian_transpose * W * jacobian_transpose.transpose();
-          g = jacobian_transpose * W * f;
-          found = (g.lpNorm<Eigen::Infinity>() < epsilon_1) ||
-                  (f.squaredNorm() < epsilon_3);
-          mu *= std::max(1.0 / 3.0, 1.0 - std::pow(2.0 * rho - 1.0, 3.0));
-          nu = 2.0;
+//     // Levenberg-Marquardt algo
+//     double epsilon_1 = 1.0e-6;
+//     double epsilon_2 = 1.0e-6;
+//     double epsilon_3 = 1.0e-6;
+//     double tau = 1.0e-3;
+//     int k = 0, k_max = 100;
+//     double nu = 2.0;
+//     Eigen::Matrix<double, 8, 8> A =
+//         jacobian_transpose * W * jacobian_transpose.transpose();
+//     Eigen::Matrix<double, 8, 1> g = jacobian_transpose * W * f;
+//     bool found = g.lpNorm<Eigen::Infinity>() < epsilon_1;
+//     double mu = -1.0e15;
+//     for (int i = 0; i < 8; ++i) mu = std::max(mu, A(i, i));
+//     mu *= tau;
+//     while (!found && k < k_max) {
+//       k++;
+//       for (int i = 0; i < 8; ++i) {
+//         A(i, i) += mu;
+//       }
+//       auto h = A.llt().solve(g);
+//       if (h.norm() < (epsilon_2 * x.norm() + epsilon_2)) {
+//         found = true;
+//       } else {
+//         double F = f.transpose() * W * f;
+//         Eigen::Matrix<double, 8, 1> x_new = x + h;
+//         auto& datum = paraboloid_to_fit.getDatum();
+//         auto& frame = paraboloid_to_fit.getReferenceFrame();
+//         auto& aligned_paraboloid =
+//         paraboloid_to_fit.getAlignedParaboloid(); Pt new_datum = datum +
+//         x_new(0, 0) * frame[0] + x_new(1, 0) * frame[1] +
+//                        x_new(2, 0) * frame[2];
+//         UnitQuaternion x_rotation(x_new(3, 0), frame[0]);
+//         UnitQuaternion y_rotation(x_new(4, 0), frame[1]);
+//         UnitQuaternion z_rotation(x_new(5, 0), frame[2]);
+//         auto total_rotation = x_rotation * y_rotation * z_rotation;
+//         total_rotation.normalize();
+//         const ReferenceFrame new_frame = total_rotation * frame;
+//         auto new_paraboloid =
+//             Paraboloid(new_datum, new_frame, x_new(6, 0), x_new(7, 0));
+//         // ProgressiveDistanceSolverParaboloid<RectangularCuboid> solver(
+//         //     neighborhood_VF.getCenterCell(),
+//         //     neighborhood_VF.getCenterCellStoredMoments(), 1.0e-14,
+//         //     new_paraboloid);
+//         // Pt new_corrected_datum =
+//         //     new_datum + solver.getDistance() * new_frame[2];
+//         Pt new_corrected_datum = new_datum;
+//         auto new_corrected_paraboloid = Paraboloid(
+//             new_corrected_datum, new_frame, x_new(6, 0), x_new(7, 0));
+//         ComputeJacobianAndF(new_corrected_paraboloid, jacobian_transpose,
+//         f,
+//                             neighborhood_VF);
+//         constraint = f(13, 0);
+//         f(13, 0) *= std::sqrt(penalty_param);
+//         f(13, 0) += lag_param / (2.0 * std::sqrt(penalty_param));
+//         for (int i = 0; i < 8; ++i) {
+//           jacobian_transpose(i, 13) *= std::sqrt(penalty_param);
+//         }
+//         F -= f.transpose() * W * f;
+//         double rho = F / (h.transpose() * (mu * h + g));
+//         if (rho > 0.0) {
+//           paraboloid_to_fit = Paraboloid(new_corrected_datum, new_frame,
+//                                          x_new(6, 0), x_new(7, 0));
+//           x(6, 0) = x_new(6, 0);
+//           x(7, 0) = x_new(7, 0);
+//           A = jacobian_transpose * W * jacobian_transpose.transpose();
+//           g = jacobian_transpose * W * f;
+//           found = (g.lpNorm<Eigen::Infinity>() < epsilon_1) ||
+//                   (f.squaredNorm() < epsilon_3);
+//           mu *= std::max(1.0 / 3.0, 1.0 - std::pow(2.0 * rho - 1.0, 3.0));
+//           nu = 2.0;
 
-          //////////////////////////////
-          surfaces.clear();
-          // const auto cell = IRL::RectangularCuboid::fromBoundingPts(
-          //     Pt(-0.5, -0.5, -0.5), Pt(0.5, 0.5, 0.5));
-          const auto cell = neighborhood_VF.getCenterCell();
-          auto volume_and_surface = getVolumeMoments<
-              AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>>(
-              cell, new_corrected_paraboloid);
-          auto& surface = volume_and_surface.getSurface();
-          surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0 / 3.0) /
-                                 30.0);
-          surfaces.push_back(surface);
-          vtk_io.writeVTKInterface(time, surfaces, true);
-          ++viz_output;
-          /////////////////////////////////
-        } else {
-          for (int i = 0; i < 8; ++i) {
-            A(i, i) -= mu;
-          }
-          mu *= nu;
-          nu *= 2.0;
-        }
-      }
-      //   std::cout << "x = " << x << std::endl;
-    }
-    std::cout << "Converged in " << k << " iterations" << std::endl;
-    std::cout << "Lagrange param = " << lag_param << std::endl;
-    std::cout << "Penalty  param = " << penalty_param << std::endl;
-    std::cout << "Constraint = " << std::fabs(constraint) << std::endl;
+//           //////////////////////////////
+//           surfaces.clear();
+//           // const auto cell = IRL::RectangularCuboid::fromBoundingPts(
+//           //     Pt(-0.5, -0.5, -0.5), Pt(0.5, 0.5, 0.5));
+//           const auto cell = neighborhood_VF.getCenterCell();
+//           auto volume_and_surface = getVolumeMoments<
+//               AddSurfaceOutput<Volume, ParametrizedSurfaceOutput>>(
+//               cell, new_corrected_paraboloid);
+//           auto& surface = volume_and_surface.getSurface();
+//           surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0
+//           / 3.0)
+//           /
+//                                  30.0);
+//           surfaces.push_back(surface);
+//           vtk_io.writeVTKInterface(time, surfaces, true);
+//           ++viz_output;
+//           /////////////////////////////////
+//         } else {
+//           for (int i = 0; i < 8; ++i) {
+//             A(i, i) -= mu;
+//           }
+//           mu *= nu;
+//           nu *= 2.0;
+//         }
+//       }
+//       //   std::cout << "x = " << x << std::endl;
+//     }
+//     std::cout << "Converged in " << k << " iterations" << std::endl;
+//     std::cout << "Lagrange param = " << lag_param << std::endl;
+//     std::cout << "Penalty  param = " << penalty_param << std::endl;
+//     std::cout << "Constraint = " << std::fabs(constraint) << std::endl;
 
-    // Update lagrange multiplier
-    lag_param += 2.0 * penalty_param * constraint;
-    if (std::fabs(constraint) > 0.25 * std::fabs(old_constraint)) {
-      penalty_param *= 2.0;
-    }
-    old_constraint = constraint;
-    if (std::fabs(constraint) < epsilon_1) {
-      std::cout << "Exiting big loop after " << n + 1 << " iterations"
-                << std::endl;
-      break;
-    }
-  }
+//     // Update lagrange multiplier
+//     lag_param += 2.0 * penalty_param * constraint;
+//     if (std::fabs(constraint) > 0.25 * std::fabs(old_constraint)) {
+//       penalty_param *= 2.0;
+//     }
+//     old_constraint = constraint;
+//     if (std::fabs(constraint) < epsilon_1) {
+//       std::cout << "Exiting big loop after " << n + 1 << " iterations"
+//                 << std::endl;
+//       break;
+//     }
+//   }
 
-  //   // Final result
-  //   auto& datum = paraboloid_to_fit.getDatum();
-  //   auto& frame = paraboloid_to_fit.getReferenceFrame();
-  //   auto& aligned_paraboloid = paraboloid_to_fit.getAlignedParaboloid();
-  //   Pt new_datum =
-  //       datum + x(0, 0) * frame[0] + x(1, 0) * frame[1] + x(2, 0) *
-  //       frame[2];
-  //   UnitQuaternion x_rotation(x(3, 0), frame[0]);
-  //   UnitQuaternion y_rotation(x(4, 0), frame[1]);
-  //   UnitQuaternion z_rotation(x(5, 0), frame[2]);
-  //   auto total_rotation = x_rotation * y_rotation * z_rotation;
-  //   total_rotation.normalize();
-  //   ReferenceFrame new_frame = total_rotation * frame;
-  //   auto new_paraboloid = Paraboloid(new_datum, new_frame, x(6, 0), x(7,
-  //   0)); surfaces.clear();
-  //   // const auto cell = IRL::RectangularCuboid::fromBoundingPts(
-  //   //     Pt(-0.5, -0.5, -0.5), Pt(0.5, 0.5, 0.5));
-  //   const auto cell = neighborhood_VF.getCenterCell();
-  //   auto volume_and_surface =
-  //       getVolumeMoments<AddSurfaceOutput<Volume,
-  //       ParametrizedSurfaceOutput>>(
-  //           cell, new_paraboloid);
-  //   auto& surface = volume_and_surface.getSurface();
-  //   surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0 / 3.0)
-  //   / 30.0); surfaces.push_back(surface); vtk_io.writeVTKInterface(time,
-  //   surfaces, true);
-  //   ++viz_output;
-  //   //    }
-}
+//   // Final result
+//   auto& datum = paraboloid_to_fit.getDatum();
+//   auto& frame = paraboloid_to_fit.getReferenceFrame();
+//   auto& aligned_paraboloid = paraboloid_to_fit.getAlignedParaboloid();
+//   Pt new_datum =
+//       datum + x(0, 0) * frame[0] + x(1, 0) * frame[1] + x(2, 0) *
+//       frame[2];
+//   UnitQuaternion x_rotation(x(3, 0), frame[0]);
+//   UnitQuaternion y_rotation(x(4, 0), frame[1]);
+//   UnitQuaternion z_rotation(x(5, 0), frame[2]);
+//   auto total_rotation = x_rotation * y_rotation * z_rotation;
+//   total_rotation.normalize();
+//   ReferenceFrame new_frame = total_rotation * frame;
+//   auto new_paraboloid = Paraboloid(new_datum, new_frame, x(6, 0), x(7,
+//   0)); surfaces.clear();
+//   // const auto cell = IRL::RectangularCuboid::fromBoundingPts(
+//   //     Pt(-0.5, -0.5, -0.5), Pt(0.5, 0.5, 0.5));
+//   const auto cell = neighborhood_VF.getCenterCell();
+//   auto volume_and_surface =
+//       getVolumeMoments<AddSurfaceOutput<Volume,
+//       ParametrizedSurfaceOutput>>(
+//           cell, new_paraboloid);
+//   auto& surface = volume_and_surface.getSurface();
+//   surface.setLengthScale(std::pow(cell.calculateVolume(), 1.0 / 3.0)
+//   / 30.0); surfaces.push_back(surface); vtk_io.writeVTKInterface(time,
+//   surfaces, true);
+//   ++viz_output;
+//   //    }
+// }
 
-void ComputeJacobianAndF(Paraboloid& paraboloid,
-                         Eigen::Matrix<double, 8, 27>& jacobian_transpose,
-                         Eigen::Matrix<double, 27, 1>& f,
-                         LVIRANeighborhood<RectangularCuboid> lvira_stencil) {
-  using MyGradientType = ParaboloidGradientLocal;
-  using MyPtType = PtWithGradient<MyGradientType>;
+// void ComputeJacobianAndF(Paraboloid& paraboloid,
+//                          Eigen::Matrix<double, 8, 27>& jacobian_transpose,
+//                          Eigen::Matrix<double, 27, 1>& f,
+//                          LVIRANeighborhood<RectangularCuboid>
+//                          lvira_stencil)
+//                          {
+//   using MyGradientType = ParaboloidGradientLocal;
+//   using MyPtType = PtWithGradient<MyGradientType>;
 
-  for (int k = 0; k < 3; ++k) {
-    for (int j = 0; j < 3; ++j) {
-      for (int i = 0; i < 3; ++i) {
-        const int cell_id = i + j * 3 + k * 9;
-        auto cell = lvira_stencil.getCell(cell_id);
-        auto moments =
-            cell.calculateVolume() * lvira_stencil.getStoredMoments(cell_id);
-        auto data_cell =
-            StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
-        auto moments_with_gradients =
-            getVolumeMoments<VolumeWithGradient<MyGradientType>>(data_cell,
-                                                                 paraboloid);
-        f(cell_id, 0) = moments - moments_with_gradients.volume();
-        auto gradient = moments_with_gradients.volume_gradient();
-        jacobian_transpose(0, cell_id) = gradient.getGradTx();
-        jacobian_transpose(1, cell_id) = gradient.getGradTy();
-        jacobian_transpose(2, cell_id) = gradient.getGradTz();
-        jacobian_transpose(3, cell_id) = gradient.getGradRx();
-        jacobian_transpose(4, cell_id) = gradient.getGradRy();
-        jacobian_transpose(5, cell_id) = gradient.getGradRz();
-        jacobian_transpose(6, cell_id) = gradient.getGradA();
-        jacobian_transpose(7, cell_id) = gradient.getGradB();
-      }
-    }
-  }
-}
+//   for (int k = 0; k < 3; ++k) {
+//     for (int j = 0; j < 3; ++j) {
+//       for (int i = 0; i < 3; ++i) {
+//         const int cell_id = i + j * 3 + k * 9;
+//         auto cell = lvira_stencil.getCell(cell_id);
+//         auto moments =
+//             cell.calculateVolume() *
+//             lvira_stencil.getStoredMoments(cell_id);
+//         auto data_cell =
+//             StoredRectangularCuboid<MyPtType>::fromOtherPolytope(cell);
+//         auto moments_with_gradients =
+//             getVolumeMoments<VolumeWithGradient<MyGradientType>>(data_cell,
+//                                                                  paraboloid);
+//         f(cell_id, 0) = moments - moments_with_gradients.volume();
+//         auto gradient = moments_with_gradients.volume_gradient();
+//         jacobian_transpose(0, cell_id) = gradient.getGradTx();
+//         jacobian_transpose(1, cell_id) = gradient.getGradTy();
+//         jacobian_transpose(2, cell_id) = gradient.getGradTz();
+//         jacobian_transpose(3, cell_id) = gradient.getGradRx();
+//         jacobian_transpose(4, cell_id) = gradient.getGradRy();
+//         jacobian_transpose(5, cell_id) = gradient.getGradRz();
+//         jacobian_transpose(6, cell_id) = gradient.getGradA();
+//         jacobian_transpose(7, cell_id) = gradient.getGradB();
+//       }
+//     }
+//   }
+// }
 
 }  // namespace IRL

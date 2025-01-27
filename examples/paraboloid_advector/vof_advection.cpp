@@ -391,10 +391,14 @@ void FullLagrangian::advectVOF(
         (*a_liquid_centroid)(i, j, k) = cell_volume_moments[0].centroid();
         (*a_gas_centroid)(i, j, k) = cell_volume_moments[1].centroid();
 
-        if ((*a_liquid_volume_fraction)(i, j, k) < 0.0) {
+        if ((*a_liquid_volume_fraction)(i, j, k) < IRL::global_constants::VF_LOW) {
           (*a_liquid_volume_fraction)(i, j, k) = 0.0;
-        } else if ((*a_liquid_volume_fraction)(i, j, k) > 1.0) {
+          (*a_liquid_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+          (*a_gas_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+        } else if ((*a_liquid_volume_fraction)(i, j, k) > IRL::global_constants::VF_HIGH) {
           (*a_liquid_volume_fraction)(i, j, k) = 1.0;
+          (*a_liquid_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+          (*a_gas_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
         }
 
         // if ((*a_liquid_volume_fraction)(i, j, k) <
