@@ -375,11 +375,6 @@ void SemiLagrangian::advectVOF(
                (face_flux[1])(i, j + 1, k)[1].volume() +
                (face_flux[2])(i, j, k)[1].volume() -
                (face_flux[2])(i, j, k + 1)[1].volume());
-
-          (*a_liquid_centroid)(i, j, k) = back_project_vertex(
-              (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
-          (*a_gas_centroid)(i, j, k) = back_project_vertex(
-              (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
         }
       }
     }
@@ -555,11 +550,6 @@ void SemiLagrangianCorrected::advectVOF(
                (face_flux[1])(i, j + 1, k)[1].volume() +
                (face_flux[2])(i, j, k)[1].volume() -
                (face_flux[2])(i, j, k + 1)[1].volume());
-
-          (*a_liquid_centroid)(i, j, k) = back_project_vertex(
-              (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
-          (*a_gas_centroid)(i, j, k) = back_project_vertex(
-              (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
         }
       }
     }

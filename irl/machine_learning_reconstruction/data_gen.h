@@ -15,6 +15,21 @@
 #include <iostream>
 #include <cstdlib>
 
+// #include "tensor.h"
+// #include "runningtime.h"
+// #include "Tensor3D.h"
+// #include "Tensor3D.cpp"
+// #include "cpd_als.cpp"
+// #include "tucker_hosvd.cpp"
+// #include "tensor_hooi.cpp"
+// #include "t_svd.cpp"
+// #include "tensor_train.cpp"
+// #include "cpd_gen.cpp"
+// #include "mode_n_product.cpp"
+// #include <mkl.h>
+
+//using namespace TensorLet_decomposition;
+
 namespace IRL 
 {
     class data_gen
@@ -64,31 +79,6 @@ namespace IRL
                 << "," << angles[0] << "," << angles[1] << "," << angles[2]
                 << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
-
-                std::ofstream type;
-                name = "type.txt";
-                type.open(name, std::ios_base::app);
-                //type << std::to_string(0) << "," << std::to_string(0) << "," << std::to_string(1) << "\n";
-                type << std::to_string(0) << "\n";
-                type.close();
-
-                /*std::ofstream classification;
-                std::string data_name = "type.txt";
-                classification.open(data_name, std::ios_base::app);
-                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
-                {
-                    classification << "0,1,0" << " \n";
-                }
-                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
-                {
-                    classification << "1,0,0" << " \n";
-                }
-                else
-                {
-                    classification << "0,0,1" << " \n";
-                }
-                classification.close();*/
-
                 
                 bool flip = false;
                 if (!all)
@@ -150,30 +140,6 @@ namespace IRL
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
 
-                IRL::Normal dir = normal;
-                dir.normalize();
-                auto moments = sm.calculate_moments(fractions, dir, number_of_cells);
-
-                std::ofstream moments_out;
-                std::string moments_name = "moments.txt";
-                moments_out.open(moments_name, std::ios_base::app);
-                auto cell = IRL::RectangularCuboid::fromBoundingPts(
-                                            IRL::Pt(-number_of_cells/2.0,-number_of_cells/2.0,-number_of_cells/2.0),
-                                            IRL::Pt(number_of_cells/2.0,number_of_cells/2.0,number_of_cells/2.0));
-                auto surface_stencil = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                double area = surface_stencil.getSurface().getSurfaceArea();
-                //moments[0] = moments[0] / pow(area,1.0/5.0);
-                // moments[1] = moments[1] / pow(area,(5.0));
-                // moments[2] = moments[2] / pow(area,(15.0/2.0));
-                //moments[moments.sizes()[0]-1] = moments[moments.sizes()[0]-1] / area;                          
-                for (int i = 0; i < moments.sizes()[0]; ++i)
-                {
-                    moments_out << moments[i].item<double>() << ",";
-                }
-                //moments_out << paraboloid.getAlignedParaboloid().a() + paraboloid.getAlignedParaboloid().b() << ",";
-                moments_out << "\n";
-                moments_out.close();  
-
                 switch (direction)
                 {
                     case 1:
@@ -232,29 +198,6 @@ namespace IRL
                 << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
                 coefficients.close();
 
-                std::ofstream classification;
-                std::string data_name = "type.txt";
-                //classification.open(data_name, std::ios_base::app);
-                if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) > 1) && (paraboloid.getAlignedParaboloid().a() < 0.2 || paraboloid.getAlignedParaboloid().b() < 0.2))
-                {
-                    //classification << "0,1,0" << " \n";
-                }
-                else if ((abs(paraboloid.getAlignedParaboloid().a() - paraboloid.getAlignedParaboloid().b()) < 1) && (paraboloid.getAlignedParaboloid().a() > 2 || paraboloid.getAlignedParaboloid().b() > 2))
-                {
-                    //classification << "1,0,0" << " \n";
-                }
-                else
-                {
-                    //classification << "0,0,1" << " \n";
-                }
-                //classification.close();
-
-                std::ofstream inter;
-                std::string interface_name = "interface.txt";
-                //inter.open(interface_name, std::ios_base::app);
-                //inter << "1,0" << " \n";
-                //inter.close();
-
                 torch::Tensor result;
                 bool flip = false;
                 if (!all)
@@ -282,112 +225,6 @@ namespace IRL
                     fractions.push_back(result[i].item<double>());
                 }
 
-                int p1 = rand() % 10;
-                int track[3][3][3] = {0};
-                // bool flag = false;
-                // if (p1 == 0)
-                // {
-                //     int p2 = rand() % 18;
-                //     int ii = 10;
-                //     int jj = 10;
-                //     int kk = 10;
-                //     switch (p2)
-                //     {
-                //         case 0:
-                //         kk = 0;
-                //         break;
-                //         case 1:
-                //         kk = 2;
-                //         break;
-                //         case 2:
-                //         jj = 0;
-                //         break;
-                //         case 3:
-                //         jj = 2;
-                //         break;
-                //         case 4:
-                //         ii = 0;
-                //         break;
-                //         case 5:
-                //         ii = 2;
-                //         break;
-                //         case 6:
-                //         kk = 0;
-                //         jj = 0;
-                //         break;
-                //         case 7:
-                //         kk = 2;
-                //         jj = 0;
-                //         break;
-                //         case 8:
-                //         jj = 0;
-                //         ii = 0;
-                //         break;
-                //         case 9:
-                //         jj = 2;
-                //         ii = 0;
-                //         break;
-                //         case 10:
-                //         ii = 0;
-                //         kk = 0;
-                //         break;
-                //         case 11:
-                //         ii = 2;
-                //         kk = 0;
-                //         break;
-                //         case 12:
-                //         kk = 0;
-                //         jj = 2;
-                //         break;
-                //         case 13:
-                //         kk = 2;
-                //         jj = 2;
-                //         break;
-                //         case 14:
-                //         jj = 0;
-                //         ii = 2;
-                //         break;
-                //         case 15:
-                //         jj = 2;
-                //         ii = 2;
-                //         break;
-                //         case 16:
-                //         ii = 0;
-                //         kk = 2;
-                //         break;
-                //         case 17:
-                //         ii = 2;
-                //         kk = 2;
-                //         break;
-                //     }
-                //     while (!flag)
-                //     {
-                //         for (int i = 0; i < 3; ++i)
-                //         {
-                //             for (int j = 0; j < 3; ++j)
-                //             {
-                //                 for (int k = 0; k < 3; ++k)
-                //                 {
-                //                     //if (kk == k || jj == j || ii == i)
-                //                     if (rand() % 5 == 0)
-                //                     {
-                //                         track[i][j][k] = 1;
-                //                         fractions[7*(i*9+j*3+k)] = -10;
-                //                         fractions[7*(i*9+j*3+k)+1] = -10;
-                //                         fractions[7*(i*9+j*3+k)+2] = -10;
-                //                         fractions[7*(i*9+j*3+k)+3] = -10;
-                //                         fractions[7*(i*9+j*3+k)+4] = -10;
-                //                         fractions[7*(i*9+j*3+k)+5] = -10;
-                //                         fractions[7*(i*9+j*3+k)+6] = -10;
-                //                         flag = true;
-                //                     }
-                //                 }   
-                //             }
-                //         }
-                //     }
-                // }
-                
-
                 int direction = 0;
                 std::vector<double> center;
                 auto sm = IRL::spatial_moments();
@@ -398,67 +235,45 @@ namespace IRL
                 }
                 else
                 {
-                    //center = sm.get_mass_centers_all_with_track(&fractions, track);
                     center = sm.get_mass_centers_all(&fractions);
                     direction = rotateFractions_all(&fractions,center);
                 }
 
                 std::ofstream output;
-                data_name = "fractions.txt";
+                std::string data_name = "fractions.txt";
                 output.open(data_name, std::ios_base::app);
 
-                int p = rand() % 8;
+                int p = 0;//rand() % 8;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 int mod = 4;
                 if (all)
                 {
                     mod = 7;
                 }
-                int ii = 0;
-                int jj = 0;
-                int kk = 0;
                 for (int i = 0; i < result.sizes()[0]; ++i)
                 {
-                    if (fractions[i] > 9)
-                    {
-                        fractions[i] = -10;
-                    }
                     if (p == 0)
                     {
                         output << fractions[i] << ",";
                     }
                     else
                     {
-                        //int r = rand() % 3 - 1;
-                        /*double c = (rand() % 401 - 200) / 1000.0;
-                        if (i % mod != 0)
-                        {
-                            if (fractions[i] + fractions[i]*c > 0.5)
-                            {
-                                output << 0.5 << ",";
-                            }
-                            else if (fractions[i] + fractions[i]*c < -0.5)
-                            {
-                                output << -0.5 << ",";
-                            }
-                            else
-                            {
-                                output << fractions[i] + fractions[i]*c << ",";
-                            }
-                        }*/
                         double c = (rand() % 201 - 100) / 1000.0;
                         if (i % mod != 0 && fractions[i] > -9)
                         {
                             if (fractions[i] + c > 0.5)
                             {
+                                fractions[i] = 0.5;
                                 output << 0.5 << ",";
                             }
                             else if (fractions[i] + c < -0.5)
                             {
+                                fractions[i] = -0.5;
                                 output << -0.5 << ",";
                             }
                             else
                             {
                                 output << fractions[i] + c << ",";
+                                fractions[i] = fractions[i] + c;
                             }
                         }
                         else
@@ -470,38 +285,41 @@ namespace IRL
                 output << "\n";
                 output.close();  
 
-                std::ofstream normals;
-                std::string normals_name = "normals.txt";
-                //normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
                 auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
+                double curv = surface.getAverageGaussianCurvature();
 
-                double origin[3];
                 IRL::Normal axis;
-                origin[0] = paraboloid.getDatum().x();
-                origin[1] = paraboloid.getDatum().y();
-                origin[2] = paraboloid.getDatum().z();
+                IRL::Normal a_dir;
+                IRL::Normal b_dir;
                 axis = paraboloid.getReferenceFrame()[2];
+                a_dir = paraboloid.getReferenceFrame()[0];
+                b_dir = paraboloid.getReferenceFrame()[1];
                 double co_a = paraboloid.getAlignedParaboloid().a();
                 double co_b = paraboloid.getAlignedParaboloid().b();
+                IRL::Pt origin = paraboloid.getDatum();
+                IRL::UnitQuaternion rot;
 
                 switch (direction)
                 {
                     case 1:
                     normal[0] = -normal[0];
                     axis[0] = -axis[0];
+                    a_dir[0] = -a_dir[0];
                     origin[0] = -origin[0];
                     break;
                     case 2:
                     normal[1] = -normal[1];
                     axis[1] = -axis[1];
+                    a_dir[1] = -a_dir[1];
                     origin[1] = -origin[1];
                     break;
                     case 3:
                     normal[2] = -normal[2];
                     axis[2] = -axis[2];
+                    a_dir[2] = -a_dir[2];
                     origin[2] = -origin[2];
                     break;
                     case 4:
@@ -509,24 +327,30 @@ namespace IRL
                     normal[1] = -normal[1];
                     axis[0] = -axis[0];
                     axis[1] = -axis[1];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[1] = -a_dir[1];
                     origin[0] = -origin[0];
-                    origin[1] = -origin[1];
+                    origin[1] = -origin[1]; 
                     break;
                     case 5:
                     normal[0] = -normal[0];
                     normal[2] = -normal[2];
                     axis[0] = -axis[0];
                     axis[2] = -axis[2];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[2] = -a_dir[2];
                     origin[0] = -origin[0];
-                    origin[2] = -origin[2];
+                    origin[2] = -origin[2]; 
                     break;
                     case 6:
                     normal[1] = -normal[1];
                     normal[2] = -normal[2];
                     axis[1] = -axis[1];
                     axis[2] = -axis[2];
+                    a_dir[1] = -a_dir[1];
+                    a_dir[2] = -a_dir[2];
                     origin[1] = -origin[1];
-                    origin[2] = -origin[2];
+                    origin[2] = -origin[2]; 
                     break;
                     case 7:
                     normal[0] = -normal[0];
@@ -535,9 +359,12 @@ namespace IRL
                     axis[0] = -axis[0];
                     axis[1] = -axis[1];
                     axis[2] = -axis[2];
-                    origin[0] = -origin[0];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[1] = -a_dir[1];
+                    a_dir[2] = -a_dir[2];   
+                    origin[0] = -origin[0]; 
                     origin[1] = -origin[1];
-                    origin[2] = -origin[2];
+                    origin[2] = -origin[2];       
                     break;
                 }
                 if (!flip)
@@ -548,38 +375,147 @@ namespace IRL
                     axis[0] = -axis[0];
                     axis[1] = -axis[1];
                     axis[2] = -axis[2];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[1] = -a_dir[1];
+                    a_dir[2] = -a_dir[2];
                     co_a = -co_a;
                     co_b = -co_b;
                 }
+                b_dir = IRL::crossProduct(axis,a_dir);
 
-                //normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
-                //normals.close();   
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();   
+
+                IRL::Normal par = ((origin[0]*normal[0] + origin[1]*normal[1] + origin[2]*normal[2])) * normal;
+                IRL::Normal offset = origin - par;
+
+                if (co_a < co_b)
+                {
+                    double temp = co_b;
+                    co_b = co_a;
+                    co_a = temp;
+                    rot = IRL::UnitQuaternion(M_PI/2,axis);
+                    a_dir = rot*a_dir;
+                    b_dir = IRL::crossProduct(axis,a_dir);
+                }
+
+                if ((a_dir[0] < 0 && a_dir[1] < 0) || (a_dir[0] < 0 && a_dir[2] < 0) || (a_dir[1] < 0 && a_dir[2] < 0))
+                {
+                    rot = IRL::UnitQuaternion(M_PI,axis);
+                    a_dir = rot*a_dir;
+                    b_dir = IRL::crossProduct(axis,a_dir);
+                }
 
                 double n2 = axis[0]/(sqrt(axis[1]*axis[1]+axis[0]*axis[0]));
                 double n1 = (-n2*axis[1])/axis[0];
-
-                double theta = acos(n1*paraboloid.getReferenceFrame()[0][0]+n2*paraboloid.getReferenceFrame()[0][1]);
-                IRL::UnitQuaternion rot(theta,axis);
+                double theta = acos(n1*a_dir[0]+n2*a_dir[1]);
+                if (sqrt(axis[1]*axis[1]+axis[0]*axis[0]) == 0 || axis[0] == 0)
+                {
+                    theta = 0;
+                }
+                // double theta2 = acos(n1*offset[0]+n2*offset[1]);
+                rot = IRL::UnitQuaternion(theta,axis);
                 IRL::Normal v1;
                 v1[0] = n1; v1[1] = n2; v1[2] = 0;
                 IRL::Normal v = rot*v1;
-                if (abs(v[0]-paraboloid.getReferenceFrame()[0][0]) >= 1e-8 && abs(v[1]-paraboloid.getReferenceFrame()[0][1]) >= 1e-8)
+                // rot = IRL::UnitQuaternion(theta2,axis);
+                // IRL::Normal v2 = rot*v1;
+                if (abs(v[0]-a_dir[0]) >= 1e-8 && abs(v[1]-a_dir[1]) >= 1e-8)
                 {
                     theta = -theta;
                 } 
+                if (theta < 0)
+                {
+                    theta = theta + 2*M_PI;
+                }
+                if (theta >= 2*M_PI)
+                {
+                    theta = theta - 2*M_PI;
+                }
+                // if (abs(v2[0]-offset[0]) >= 1e-8 && abs(v2[1]-offset[1]) >= 1e-8)
+                // {
+                //     theta2 = -theta2;
+                // } 
+                // if (theta2 < 0)
+                // {
+                //     theta2 = theta2 + 2*M_PI;
+                // }
+                // if (theta2 >= 2*M_PI)
+                // {
+                //     theta2 = theta2 - 2*M_PI;
+                // }
+                
 
+                axis.normalize();
                 std::ofstream input;
                 name = "input.txt";
                 input.open(name, std::ios_base::app);
-                input << origin[0] << "," << origin[1] << "," << origin[2]
-                << "," << axis[0] << "," << axis[1] << "," << axis[2]
-                << "," << theta << "," <<  co_a << "," << co_b << "\n";
+                input << axis[0] << "," << axis[1] << "," << axis[2] << "\n";
+                input.close();   
 
-                // double n2 = (-2*theta*axis[2]*axis[1]+sqrt(pow(2*theta*axis[2]*axis[1],2.0)-4*(axis[1]*axis[1]+axis[0]*axis[0])*(theta*theta*axis[2]*axis[2]+theta*theta*axis[0]*axis[0]-axis[0]*axis[0])))/(2*(axis[1]*axis[1]+axis[0]*axis[0]));
-                // double n22 = (-2*theta*axis[2]*axis[1]-sqrt(pow(2*theta*axis[2]*axis[1],2.0)-4*(axis[1]*axis[1]+axis[0]*axis[0])*(theta*theta*axis[2]*axis[2]+theta*theta*axis[0]*axis[0]-axis[0]*axis[0])))/(2*(axis[1]*axis[1]+axis[0]*axis[0]));
-                // double n1 = (-theta*axis[2]-n2*axis[1])/axis[0];
-                // double n12 = (-theta*axis[2]-n22*axis[1])/axis[0];
-                input.close();              
+                a_dir.normalize();
+                // name = "input1.txt";
+                // input.open(name, std::ios_base::app);
+                // input << co_a << "," << co_b << "," << a_dir[0] << "," << a_dir[1] << "," << a_dir[2] << "\n";
+                // input.close();
+
+                double a = co_a*origin[1]*origin[1] - origin[2] + co_b*origin[0]*origin[0] + co_a*origin[0]*origin[0]*pow(cos(theta),2.0) - co_a*origin[1]*origin[1]*pow(cos(theta),2.0) - co_b*origin[0]*origin[0]*pow(cos(theta),2.0) + co_b*origin[1]*origin[1]*pow(cos(theta),2.0) + co_a*origin[0]*origin[1]*sin(2*theta) - co_b*origin[0]*origin[1]*sin(2*theta);
+                
+                double b = co_a*origin[0] + co_b*origin[0] + co_a*origin[0]*cos(2*theta) - co_b*origin[0]*cos(2*theta) + co_a*origin[1]*sin(2*theta) - co_b*origin[1]*sin(2*theta);
+                double c = co_a*origin[1] + co_b*origin[1] - co_a*origin[1]*cos(2*theta) + co_b*origin[1]*cos(2*theta) + co_a*origin[0]*sin(2*theta) - co_b*origin[0]*sin(2*theta);
+
+                double d = co_a - co_a * pow(sin(theta),2.0) + co_b * pow(sin(theta),2.0);
+                double f = co_b - co_b * pow(sin(theta),2.0) + co_a * pow(sin(theta),2.0);
+                double e = (co_a-co_b) * sin(2.0*theta);
+
+                // name = "input1.txt";
+                // input.open(name, std::ios_base::app);
+                // input << co_a << "," << co_b << "," << (co_a-co_b)*theta << "\n";
+                // input.close();
+
+                name = "input1.txt";
+                input.open(name, std::ios_base::app);
+                input << d << "," << f << "," << e << "\n";
+                input.close();
+
+                // name = "input2.txt";
+                // input.open(name, std::ios_base::app);
+                // input << origin[0] << "," << origin[1] << "," << origin[2] << "\n";
+                // input.close();
+
+                // name = "input3.txt";
+                // input.open(name, std::ios_base::app);
+                // input << a << "," << b << "," << c << "\n";
+                // input.close();
+
+                // name = "input4.txt";
+                // input.open(name, std::ios_base::app);
+                // input << offset[0] << "," << offset[1] << "," << offset[2] << "\n";
+                // input.close();
+
+                // name = "input5.txt";
+                // input.open(name, std::ios_base::app);
+                // input << IRL::magnitude(offset) << "\n";
+                // input.close();
+
+                // name = "input6.txt";
+                // input.open(name, std::ios_base::app);
+                // input << theta2 << "\n";
+                // input.close();
+
+                // data_name = "fractions_w_coeffs.txt";
+                // output.open(data_name, std::ios_base::app);
+
+                // output << d << "," << e << "," << f << "," << normal[0] << "," << normal[1] << "," << normal[2] << ",";
+                // for (int i = 0; i < result.sizes()[0]; ++i)
+                // {
+                //     output << fractions[i] << ",";
+                // }
+                // output << "\n";
+                // output.close();  
             }           
         };
 
@@ -1302,91 +1238,7 @@ namespace IRL
                             }
                             ++count;
                         }
-                        // if (option)
-                        // {
-                        //     fractions.push_back(result1[i].item<double>());
-                        //     count = 0;
-                        // }
-                        // else if (!same_cell)
-                        // {
-                        //     fractions.push_back(result[i].item<double>());
-                        //     count = 0;
-                        // }
-                        // else
-                        // {
-                        //     if (i%mod == 0)
-                        //     {
-                        //         fractions.push_back(result[i].item<double>() + result1[i].item<double>());
-                        //         ind = i;
-                        //     }
-                        //     else
-                        //     {
-                        //         ++count;
-                        //         double x = result[ind].item<double>();
-                        //         double y = result1[ind].item<double>();
-                        //         if (count > 3)
-                        //         {
-                        //             x = 1 - x;
-                        //             y = 1 - y;
-                        //         }
-                        //         double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
-                        //         fractions.push_back(c);
-                        //     }
-                        // }
                     }
-                    // else
-                    // {
-                    //     if (i%mod == 0)
-                    //     {
-                    //         count = 0;
-                    //         if (result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() >= IRL::global_constants::VF_HIGH)
-                    //         {
-                    //             option = true;
-                    //             same_cell = false;
-                    //         }
-                    //         else if (result1[i].item<double>() > IRL::global_constants::VF_LOW && result[i].item<double>() > IRL::global_constants::VF_LOW && result1[i].item<double>() < IRL::global_constants::VF_HIGH && result[i].item<double>() < IRL::global_constants::VF_HIGH)
-                    //         {
-                    //             option = false;
-                    //             same_cell = true;
-                    //         }
-                    //         else
-                    //         {
-                    //             option = false;
-                    //             same_cell = false;
-                    //         }
-                    //     }
-                    //     if (option)
-                    //     {
-                    //         fractions.push_back(result1[i].item<double>());
-                    //         count = 0;
-                    //     }
-                    //     else if (!same_cell)
-                    //     {
-                    //         fractions.push_back(result[i].item<double>());
-                    //         count = 0;
-                    //     }
-                    //     else
-                    //     {
-                    //         if (i%mod == 0)
-                    //         {
-                    //             fractions.push_back(result[i].item<double>() + result1[i].item<double>());
-                    //             ind = i;
-                    //         }
-                    //         else
-                    //         {
-                    //             ++count;
-                    //             double x = result[ind].item<double>();
-                    //             double y = result1[ind].item<double>();
-                    //             if (count > 3)
-                    //             {
-                    //                 x = 1 - x;
-                    //                 y = 1 - y;
-                    //             }
-                    //             double c = x/(x + y) * result[i].item<double>() + y/(x + y) * result1[i].item<double>();
-                    //             fractions.push_back(c);
-                    //         }
-                    //     }
-                    // }
                 }
 
                 int direction = 0;
@@ -1413,135 +1265,7 @@ namespace IRL
                             track[i][j][k] = 1;
                         }
                     }
-                }
-                // double vol = 0;
-                // for (int i = 0; i < number_of_cells; ++i)
-                // {
-                //     for (int j = 0; j < number_of_cells; ++j)
-                //     {
-                //         for (int k = 0; k < number_of_cells; ++k)
-                //         {
-                //             vol = vol + result[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>();
-                //             track[i][j][k] = 0;
-                //             if ((i == 0 || i == number_of_cells-1) || (j == 0 || j == number_of_cells-1) || (k == 0 || k == number_of_cells-1))
-                //             {
-                //                 if (fractions[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)] > IRL::global_constants::VF_LOW && fractions[7*(i*number_of_cells*number_of_cells+j*number_of_cells+k)] < IRL::global_constants::VF_HIGH)
-                //                 {
-                //                     track[i][j][k] = 1;
-                //                 }
-                //             }
-                //         }  
-                //     }  
-                // }  
-
-                // int num = 0;
-                // if (flip)
-                // {
-                //     num = 1;
-                // }
-
-                // int i = rand() % number_of_cells;
-                // int j = rand() % number_of_cells;
-                // int k = rand() % number_of_cells;
-                // int lim1 = number_of_cells;
-                // int lim2 = number_of_cells;
-                // while (track[i][j][k] == 0)
-                // {
-                //     i = rand() % number_of_cells;
-                //     j = rand() % number_of_cells;
-                //     k = rand() % number_of_cells;
-                // }
-
-                // if (i == 0 || i == number_of_cells-1)
-                // {
-                //     int cur;
-                //     int next;
-                //     if (i == 0)
-                //     {
-                //         cur = i;
-                //         next = number_of_cells/2;
-                //     }
-                //     else
-                //     {
-                //         cur = number_of_cells/2+1;
-                //         next = number_of_cells;
-                //     }
-                //     for (int ii = cur; ii < next; ++ii)
-                //     {
-                //         for (int jj = 0; jj < lim1; ++jj)
-                //         {
-                //             for (int kk = 0; kk < lim2; ++kk)
-                //             {
-                //                 track[ii][jj][kk] = 0;
-                //                 fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
-                //                 for (int n = 1; n <= 6; ++n)
-                //                 {
-                //                     fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-                // else if (j == 0 || j == number_of_cells-1)
-                // {
-                //     int cur;
-                //     int next;
-                //     if (j == 0)
-                //     {
-                //         cur = j;
-                //         next = number_of_cells/2;
-                //     }
-                //     else
-                //     {
-                //         cur = number_of_cells/2+1;
-                //         next = number_of_cells;
-                //     }
-                //     for (int jj = cur; jj < next; ++jj)
-                //     {
-                //         for (int ii = 0; ii < lim1; ++ii)
-                //         {
-                //             for (int kk = 0; kk < lim2; ++kk)
-                //             {
-                //                 track[ii][jj][kk] = 0;
-                //                 fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
-                //                 for (int n = 1; n <= 6; ++n)
-                //                 {
-                //                     fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-                // else if (k == 0 || k == number_of_cells-1)
-                // {
-                //     int cur;
-                //     int next;
-                //     if (k == 0)
-                //     {
-                //         cur = k;
-                //         next = number_of_cells/2;
-                //     }
-                //     else
-                //     {
-                //         cur = number_of_cells/2+1;
-                //         next = number_of_cells;
-                //     }
-                //     for (int kk = cur; kk < next; ++kk)
-                //     {
-                //         for (int jj = 0; jj < lim1; ++jj)
-                //         {
-                //             for (int ii = 0; ii < lim2; ++ii)
-                //             {
-                //                 track[ii][jj][kk] = 0;
-                //                 fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
-                //                 for (int n = 1; n <= 6; ++n)
-                //                 {
-                //                     fractions[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }  
+                } 
 
                 std::ofstream output;
                 string data_name = "fractions.txt";
@@ -2220,122 +1944,6 @@ namespace IRL
                 }
 
                 normals.close(); 
-                //normals2.close();   
-
-                /*const Mesh& mesh = gen->getMesh();
-                FILE* viz_file;
-                std::string file_name = "interface_0.vtu";
-                viz_file = fopen(file_name.c_str(), "w");
-
-                // Build vectors of vertex locations and connectivities
-                std::size_t n_vert = 0;
-                std::size_t n_faces = 0;
-                std::size_t current_face_size = 0;
-                std::string vert_loc;
-                std::string connectivity;
-                std::string offsets;
-
-                auto add_polyhedron = [&](const auto& a_poly) {
-                    using T = std::decay_t<decltype(a_poly)>;
-                    std::unordered_map<const typename T::vertex_type*, IRL::UnsignedIndex_t>
-                        unique_vertices;
-                    for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfVertices(); ++n) {
-                    unique_vertices[a_poly.getVertex(n)] = n + n_vert;
-                    const auto& vert_pt = a_poly.getVertex(n)->getLocation();
-                    vert_loc += std::to_string(vert_pt[0]) + " " +
-                                std::to_string(vert_pt[1]) + " " +
-                                std::to_string(vert_pt[2]) + "\n";
-                    }
-                    assert(unique_vertices.size() == a_poly.getNumberOfVertices());
-
-                    for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfFaces(); ++n) {
-                    const auto& face = a_poly[n];
-                    auto current_half_edge = face->getStartingHalfEdge();
-                    do {
-                        ++current_face_size;
-                        connectivity +=
-                            std::to_string(unique_vertices[current_half_edge->getVertex()]) +
-                            " ";
-                        current_half_edge = current_half_edge->getNextHalfEdge();
-                    } while (current_half_edge != face->getStartingHalfEdge());
-                    offsets += std::to_string(current_face_size) + " ";
-                    connectivity += "\n";
-                    }
-
-                    n_vert += a_poly.getNumberOfVertices();
-                    n_faces += a_poly.getNumberOfFaces();
-                };
-
-                for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-                    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-                        for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-                            const auto& recon = plane;
-                            auto cell = IRL::RectangularCuboid::fromBoundingPts(
-                                IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
-                                IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-
-                            if (recon.isFlipped()) {
-                            auto he_poly = cell.generateHalfEdgeVersion();
-                            auto seg = he_poly.generateSegmentedPolyhedron();
-                            for (const auto& plane : recon) {
-                                decltype(seg) clipped;
-                                auto new_plane = plane.generateFlippedPlane();
-                                IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, new_plane);
-                                add_polyhedron(clipped);
-                            }
-                            } else {
-                            auto he_poly = cell.generateHalfEdgeVersion();
-                            auto seg = he_poly.generateSegmentedPolyhedron();
-                            for (const auto& plane : recon) {
-                                decltype(seg) clipped;
-                                IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, plane);
-                            }
-                            add_polyhedron(seg);
-                            }
-                        }
-                    }
-                }
-
-                // Write header
-                {
-                    fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
-                    fprintf(viz_file,
-                            "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
-                            "byte_order=\"LittleEndian\">\n");
-                    fprintf(viz_file, "<UnstructuredGrid>\n");
-                    fprintf(viz_file, "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
-                            n_vert, n_faces);
-
-                    fprintf(viz_file, "<Points>\n");
-                    fprintf(viz_file,
-                            "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
-                    fprintf(viz_file, "%s", vert_loc.c_str());
-                    fprintf(viz_file, "</DataArray>\n");
-                    fprintf(viz_file, "</Points>\n");
-
-                    fprintf(viz_file, "<Cells>\n");
-                    fprintf(viz_file,
-                            "<DataArray type=\"Int32\" Name=\"connectivity\" "
-                            "format=\"ascii\">\n");
-                    fprintf(viz_file, "%s", connectivity.c_str());
-                    fprintf(viz_file, "</DataArray>\n");
-
-                    fprintf(viz_file,
-                            "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-                    fprintf(viz_file, "%s", offsets.c_str());
-                    fprintf(viz_file, "\n</DataArray>\n");
-
-                    // Cell type - General Polygon type
-                    fprintf(viz_file,
-                            "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-                    for (std::size_t n = 0; n < n_faces; ++n) {
-                    fprintf(viz_file, "7 ");  // General polygon type
-                    }
-                    fprintf(viz_file,
-                            "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
-                            "VTKFile>\n");
-                }
-                fclose(viz_file);*/       
             }  
         }; 
 
@@ -2543,135 +2151,7 @@ namespace IRL
                             track[i][j][k] = 1;
                         }
                     }
-                }
-                // double vol = 0;
-                // for (int i = 0; i < number_of_cells; ++i)
-                // {
-                //     for (int j = 0; j < number_of_cells; ++j)
-                //     {
-                //         for (int k = 0; k < number_of_cells; ++k)
-                //         {
-                //             vol = vol + result[/*7**/(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>();
-                //             track[i][j][k] = 0;
-                //             if ((i == 0 || i == number_of_cells-1) || (j == 0 || j == number_of_cells-1) || (k == 0 || k == number_of_cells-1))
-                //             {
-                //                 if (result[/*7**/(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() > IRL::global_constants::VF_LOW && result[/*7**/(i*number_of_cells*number_of_cells+j*number_of_cells+k)].item<double>() < IRL::global_constants::VF_HIGH)
-                //                 {
-                //                     track[i][j][k] = 1;
-                //                 }
-                //             }
-                //         }  
-                //     }  
-                // }  
-
-                // int num = 0;
-                // if (flip)
-                // {
-                //     num = 1;
-                // }
-
-                // int i = rand() % number_of_cells;
-                // int j = rand() % number_of_cells;
-                // int k = rand() % number_of_cells;
-                // int lim1 = number_of_cells;
-                // int lim2 = number_of_cells;
-                // while (track[i][j][k] == 0)
-                // {
-                //     i = rand() % number_of_cells;
-                //     j = rand() % number_of_cells;
-                //     k = rand() % number_of_cells;
-                // }
-
-                // if (i == 0 || i == number_of_cells-1)
-                // {
-                //     int cur;
-                //     int next;
-                //     if (i == 0)
-                //     {
-                //         cur = i;
-                //         next = number_of_cells/2;
-                //     }
-                //     else
-                //     {
-                //         cur = number_of_cells/2+1;
-                //         next = number_of_cells;
-                //     }
-                //     for (int ii = cur; ii < next; ++ii)
-                //     {
-                //         for (int jj = 0; jj < lim1; ++jj)
-                //         {
-                //             for (int kk = 0; kk < lim2; ++kk)
-                //             {
-                //                 track[ii][jj][kk] = 0;
-                //                 result[/*7**/(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
-                //                 for (int n = 1; n <= 6; ++n)
-                //                 {
-                //                     //result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-                // else if (j == 0 || j == number_of_cells-1)
-                // {
-                //     int cur;
-                //     int next;
-                //     if (j == 0)
-                //     {
-                //         cur = j;
-                //         next = number_of_cells/2;
-                //     }
-                //     else
-                //     {
-                //         cur = number_of_cells/2+1;
-                //         next = number_of_cells;
-                //     }
-                //     for (int jj = cur; jj < next; ++jj)
-                //     {
-                //         for (int ii = 0; ii < lim1; ++ii)
-                //         {
-                //             for (int kk = 0; kk < lim2; ++kk)
-                //             {
-                //                 track[ii][jj][kk] = 0;
-                //                 result[/*7**/(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
-                //                 for (int n = 1; n <= 6; ++n)
-                //                 {
-                //                     //result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-                // else if (k == 0 || k == number_of_cells-1)
-                // {
-                //     int cur;
-                //     int next;
-                //     if (k == 0)
-                //     {
-                //         cur = k;
-                //         next = number_of_cells/2;
-                //     }
-                //     else
-                //     {
-                //         cur = number_of_cells/2+1;
-                //         next = number_of_cells;
-                //     }
-                //     for (int kk = cur; kk < next; ++kk)
-                //     {
-                //         for (int jj = 0; jj < lim1; ++jj)
-                //         {
-                //             for (int ii = 0; ii < lim2; ++ii)
-                //             {
-                //                 track[ii][jj][kk] = 0;
-                //                 result[/*7**/(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)] = num;
-                //                 for (int n = 1; n <= 6; ++n)
-                //                 {
-                //                     //result[7*(ii*number_of_cells*number_of_cells+jj*number_of_cells+kk)+n] = 0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }                      
+                }                   
 
                 std::vector<double> fractions;
                 //std::vector<double> fractions1;
@@ -2683,65 +2163,6 @@ namespace IRL
 
                 int direction = 0;
                 std::vector<double> center;
-                //std::vector<double> eigenvectors;
-                // auto sm = IRL::spatial_moments();
-                // IRL::Normal dir = plane[0].normal() - plane[1].normal();
-                // dir.normalize();
-                // auto moments = sm.calculate_moments(fractions, dir, number_of_cells);
-
-                // std::ofstream moments_out;
-                // std::string moments_name = "moments.txt";
-                // moments_out.open(moments_name, std::ios_base::app);
-                // IRL::RectangularCuboid cell;
-                // double area = 0;
-                // track[1][1][1] = 1;
-                // for (int i = 0; i < number_of_cells; ++i)
-                // {
-                //     for (int j = 0; j < number_of_cells; ++j)
-                //     {
-                //         for (int k = 0; k < number_of_cells; ++k)
-                //         {
-                //             if (track[i][j][k] == 1)
-                //             {
-                //                 cell = IRL::RectangularCuboid::fromBoundingPts(
-                //                             IRL::Pt(-number_of_cells/2.0+i,-number_of_cells/2.0+j,-number_of_cells/2.0+k),
-                //                             IRL::Pt(-number_of_cells/2.0+1+i,-number_of_cells/2.0+1+j,-number_of_cells/2.0+1+k));
-                //                 area = area + getReconstructionSurfaceArea(cell,plane);
-                //             }
-                //         }
-                //     }
-                // }
-                // moments[0] = moments[0] / pow(area,(1.0));
-                // // moments[1] = moments[1] / pow(area,(5.0));
-                // // moments[2] = moments[2] / pow(area,(15.0/2.0));
-                // //moments[moments.sizes()[0]-1] = moments[moments.sizes()[0]-1] / area;
-                // for (int i = 0; i < moments.sizes()[0]; ++i)
-                // {
-                //     moments_out << moments[i].item<double>() << ",";
-                // }
-                // //moments_out << 0 << ",";
-                // moments_out << "\n";
-                // moments_out.close();  
-
-                //center = sm.get_mass_centers_all(&fractions);
-                //eigenvectors = sm.get_moment_of_intertia(&fractions);
-                //int min = 0;
-                //if (eigenvectors[0] < eigenvectors[4] && eigenvectors[0] < eigenvectors[8])
-                {
-                    //min = 0;
-                }
-                //else if (eigenvectors[4] < eigenvectors[0] && eigenvectors[4] < eigenvectors[8])
-                {
-                    //min = 4;
-                }
-                //else
-                {
-                    //min = 8;
-                }
-                //center.push_back(eigenvectors[min+1]);
-                //center.push_back(eigenvectors[min+2]);
-                //center.push_back(eigenvectors[min+3]);
-                //direction = rotateFractions_all(&fractions,center);
                 double c = (rand() % 601 - 300) / 1000.0;
                 center.push_back(plane[0].normal()[0] + c);
                 center.push_back(plane[0].normal()[1] + c);
@@ -2998,154 +2419,8 @@ namespace IRL
                 //phi2 = sin(phi2);
                 //normals << normal[0] << "," << normal[1] << "," << normal[2] << "," << normal1[0] << "," << normal1[1] << "," << normal1[2] << "\n"; //<< "," << plane[0].distance() << "," << plane[1].distance() << "\n";
                 normals << /*theta1 << "," << phi1 << "," <<*/ theta2 << "," << phi2 /*<< "," << plane[0].distance() << "," << plane[1].distance()*/ << "\n";
-                normals.close();     
-
-                // const Mesh& mesh = gen->getMesh();
-                // FILE* viz_file;
-                // std::string file_name = "interface_0.vtu";
-                // viz_file = fopen(file_name.c_str(), "w");
-
-                // // Build vectors of vertex locations and connectivities
-                // std::size_t n_vert = 0;
-                // std::size_t n_faces = 0;
-                // std::size_t current_face_size = 0;
-                // std::string vert_loc;
-                // std::string connectivity;
-                // std::string offsets;
-
-                // auto add_polyhedron = [&](const auto& a_poly) {
-                //     using T = std::decay_t<decltype(a_poly)>;
-                //     std::unordered_map<const typename T::vertex_type*, IRL::UnsignedIndex_t>
-                //         unique_vertices;
-                //     for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfVertices(); ++n) {
-                //     unique_vertices[a_poly.getVertex(n)] = n + n_vert;
-                //     const auto& vert_pt = a_poly.getVertex(n)->getLocation();
-                //     vert_loc += std::to_string(vert_pt[0]) + " " +
-                //                 std::to_string(vert_pt[1]) + " " +
-                //                 std::to_string(vert_pt[2]) + "\n";
-                //     }
-                //     assert(unique_vertices.size() == a_poly.getNumberOfVertices());
-
-                //     for (IRL::UnsignedIndex_t n = 0; n < a_poly.getNumberOfFaces(); ++n) {
-                //     const auto& face = a_poly[n];
-                //     auto current_half_edge = face->getStartingHalfEdge();
-                //     do {
-                //         ++current_face_size;
-                //         connectivity +=
-                //             std::to_string(unique_vertices[current_half_edge->getVertex()]) +
-                //             " ";
-                //         current_half_edge = current_half_edge->getNextHalfEdge();
-                //     } while (current_half_edge != face->getStartingHalfEdge());
-                //     offsets += std::to_string(current_face_size) + " ";
-                //     connectivity += "\n";
-                //     }
-
-                //     n_vert += a_poly.getNumberOfVertices();
-                //     n_faces += a_poly.getNumberOfFaces();
-                // };
-
-                // for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-                //     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-                //         for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-                //             const auto& recon = plane;
-                //             auto cell = IRL::RectangularCuboid::fromBoundingPts(
-                //                 IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
-                //                 IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-
-                //             if (recon.isFlipped()) {
-                //             auto he_poly = cell.generateHalfEdgeVersion();
-                //             auto seg = he_poly.generateSegmentedPolyhedron();
-                //             for (const auto& plane : recon) {
-                //                 decltype(seg) clipped;
-                //                 auto new_plane = plane.generateFlippedPlane();
-                //                 IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, new_plane);
-                //                 add_polyhedron(clipped);
-                //             }
-                //             } else {
-                //             auto he_poly = cell.generateHalfEdgeVersion();
-                //             auto seg = he_poly.generateSegmentedPolyhedron();
-                //             for (const auto& plane : recon) {
-                //                 decltype(seg) clipped;
-                //                 IRL::splitHalfEdgePolytope(&seg, &clipped, &he_poly, plane);
-                //             }
-                //             add_polyhedron(seg);
-                //             }
-                //         }
-                //     }
-                // }
-
-                // // Write header
-                // {
-                //     fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
-                //     fprintf(viz_file,
-                //             "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
-                //             "byte_order=\"LittleEndian\">\n");
-                //     fprintf(viz_file, "<UnstructuredGrid>\n");
-                //     fprintf(viz_file, "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
-                //             n_vert, n_faces);
-
-                //     fprintf(viz_file, "<Points>\n");
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"Float32\" NumberOfComponents=\"3\">\n");
-                //     fprintf(viz_file, "%s", vert_loc.c_str());
-                //     fprintf(viz_file, "</DataArray>\n");
-                //     fprintf(viz_file, "</Points>\n");
-
-                //     fprintf(viz_file, "<Cells>\n");
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"Int32\" Name=\"connectivity\" "
-                //             "format=\"ascii\">\n");
-                //     fprintf(viz_file, "%s", connectivity.c_str());
-                //     fprintf(viz_file, "</DataArray>\n");
-
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
-                //     fprintf(viz_file, "%s", offsets.c_str());
-                //     fprintf(viz_file, "\n</DataArray>\n");
-
-                //     // Cell type - General Polygon type
-                //     fprintf(viz_file,
-                //             "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
-                //     for (std::size_t n = 0; n < n_faces; ++n) {
-                //     fprintf(viz_file, "7 ");  // General polygon type
-                //     }
-                //     fprintf(viz_file,
-                //             "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
-                //             "VTKFile>\n");
-                // }
-                // fclose(viz_file);        
-            }  
-            
-            //result_all = torch::div((result_all - result_all.mean(1).unsqueeze(0).transpose(0,1)), result_all.std(1).unsqueeze(0).transpose(0,1));
-            //std::cout << result_all.index({torch::indexing::Slice(),0}) << std::endl;
-            /*torch::Tensor Cov = torch::zeros({162, 162});
-            std::tuple<torch::Tensor, torch::Tensor> x;
-            std::tuple<torch::Tensor, torch::Tensor> s;
-            Cov = torch::matmul(result_all, result_all.transpose(0, 1))/Ntests;
-            x = torch::linalg::eig(Cov);
-            torch::Tensor lam = torch::real(get<0>(x));
-            torch::Tensor u = torch::real(get<1>(x));
-            s = torch::sort(lam,0,true);
-            lam = get<0>(s);
-            int r = 100;
-            double percent = torch::sum(lam.index({torch::indexing::Slice(0,r)})).item<double>()/torch::sum(lam).item<double>();
-            u = u.index({get<1>(s),torch::indexing::Slice()});
-            u = u.index({torch::indexing::Slice(0,r),torch::indexing::Slice()});
-            result_all = torch::matmul(u, result_all);
-            std::cout << percent << std::endl;
-            std::ofstream output;
-            std::string data_name = "fractions.txt";
-            output.open(data_name, std::ios_base::app);
-
-            for (int i = 0; i < Ntests; ++i)
-            {
-                for (int j = 0; j < r; ++j)
-                {
-                    output << result_all[j][i].item<double>() << ",";
-                }
-                output << "\n";
-            }
-            output.close();*/  
+                normals.close();    
+            } 
         }; 
 
         void generate_R2P_with_disturbance(double rota1_l, double rota1_h, double rotb1_l, double rotb1_h, double rota2_l, double rota2_h, double rotb2_l, double rotb2_h, double d1_l, double d1_h, double d2_l, double d2_h, bool inter, bool same)
@@ -3201,27 +2476,6 @@ namespace IRL
 
                 int direction = 0;
                 std::vector<double> center;
-                //std::vector<double> eigenvectors;
-                //auto sm = IRL::spatial_moments();
-                //center = sm.get_mass_centers_all(&fractions);
-                //eigenvectors = sm.get_moment_of_intertia(&fractions);
-                //int min = 0;
-                //if (eigenvectors[0] < eigenvectors[4] && eigenvectors[0] < eigenvectors[8])
-                {
-                    //min = 0;
-                }
-                //else if (eigenvectors[4] < eigenvectors[0] && eigenvectors[4] < eigenvectors[8])
-                {
-                    //min = 4;
-                }
-                //else
-                {
-                    //min = 8;
-                }
-                //center.push_back(eigenvectors[min+1]);
-                //center.push_back(eigenvectors[min+2]);
-                //center.push_back(eigenvectors[min+3]);
-                //direction = rotateFractions_all(&fractions,center);
                 double c = (rand() % 601 - 300) / 1000.0;
                 center.push_back(plane[0].normal()[0] + c);
                 center.push_back(plane[0].normal()[1] + c);
@@ -4497,6 +3751,101 @@ namespace IRL
             }
             *fractions1 = fractions;
             return direction;
+        };
+
+        void rotateMoments(std::vector<double>* moments1, int direction)
+        {
+            std::vector<double> moments = *moments1;
+            switch(direction)
+            {
+                case 1:
+                    moments[1] = -moments[1];
+                    moments[5] = -moments[5];
+                    moments[6] = -moments[6];
+                    moments[10] = -moments[10];
+                    moments[14] = -moments[14];
+                    moments[15] = -moments[15];                    
+                break;
+                case 2:
+                    moments[2] = -moments[2];
+                    moments[5] = -moments[5];
+                    moments[8] = -moments[8];
+                    moments[11] = -moments[11];
+                    moments[14] = -moments[14];
+                    moments[17] = -moments[17];
+                break;
+                case 3:
+                    moments[3] = -moments[3];
+                    moments[6] = -moments[6];
+                    moments[8] = -moments[8];
+                    moments[12] = -moments[12];
+                    moments[15] = -moments[15];
+                    moments[17] = -moments[17];
+                break;
+                case 4:
+                    moments[1] = -moments[1];
+                    moments[5] = -moments[5];
+                    moments[6] = -moments[6];
+                    moments[10] = -moments[10];
+                    moments[14] = -moments[14];
+                    moments[15] = -moments[15];     
+                    moments[2] = -moments[2];
+                    moments[5] = -moments[5];
+                    moments[8] = -moments[8];
+                    moments[11] = -moments[11];
+                    moments[14] = -moments[14];
+                    moments[17] = -moments[17];               
+                break;
+                case 5:
+                    moments[1] = -moments[1];
+                    moments[5] = -moments[5];
+                    moments[6] = -moments[6];
+                    moments[10] = -moments[10];
+                    moments[14] = -moments[14];
+                    moments[15] = -moments[15]; 
+                    moments[2] = -moments[2];
+                    moments[5] = -moments[5];
+                    moments[8] = -moments[8];
+                    moments[11] = -moments[11];
+                    moments[14] = -moments[14];
+                    moments[17] = -moments[17];                
+                break;
+                case 6:
+                    moments[2] = -moments[2];
+                    moments[5] = -moments[5];
+                    moments[8] = -moments[8];
+                    moments[11] = -moments[11];
+                    moments[14] = -moments[14];
+                    moments[17] = -moments[17];
+                    moments[3] = -moments[3];
+                    moments[6] = -moments[6];
+                    moments[8] = -moments[8];
+                    moments[12] = -moments[12];
+                    moments[15] = -moments[15];
+                    moments[17] = -moments[17];
+                break;
+                case 7:
+                    moments[1] = -moments[1];
+                    moments[5] = -moments[5];
+                    moments[6] = -moments[6];
+                    moments[10] = -moments[10];
+                    moments[14] = -moments[14];
+                    moments[15] = -moments[15];   
+                    moments[2] = -moments[2];
+                    moments[5] = -moments[5];
+                    moments[8] = -moments[8];
+                    moments[11] = -moments[11];
+                    moments[14] = -moments[14];
+                    moments[17] = -moments[17];
+                    moments[3] = -moments[3];
+                    moments[6] = -moments[6];
+                    moments[8] = -moments[8];
+                    moments[12] = -moments[12];
+                    moments[15] = -moments[15];
+                    moments[17] = -moments[17];
+                break;
+            }
+            *moments1 = moments;
         };
 
 

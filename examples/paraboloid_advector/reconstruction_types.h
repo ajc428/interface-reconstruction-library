@@ -14,6 +14,7 @@
 
 #include "irl/paraboloid_reconstruction/paraboloid.h"
 #include "irl/planar_reconstruction/planar_separator.h"
+#include "irl/geometry/polyhedrons/rectangular_cuboid.h"
 
 #include "examples/paraboloid_advector/data.h"
 
@@ -38,11 +39,18 @@ struct PLIC {
 };
 
 struct Jibben {
-  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,
                                 const double a_dt, const Data<double>& a_U,
                                 const Data<double>& a_V,
                                 const Data<double>& a_W,
                                 Data<IRL::Paraboloid>* a_interface);
+};
+
+struct Jibben_ML{
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+  const double a_dt, const Data<double>& a_U,
+  const Data<double>& a_V, const Data<double>& a_W,
+  Data<IRL::Paraboloid>* a_interface);
 };
 
 struct Centroid {
@@ -68,6 +76,8 @@ struct ML_QUAD {
                                  const Data<double>& a_W,
                                  Data<IRL::Paraboloid>* a_interface);
 };
+
+IRL::Paraboloid gradientDescent(IRL::Paraboloid paraboloid,IRL::RectangularCuboid cell,IRL::Pt bary,double VF);
 
 void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface);
 

@@ -387,18 +387,25 @@ void FullLagrangian::advectVOF(
                 transported_cell, (*a_link_localized_paraboloid)(i, j, k));
         const double cell_volume = cell.calculateVolume();
         (*a_liquid_volume_fraction)(i, j, k) =
-            cell_volume_moments[0].volume() / (cell_volume);
+            cell_volume_moments[0].volume() / (cell_volume_moments[0].volume() + cell_volume_moments[1].volume());
         (*a_liquid_centroid)(i, j, k) = cell_volume_moments[0].centroid();
         (*a_gas_centroid)(i, j, k) = cell_volume_moments[1].centroid();
 
-        if ((*a_liquid_volume_fraction)(i, j, k) < IRL::global_constants::VF_LOW) {
+        if ((*a_liquid_volume_fraction)(i, j, k) <
+            IRL::global_constants::VF_LOW) {
           (*a_liquid_volume_fraction)(i, j, k) = 0.0;
-          (*a_liquid_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
-          (*a_gas_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
-        } else if ((*a_liquid_volume_fraction)(i, j, k) > IRL::global_constants::VF_HIGH) {
+          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+          (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
+        } else if ((*a_liquid_volume_fraction)(i, j, k) >
+                   IRL::global_constants::VF_HIGH) {
           (*a_liquid_volume_fraction)(i, j, k) = 1.0;
-          (*a_liquid_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
-          (*a_gas_centroid)(i, j, k) = IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k));
+          (*a_liquid_centroid)(i, j, k) = cell.calculateCentroid();
+          (*a_gas_centroid)(i, j, k) = (*a_liquid_centroid)(i, j, k);
+        } else {
+          (*a_liquid_centroid)(i, j, k) = back_project_vertex(
+              (*a_liquid_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
+          (*a_gas_centroid)(i, j, k) = back_project_vertex(
+              (*a_gas_centroid)(i, j, k), a_dt, a_U, a_V, a_W);
         }
 
         // if ((*a_liquid_volume_fraction)(i, j, k) <

@@ -126,7 +126,7 @@ int runSimulation(const std::string& a_advection_method,
   if (rank == 0) {
     vtk_io.writeVTKFile(simulation_time);
   }
-  if (a_reconstruction_method == "ML_QUAD")
+  if (a_reconstruction_method == "ML_QUAD" || a_reconstruction_method == "Jibben_ML")
   {
     load();
   }

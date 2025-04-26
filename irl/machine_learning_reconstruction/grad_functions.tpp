@@ -423,6 +423,224 @@ namespace IRL
         }
         return result;
     }
+
+    torch::Tensor grad_functions::MOF_Forward(const torch::Tensor y_pred) 
+    {
+        IRL::Paraboloid paraboloid = gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>());
+
+        vector<IRL::Paraboloid> p;
+        vector<IRL::Paraboloid> p1;
+        double e = std::sqrt(DBL_EPSILON);
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>()+e, y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>()+e, y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()+e,
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>()+e, y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>()+e, y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>()+e,
+        y_pred[6].item<double>(), y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>()+e, y_pred[7].item<double>()));
+
+        p.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred[3].item<double>(), y_pred[4].item<double>(), y_pred[5].item<double>(),
+        y_pred[6].item<double>(), y_pred[7].item<double>()+e));
+
+        auto result = gen->get_fractions2_all(paraboloid);
+        bool flip = false;
+        if (result[0].item<double>() > 0.5)
+        {
+            flip = true;
+            result = gen->get_fractions2_gas_all(paraboloid);
+        }
+
+        vector<torch::Tensor> ep;
+        vector<torch::Tensor> grads;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            if (!flip)
+            {
+                ep.push_back(gen->get_fractions2_all(p[i]));
+            }
+            else
+            {
+                ep.push_back(gen->get_fractions2_gas_all(p[i]));
+            }
+            torch::Tensor temp = torch::zeros(19);
+            for (int j = 0; j < 19; ++j)
+            {
+                temp[j] = (ep[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            grads.push_back(temp);
+        }
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<MOFBackward>(new grad_functions::MOFBackward(), deleteNode);
+
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->frac_grads = grads;
+            grad_fn->y_pred = y_pred;
+
+            set_history(flatten_tensor_args(result), grad_fn);
+        }
+        return result;
+    }
+
+    torch::Tensor grad_functions::MOF_Forward2(const torch::Tensor y_pred,const torch::Tensor y_pred1,const torch::Tensor y_pred2) 
+    {
+        IRL::Paraboloid paraboloid = gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred1[0].item<double>(), y_pred1[1].item<double>(), y_pred1[2].item<double>(),
+        y_pred2[0].item<double>(), y_pred2[1].item<double>());
+
+        vector<IRL::Paraboloid> po;
+        vector<IRL::Paraboloid> pa;
+        vector<IRL::Paraboloid> pc;
+        vector<IRL::Paraboloid> p1;
+        double e = std::sqrt(DBL_EPSILON);
+
+        po.push_back(gen->new_parabaloid(y_pred[0].item<double>()+e, y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred1[0].item<double>(), y_pred1[1].item<double>(), y_pred1[2].item<double>(),
+        y_pred2[0].item<double>(), y_pred2[1].item<double>()));
+
+        po.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>()+e, y_pred[2].item<double>(),
+        y_pred1[0].item<double>(), y_pred1[1].item<double>(), y_pred1[2].item<double>(),
+        y_pred2[0].item<double>(), y_pred2[1].item<double>()));
+
+        po.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>()+e,
+        y_pred1[0].item<double>(), y_pred1[1].item<double>(), y_pred1[2].item<double>(),
+        y_pred2[0].item<double>(), y_pred2[1].item<double>()));
+
+        pa.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred1[0].item<double>()+e, y_pred1[1].item<double>(), y_pred1[2].item<double>(),
+        y_pred2[0].item<double>(), y_pred2[1].item<double>()));
+
+        pa.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred1[0].item<double>(), y_pred1[1].item<double>()+e, y_pred1[2].item<double>(),
+        y_pred2[0].item<double>(), y_pred2[1].item<double>()));
+
+        pa.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred1[0].item<double>(), y_pred1[1].item<double>(), y_pred1[2].item<double>()+e,
+        y_pred2[0].item<double>(), y_pred2[1].item<double>()));
+
+        pc.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred1[0].item<double>(), y_pred1[1].item<double>(), y_pred1[2].item<double>(),
+        y_pred2[0].item<double>()+e, y_pred2[1].item<double>()));
+
+        pc.push_back(gen->new_parabaloid(y_pred[0].item<double>(), y_pred[1].item<double>(), y_pred[2].item<double>(),
+        y_pred1[0].item<double>(), y_pred1[1].item<double>(), y_pred1[2].item<double>(),
+        y_pred2[0].item<double>(), y_pred2[1].item<double>()+e));
+
+        auto result = gen->get_fractions2_all(paraboloid);
+        bool flip = false;
+        if (result[0].item<double>() > 0.5)
+        {
+            flip = true;
+            result = gen->get_fractions2_gas_all(paraboloid);
+        }
+
+        vector<torch::Tensor> epo;
+        vector<torch::Tensor> epa;
+        vector<torch::Tensor> epc;
+        vector<torch::Tensor> gradso;
+        vector<torch::Tensor> gradsa;
+        vector<torch::Tensor> gradsc;
+
+        for (int i = 0; i < 3; ++i)
+        {
+            if (!flip)
+            {
+                epo.push_back(gen->get_fractions2_all(po[i]));
+            }
+            else
+            {
+                epo.push_back(gen->get_fractions2_gas_all(po[i]));
+            }
+            torch::Tensor temp = torch::zeros(19);
+            for (int j = 0; j < 19; ++j)
+            {
+                temp[j] = (epo[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            gradso.push_back(temp);
+        }
+        for (int i = 0; i < 3; ++i)
+        {
+            if (!flip)
+            {
+                epa.push_back(gen->get_fractions2_all(pa[i]));
+            }
+            else
+            {
+                epa.push_back(gen->get_fractions2_gas_all(pa[i]));
+            }
+            torch::Tensor temp = torch::zeros(19);
+            for (int j = 0; j < 19; ++j)
+            {
+                temp[j] = (epa[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            gradsa.push_back(temp);
+        }
+        for (int i = 0; i < 2; ++i)
+        {
+            if (!flip)
+            {
+                epc.push_back(gen->get_fractions2_all(pc[i]));
+            }
+            else
+            {
+                epc.push_back(gen->get_fractions2_gas_all(pc[i]));
+            }
+            torch::Tensor temp = torch::zeros(19);
+            for (int j = 0; j < 19; ++j)
+            {
+                temp[j] = (epc[i][j].item<double>() - result[j].item<double>()) / e;
+            }
+            gradsc.push_back(temp);
+        }
+        if (compute_requires_grad(y_pred)) 
+        {
+            auto grad_fn = std::shared_ptr<MOFBackward1>(new grad_functions::MOFBackward1(), deleteNode);
+            auto grad_fn1 = std::shared_ptr<MOFBackward1>(new grad_functions::MOFBackward1(), deleteNode);
+            auto grad_fn2 = std::shared_ptr<MOFBackward2>(new grad_functions::MOFBackward2(), deleteNode);
+
+            grad_fn->set_next_edges(collect_next_edges(y_pred));
+            grad_fn->frac_grads = gradso;
+            grad_fn->y_pred = y_pred;
+
+            grad_fn1->set_next_edges(collect_next_edges(y_pred1));
+            grad_fn1->frac_grads = gradsa;
+            grad_fn1->y_pred = y_pred1;
+
+            grad_fn2->set_next_edges(collect_next_edges(y_pred2));
+            grad_fn2->frac_grads = gradsc;
+            grad_fn2->y_pred = y_pred2;
+
+            set_history(flatten_tensor_args(result), grad_fn);
+            set_history(flatten_tensor_args(result), grad_fn1);
+            set_history(flatten_tensor_args(result), grad_fn2);
+        }
+        return result;
+    }
 }
 
 #endif

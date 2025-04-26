@@ -21,8 +21,8 @@ namespace IRL
         mesh = initializeMesh(a_number_of_cells);
         IRL::setVolumeFractionBounds(1.0e-14);
         std::cout.precision(15);
-        distribution1 = std::normal_distribution<double>(0.0,0.3);
-        distribution2 = std::normal_distribution<double>(0.0,0.3);
+        distribution1 = std::normal_distribution<double>(0.0,0.1);
+        distribution2 = std::normal_distribution<double>(0.0,0.1);
     }
 
     IRL::Paraboloid fractions::new_parabaloid(double x, double y, double z, double a, double b, double c, double alpha, double beta)
@@ -65,6 +65,7 @@ namespace IRL
         std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
         std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
         std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
+        std::uniform_real_distribution<double> random_sign(-1, 1);
         std::uniform_real_distribution<double> random_translationx(ox_l, ox_h);
         std::uniform_real_distribution<double> random_translationy(oy_l, oy_h);
         std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
@@ -72,8 +73,35 @@ namespace IRL
 
         do
         {
-            alpha = random_coeffsa(a_eng);//distribution1(generator);
-            beta = random_coeffsb(a_eng);//distribution2(generator);
+            do
+            {
+                double sign = random_sign(a_eng);
+                //if (sign > 0)
+                {
+                    alpha = random_coeffsa(a_eng);//distribution1(generator);//
+                }
+                //else
+                {
+                    //alpha = -random_coeffsa(a_eng);//distribution1(generator);//
+                }
+                sign = random_sign(a_eng);
+                if (alpha > 0)
+                {
+                    //random_coeffsb = std::uniform_real_distribution<double>(0, cob_h);
+                }
+                else
+                {
+                    //random_coeffsb = std::uniform_real_distribution<double>(cob_l, 0);
+                }
+                //if (sign > 0)
+                {
+                    beta = random_coeffsb(a_eng);//distribution2(generator);//
+                }
+                //else
+                {
+                    //beta = -random_coeffsb(a_eng);//distribution2(generator);//
+                }
+            } while (abs(alpha) < 1 && abs(beta) < 1);
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
             datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
             angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
@@ -543,6 +571,128 @@ namespace IRL
         return torch::tensor(f);  
     }
 
+    torch::Tensor fractions::get_fractions2_all(IRL::Paraboloid p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        const auto volumes = getCellMoments2(p, liquid_volume_fraction, 1, 1, 1);  
+        const auto volumes_gas = getCellMomentsGas2(p, liquid_volume_fraction, 1, 1, 1);    
+        
+        f.push_back(volumes[0]);
+        if (volumes[0] < 10e-15 || volumes[0] > 1-10e-15)
+        {
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);    
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);  
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);    
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);  
+        }
+        else
+        {
+            f.push_back(volumes[1]);
+            f.push_back(volumes[2]);
+            f.push_back(volumes[3]); 
+            f.push_back(volumes[4]);
+            f.push_back(volumes[5]);
+            f.push_back(volumes[6]);    
+            f.push_back(volumes[7]);
+            f.push_back(volumes[8]);
+            f.push_back(volumes[9]);                
+
+            f.push_back(volumes_gas[1]);
+            f.push_back(volumes_gas[2]);
+            f.push_back(volumes_gas[3]); 
+            f.push_back(volumes_gas[4]);
+            f.push_back(volumes_gas[5]);
+            f.push_back(volumes_gas[6]); 
+            f.push_back(volumes_gas[7]);
+            f.push_back(volumes_gas[8]);
+            f.push_back(volumes_gas[9]);     
+        }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_fractions3_all(IRL::Paraboloid p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments2(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas2(p, liquid_volume_fraction, i, j, k);  
+
+        
+                    f.push_back(volumes[0]);
+                    if (volumes[0] < 10e-15 || volumes[0] > 1-10e-15)
+                    {
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);  
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);  
+                    }
+                    else
+                    {
+                        f.push_back(volumes[1] - mesh.xm(i));
+                        f.push_back(volumes[2] - mesh.ym(j));
+                        f.push_back(volumes[3] - mesh.zm(k)); 
+                        f.push_back(volumes[4] + mesh.ym(j)*mesh.ym(j) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes[5] - mesh.xm(i)*mesh.ym(j));
+                        f.push_back(volumes[6] - mesh.xm(i)*mesh.zm(k));    
+                        f.push_back(volumes[7] + mesh.xm(i)*mesh.xm(i) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes[8] - mesh.ym(j)*mesh.zm(k));
+                        f.push_back(volumes[9] + mesh.xm(i)*mesh.xm(i) + mesh.ym(j)*mesh.ym(j));                
+
+                        f.push_back(volumes_gas[1] - mesh.xm(i));
+                        f.push_back(volumes_gas[2] - mesh.ym(j));
+                        f.push_back(volumes_gas[3] - mesh.zm(k)); 
+                        f.push_back(volumes_gas[4] + mesh.ym(j)*mesh.ym(j) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes_gas[5] - mesh.xm(i)*mesh.ym(j));
+                        f.push_back(volumes_gas[6] - mesh.xm(i)*mesh.zm(k)); 
+                        f.push_back(volumes_gas[7] + mesh.xm(i)*mesh.xm(i) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes_gas[8] - mesh.ym(j)*mesh.zm(k));
+                        f.push_back(volumes_gas[9] + mesh.xm(i)*mesh.xm(i) + mesh.ym(j)*mesh.ym(j));     
+                    }
+                }
+            }
+        }  
+        return torch::tensor(f);  
+    }
+
     torch::Tensor fractions::get_fractions_gas(IRL::Paraboloid p, bool centroids)
     {
         DataMesh<double> liquid_volume_fraction(mesh);
@@ -629,6 +779,128 @@ namespace IRL
                 }
             }
         }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_fractions2_gas_all(IRL::Paraboloid p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        const auto volumes = getCellMoments2(p, liquid_volume_fraction, 1, 1, 1);  
+        const auto volumes_gas = getCellMomentsGas2(p, liquid_volume_fraction, 1, 1, 1);    
+        
+        f.push_back(volumes_gas[0]);
+        if (volumes_gas[0] < 10e-15 || volumes_gas[0] > 1-10e-15)
+        {
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);    
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);  
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);    
+            f.push_back(0);
+            f.push_back(0);
+            f.push_back(0);  
+        }
+        else
+        {
+            f.push_back(volumes_gas[1]);
+            f.push_back(volumes_gas[2]);
+            f.push_back(volumes_gas[3]); 
+            f.push_back(volumes_gas[4]);
+            f.push_back(volumes_gas[5]);
+            f.push_back(volumes_gas[6]);  
+            f.push_back(volumes_gas[7]);
+            f.push_back(volumes_gas[8]);
+            f.push_back(volumes_gas[9]);  
+
+            f.push_back(volumes[1]);
+            f.push_back(volumes[2]);
+            f.push_back(volumes[3]); 
+            f.push_back(volumes[4]);
+            f.push_back(volumes[5]);
+            f.push_back(volumes[6]); 
+            f.push_back(volumes[7]);
+            f.push_back(volumes[8]);
+            f.push_back(volumes[9]);            
+        }
+        return torch::tensor(f);  
+    }
+
+    torch::Tensor fractions::get_fractions3_gas_all(IRL::Paraboloid p)
+    {
+        DataMesh<double> liquid_volume_fraction(mesh);
+        vector<double> f;
+
+        for (int i = 0; i < a_number_of_cells; ++i)
+        {
+            for (int j = 0; j < a_number_of_cells; ++j)
+            {
+                for (int k = 0; k < a_number_of_cells; ++k)
+                {
+                    const auto volumes = getCellMoments2(p, liquid_volume_fraction, i, j, k);  
+                    const auto volumes_gas = getCellMomentsGas2(p, liquid_volume_fraction, i, j, k);  
+
+        
+                    f.push_back(volumes_gas[0]);
+                    if (volumes[0] < 10e-15 || volumes[0] > 1-10e-15)
+                    {
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);  
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);    
+                        f.push_back(0);
+                        f.push_back(0);
+                        f.push_back(0);  
+                    }
+                    else
+                    {
+                        f.push_back(volumes_gas[1] - mesh.xm(i));
+                        f.push_back(volumes_gas[2] - mesh.ym(j));
+                        f.push_back(volumes_gas[3] - mesh.zm(k)); 
+                        f.push_back(volumes_gas[4] + mesh.ym(j)*mesh.ym(j) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes_gas[5] - mesh.xm(i)*mesh.ym(j));
+                        f.push_back(volumes_gas[6] - mesh.xm(i)*mesh.zm(k)); 
+                        f.push_back(volumes_gas[7] + mesh.xm(i)*mesh.xm(i) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes_gas[8] - mesh.ym(j)*mesh.zm(k));
+                        f.push_back(volumes_gas[9] + mesh.xm(i)*mesh.xm(i) + mesh.ym(j)*mesh.ym(j)); 
+
+                        f.push_back(volumes[1] - mesh.xm(i));
+                        f.push_back(volumes[2] - mesh.ym(j));
+                        f.push_back(volumes[3] - mesh.zm(k)); 
+                        f.push_back(volumes[4] + mesh.ym(j)*mesh.ym(j) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes[5] - mesh.xm(i)*mesh.ym(j));
+                        f.push_back(volumes[6] - mesh.xm(i)*mesh.zm(k));    
+                        f.push_back(volumes[7] + mesh.xm(i)*mesh.xm(i) + mesh.zm(k)*mesh.zm(k));
+                        f.push_back(volumes[8] - mesh.ym(j)*mesh.zm(k));
+                        f.push_back(volumes[9] + mesh.xm(i)*mesh.xm(i) + mesh.ym(j)*mesh.ym(j));                   
+                    }
+                }
+            }
+        }  
         return torch::tensor(f);  
     }
 
@@ -977,6 +1249,30 @@ namespace IRL
             moments[1].centroid()[1] = moments[1].centroid()[1] / moments[1].volume();
             moments[1].centroid()[2] = moments[1].centroid()[2] / moments[1].volume();
         }
+        return moments[1];
+    }
+
+    GeneralMoments3D<2> fractions::getCellMoments2(const IRL::Paraboloid& a_interface,
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
+    {
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
+        const int i(x_loc), j(y_loc), k(z_loc);
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        auto moments = IRL::getNormalizedVolumeMoments<SeparatedMoments<GeneralMoments3D<2>>>(cell, a_interface);
+        return moments[0];
+    }
+
+    GeneralMoments3D<2> fractions::getCellMomentsGas2(const IRL::Paraboloid& a_interface,
+    const DataMesh<double>& a_liquid_volume_fraction, int x_loc, int y_loc, int z_loc)
+    {
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
+        const int i(x_loc), j(y_loc), k(z_loc);
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        auto moments = IRL::getNormalizedVolumeMoments<SeparatedMoments<GeneralMoments3D<2>>>(cell, a_interface);
         return moments[1];
     }
 

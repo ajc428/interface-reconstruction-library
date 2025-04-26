@@ -50,6 +50,7 @@ namespace IRL
 
         ofstream results_ex;
         ofstream results_pr;
+        ofstream results;
         torch::Tensor train_in;
         torch::Tensor train_out;
         torch::Tensor val_in;
@@ -74,6 +75,7 @@ namespace IRL
     public:
         trainer(int);
         trainer(int, int, double, int);
+        trainer(int, int, int, int, double, int);
         ~trainer();
         void init();
         void load_train_data(string, string);
@@ -82,10 +84,16 @@ namespace IRL
         void load_model(string);
         void train_model(bool, string, string);
         void test_model(int);
+        double test_model();
         IRL::Normal get_normal(vector<double>*);
         IRL::Normal get_r2p_normal(vector<double>*);
         double get_type(vector<double>*);
+        double get_curv(vector<double>*);
         //vector<double> get_2normals(vector<double>*);
+        // IRL::Normal get_para_axis(vector<double>*);
+        vector<double> get_para_coeff(vector<double>*);
+        vector<double> get_para_curvs(vector<double>*);
+        // IRL::Normal get_para_origin(vector<double>*);
     };
 
     class cnn_trainer
@@ -103,6 +111,7 @@ namespace IRL
 
         ofstream results_ex;
         ofstream results_pr;
+        ofstream results;
         torch::Tensor train_in;
         torch::Tensor train_out;
         torch::Tensor val_in;

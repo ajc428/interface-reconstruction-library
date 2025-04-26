@@ -76,6 +76,10 @@ namespace IRL
         torch::Tensor get_fractions(IRL::Plane, bool);
         torch::Tensor get_fractions_all(IRL::Paraboloid);
         torch::Tensor get_fractions_gas_all(IRL::Paraboloid);
+        torch::Tensor get_fractions2_all(IRL::Paraboloid);
+        torch::Tensor get_fractions3_all(IRL::Paraboloid);
+        torch::Tensor get_fractions2_gas_all(IRL::Paraboloid);
+        torch::Tensor get_fractions3_gas_all(IRL::Paraboloid);
         torch::Tensor get_fractions_all(IRL::PlanarSeparator);
         torch::Tensor get_fractions_only(IRL::PlanarSeparator);
         torch::Tensor get_fractions_gas_all(IRL::PlanarSeparator);
@@ -93,6 +97,10 @@ namespace IRL
 
         template <class MomentType>
         MomentType getCellMomentsGas(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int);
+
+        GeneralMoments3D<2> getCellMoments2(const IRL::Paraboloid&,const DataMesh<double>&, int, int, int); 
+
+        GeneralMoments3D<2> getCellMomentsGas2(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int);
 
         template <class MomentType>
         MomentType getCellMoments(const IRL::PlanarSeparator&,const DataMesh<double>&, int, int, int); 

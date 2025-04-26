@@ -16,6 +16,7 @@
 #include <torch/torch.h>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues> 
+#include <Eigen/SVD>
 
 using namespace std;
 

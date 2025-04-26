@@ -56,7 +56,26 @@ namespace IRL
         torch::Tensor VolumeFracsForwardFD(const torch::Tensor);
         torch::Tensor R2PVolumeFracsForward(const torch::Tensor,double,double,double);
         torch::Tensor VolumeFracsNormalForward(const torch::Tensor, IRL::Normal);
+        torch::Tensor MOF_Forward(const torch::Tensor);
+        torch::Tensor MOF_Forward2(const torch::Tensor,const torch::Tensor,const torch::Tensor);
         
+
+
+        torch::Tensor MSE_paraboloid_ref(torch::Tensor out, torch::Tensor target)
+        {   
+            torch::Tensor axis_out = out;//out.index({torch::indexing::Slice(),torch::indexing::Slice(2,5)});
+            torch::Tensor axis_target = target.index({torch::indexing::Slice(),torch::indexing::Slice(2,5)});
+            torch::Tensor coa = target.index({torch::indexing::Slice(),torch::indexing::Slice(0,1)});
+            torch::Tensor cob = target.index({torch::indexing::Slice(),torch::indexing::Slice(1,2)});
+            coa = torch::div(coa, torch::max(coa));
+            cob = torch::div(cob, torch::max(cob));
+            //torch::Tensor loss = torch::mean(torch::mean(torch::pow(axis_out - axis_target,2.0)*torch::clamp(torch::pow(coa-cob,4.0)/torch::pow(torch::maximum(coa,cob),4.0),0.0,1.0),-1),-1);
+            torch::Tensor loss = torch::mean(torch::mean(torch::pow(axis_out - axis_target,2.0)*torch::clamp(torch::abs(coa-cob),0.0,1.0),-1),-1);
+
+            return loss;
+        };
+
+
         torch::Tensor MSE_angle_loss(torch::Tensor out, torch::Tensor target)
         {   
             //torch::Tensor loss = torch::mse_loss(out,target);
@@ -204,6 +223,102 @@ namespace IRL
                 }
 
                 for (int i = 0; i < 6; ++i)
+                {
+                    temp[i] = grad_result[i];
+                }
+                grad_inputs[0] = temp;
+                return grad_inputs;
+            }
+        };
+
+        struct MOFBackward : public Node 
+        {
+            vector<torch::Tensor> frac_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                torch::Tensor in_grads = torch::zeros({19,1});
+                torch::Tensor out_grads = torch::zeros({8,19});
+                torch::Tensor grad_result = torch::zeros({8,1});
+                for (int i = 0; i < 8; ++i)
+                {
+                    out_grads.index_put_({i,torch::indexing::Slice()},frac_grads[i]);
+                }
+                in_grads = inputs[0];
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros(8); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = torch::matmul(out_grads, in_grads);
+                }
+
+                for (int i = 0; i < 8; ++i)
+                {
+                    temp[i] = grad_result[i];
+                }
+                grad_inputs[0] = temp;
+                return grad_inputs;
+            }
+        };
+
+        struct MOFBackward1 : public Node 
+        {
+            vector<torch::Tensor> frac_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                torch::Tensor in_grads = torch::zeros({19,1});
+                torch::Tensor out_grads = torch::zeros({3,19});
+                torch::Tensor grad_result = torch::zeros({3,1});
+                for (int i = 0; i < 3; ++i)
+                {
+                    out_grads.index_put_({i,torch::indexing::Slice()},frac_grads[i]);
+                }
+                in_grads = inputs[0];
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros(3); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = torch::matmul(out_grads, in_grads);
+                }
+
+                for (int i = 0; i < 3; ++i)
+                {
+                    temp[i] = grad_result[i];
+                }
+                grad_inputs[0] = temp;
+                return grad_inputs;
+            }
+        };
+
+        struct MOFBackward2 : public Node 
+        {
+            vector<torch::Tensor> frac_grads;
+            torch::Tensor y_pred;
+
+            variable_list apply(variable_list&& inputs) override 
+            {
+                torch::Tensor in_grads = torch::zeros({19,1});
+                torch::Tensor out_grads = torch::zeros({2,19});
+                torch::Tensor grad_result = torch::zeros({2,1});
+                for (int i = 0; i < 2; ++i)
+                {
+                    out_grads.index_put_({i,torch::indexing::Slice()},frac_grads[i]);
+                }
+                in_grads = inputs[0];
+                variable_list grad_inputs(1); 
+                torch::Tensor temp = torch::zeros(2); 
+
+                if (should_compute_output(0)) 
+                {
+                    grad_result = torch::matmul(out_grads, in_grads);
+                }
+
+                for (int i = 0; i < 2; ++i)
                 {
                     temp[i] = grad_result[i];
                 }

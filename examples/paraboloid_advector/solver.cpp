@@ -92,7 +92,7 @@ void setPhaseQuantities(const Data<IRL::Paraboloid>& a_interface,
 }
 
 void writeDiagnosticsHeader(void) {
-  printf("%10s %20s %12s %20s %20s %20s %20s %20s %20s %20s\n", "Iteration",
+  printf("%10s %20s %12s %20s %20s %20s %20s %20s %20s %20s %20s\n", "Iteration",
          "Time", "CFL", "liquidVFSum", "liquidVolSum", "ChangeLiquidVFSum",
          "ChangeLiquidVolSum", "AdvectionDuration", "ReconDuration",
          "OutputDuration", "InterfaceCells");

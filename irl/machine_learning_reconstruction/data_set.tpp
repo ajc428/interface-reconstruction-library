@@ -79,24 +79,28 @@ vector<torch::Tensor> MyDataset_cnn::read_data_in(string file, int data_size, in
     string line, value;
     int i = 0;
     int size = 3;
+    int channels = 7;
     while (getline(indata, line) && i < data_size)
     {
         num.clear();
-        torch::Tensor temp = torch::zeros({1,size,size,size});
+        torch::Tensor temp = torch::zeros({channels,size,size,size});
         stringstream str(line);
         while (getline(str, value, ','))
         {
             num.push_back(stod(value));
         }
-        for (int ii = 0; ii < size; ++ii)
+        for (int c = 0; c < channels; ++c)
         {
-            for (int jj = 0; jj < size; ++jj)
+            for (int ii = 0; ii < size; ++ii)
             {
-                for (int kk = 0; kk < size; ++kk)
+                for (int jj = 0; jj < size; ++jj)
                 {
-                    temp[0][ii][jj][kk] = double(num[ii*size*size+jj*size+kk]);
-                }
-            } 
+                    for (int kk = 0; kk < size; ++kk)
+                    {
+                        temp[c][ii][jj][kk] = double(num[channels*(ii*size*size+jj*size+kk)+c]);
+                    }
+                } 
+            }
         }
         output.push_back(temp);
         ++i;
