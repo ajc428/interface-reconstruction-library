@@ -64,12 +64,12 @@ namespace IRL
                 torch::Tensor result;
                 std::cout << n << endl;
                 IRL::Paraboloid paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-                result = gen->get_fractions_all(paraboloid);
-                while (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
-                {
-                    paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
-                    result = gen->get_fractions_all(paraboloid);
-                }
+                // result = gen->get_fractions_all(paraboloid);
+                // while (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                // {
+                //     paraboloid = gen->new_random_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                //     result = gen->get_fractions_all(paraboloid);
+                // }
                 angles = gen->getAngles();
 
                 std::ofstream coefficients;
@@ -136,7 +136,7 @@ namespace IRL
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid);
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
 
@@ -243,7 +243,7 @@ namespace IRL
                 std::string data_name = "fractions.txt";
                 output.open(data_name, std::ios_base::app);
 
-                int p = 0;//rand() % 8;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                int p = rand() % 8;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 int mod = 4;
                 if (all)
                 {
@@ -286,7 +286,7 @@ namespace IRL
                 output.close();  
 
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid);
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
                 double curv = surface.getAverageGaussianCurvature();
@@ -519,6 +519,313 @@ namespace IRL
             }           
         };
 
+        void generate_sub_grid(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
+        {
+            srand((unsigned) time(NULL));
+            for (int n = 0; n < Ntests; ++n) 
+            {
+                std::cout << n << endl;
+                IRL::Paraboloid paraboloid = gen->new_random_sub_grid2_parabaloid(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string name = "coefficients.txt";
+                coefficients.open(name, std::ios_base::app);
+                coefficients << paraboloid.getDatum().x() << "," << paraboloid.getDatum().y() << "," << paraboloid.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << paraboloid.getAlignedParaboloid().a() << "," << paraboloid.getAlignedParaboloid().b() << "\n";
+                coefficients.close();
+
+                torch::Tensor result;
+                bool flip = false;
+                if (!all)
+                {
+                    result = gen->get_fractions(paraboloid, true);
+                    if (result[((result.sizes()[0]-/*7*/4)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas(paraboloid, true);
+                    }
+                }
+                else
+                {
+                    result = gen->get_fractions_all(paraboloid);
+                    if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                    {
+                        flip = true;
+                        result = gen->get_fractions_gas_all(paraboloid);
+                    }                    
+                }
+
+                std::vector<double> fractions;
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    fractions.push_back(result[i].item<double>());
+                }
+
+                int direction = 0;
+                std::vector<double> center;
+                auto sm = IRL::spatial_moments();
+                if (!all)
+                {
+                    center = sm.get_mass_centers(fractions);
+                    direction = rotateFractions(&fractions,center);
+                }
+                else
+                {
+                    center = sm.get_mass_centers_all(&fractions);
+                    direction = rotateFractions_all(&fractions,center);
+                }
+
+                std::ofstream output;
+                std::string data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+
+                int p = 0;//rand() % 8;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                int mod = 4;
+                if (all)
+                {
+                    mod = 7;
+                }
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    if (p == 0)
+                    {
+                        output << fractions[i] << ",";
+                    }
+                    else
+                    {
+                        double c = (rand() % 201 - 100) / 1000.0;
+                        if (i % mod != 0 && fractions[i] > -9)
+                        {
+                            if (fractions[i] + c > 0.5)
+                            {
+                                fractions[i] = 0.5;
+                                output << 0.5 << ",";
+                            }
+                            else if (fractions[i] + c < -0.5)
+                            {
+                                fractions[i] = -0.5;
+                                output << -0.5 << ",";
+                            }
+                            else
+                            {
+                                output << fractions[i] + c << ",";
+                                fractions[i] = fractions[i] + c;
+                            }
+                        }
+                        else
+                        {
+                            output << fractions[i] << ",";
+                        }
+                    }
+                }
+                output << "\n";
+                output.close();  
+
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+                double curv = surface.getAverageGaussianCurvature();
+
+                IRL::Normal axis;
+                IRL::Normal a_dir;
+                IRL::Normal b_dir;
+                axis = paraboloid.getReferenceFrame()[2];
+                a_dir = paraboloid.getReferenceFrame()[0];
+                b_dir = paraboloid.getReferenceFrame()[1];
+                double co_a = paraboloid.getAlignedParaboloid().a();
+                double co_b = paraboloid.getAlignedParaboloid().b();
+                IRL::Pt origin = paraboloid.getDatum();
+                IRL::UnitQuaternion rot;
+
+                switch (direction)
+                {
+                    case 1:
+                    normal[0] = -normal[0];
+                    axis[0] = -axis[0];
+                    a_dir[0] = -a_dir[0];
+                    origin[0] = -origin[0];
+                    break;
+                    case 2:
+                    normal[1] = -normal[1];
+                    axis[1] = -axis[1];
+                    a_dir[1] = -a_dir[1];
+                    origin[1] = -origin[1];
+                    break;
+                    case 3:
+                    normal[2] = -normal[2];
+                    axis[2] = -axis[2];
+                    a_dir[2] = -a_dir[2];
+                    origin[2] = -origin[2];
+                    break;
+                    case 4:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    axis[0] = -axis[0];
+                    axis[1] = -axis[1];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[1] = -a_dir[1];
+                    origin[0] = -origin[0];
+                    origin[1] = -origin[1]; 
+                    break;
+                    case 5:
+                    normal[0] = -normal[0];
+                    normal[2] = -normal[2];
+                    axis[0] = -axis[0];
+                    axis[2] = -axis[2];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[2] = -a_dir[2];
+                    origin[0] = -origin[0];
+                    origin[2] = -origin[2]; 
+                    break;
+                    case 6:
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    axis[1] = -axis[1];
+                    axis[2] = -axis[2];
+                    a_dir[1] = -a_dir[1];
+                    a_dir[2] = -a_dir[2];
+                    origin[1] = -origin[1];
+                    origin[2] = -origin[2]; 
+                    break;
+                    case 7:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    axis[0] = -axis[0];
+                    axis[1] = -axis[1];
+                    axis[2] = -axis[2];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[1] = -a_dir[1];
+                    a_dir[2] = -a_dir[2];   
+                    origin[0] = -origin[0]; 
+                    origin[1] = -origin[1];
+                    origin[2] = -origin[2];       
+                    break;
+                }
+                if (!flip)
+                {
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    axis[0] = -axis[0];
+                    axis[1] = -axis[1];
+                    axis[2] = -axis[2];
+                    a_dir[0] = -a_dir[0];
+                    a_dir[1] = -a_dir[1];
+                    a_dir[2] = -a_dir[2];
+                    co_a = -co_a;
+                    co_b = -co_b;
+                }
+                b_dir = IRL::crossProduct(axis,a_dir);
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();   
+
+                IRL::Normal par = ((origin[0]*normal[0] + origin[1]*normal[1] + origin[2]*normal[2])) * normal;
+                IRL::Normal offset = origin - par;
+
+                // if (co_a < co_b)
+                // {
+                //     double temp = co_b;
+                //     co_b = co_a;
+                //     co_a = temp;
+                //     rot = IRL::UnitQuaternion(M_PI/2,axis);
+                //     a_dir = rot*a_dir;
+                //     b_dir = IRL::crossProduct(axis,a_dir);
+                // }
+
+                if ((a_dir[0] < 0 && a_dir[1] < 0) || (a_dir[0] < 0 && a_dir[2] < 0) || (a_dir[1] < 0 && a_dir[2] < 0))
+                {
+                    rot = IRL::UnitQuaternion(M_PI,axis);
+                    a_dir = rot*a_dir;
+                    b_dir = IRL::crossProduct(axis,a_dir);
+                }
+
+                double n2 = axis[0]/(sqrt(axis[1]*axis[1]+axis[0]*axis[0]));
+                double n1 = (-n2*axis[1])/axis[0];
+                double theta = acos(n1*a_dir[0]+n2*a_dir[1]);
+                if (sqrt(axis[1]*axis[1]+axis[0]*axis[0]) == 0 || axis[0] == 0)
+                {
+                    theta = 0;
+                }
+                rot = IRL::UnitQuaternion(theta,axis);
+                IRL::Normal v1;
+                v1[0] = n1; v1[1] = n2; v1[2] = 0;
+                IRL::Normal v = rot*v1;
+                if (abs(v[0]-a_dir[0]) >= 1e-8 && abs(v[1]-a_dir[1]) >= 1e-8)
+                {
+                    theta = -theta;
+                } 
+                if (theta < 0)
+                {
+                    theta = theta + 2*M_PI;
+                }
+                if (theta >= 2*M_PI)
+                {
+                    theta = theta - 2*M_PI;
+                }
+                
+
+                axis.normalize();
+                std::ofstream input;
+                name = "input.txt";
+                input.open(name, std::ios_base::app);
+                input << axis[0] << "," << axis[1] << "," << axis[2] << "\n";
+                input.close();   
+
+                a_dir.normalize();
+
+                double a = co_a*origin[1]*origin[1] - origin[2] + co_b*origin[0]*origin[0] + co_a*origin[0]*origin[0]*pow(cos(theta),2.0) - co_a*origin[1]*origin[1]*pow(cos(theta),2.0) - co_b*origin[0]*origin[0]*pow(cos(theta),2.0) + co_b*origin[1]*origin[1]*pow(cos(theta),2.0) + co_a*origin[0]*origin[1]*sin(2*theta) - co_b*origin[0]*origin[1]*sin(2*theta);
+                
+                double b = co_a*origin[0] + co_b*origin[0] + co_a*origin[0]*cos(2*theta) - co_b*origin[0]*cos(2*theta) + co_a*origin[1]*sin(2*theta) - co_b*origin[1]*sin(2*theta);
+                double c = co_a*origin[1] + co_b*origin[1] - co_a*origin[1]*cos(2*theta) + co_b*origin[1]*cos(2*theta) + co_a*origin[0]*sin(2*theta) - co_b*origin[0]*sin(2*theta);
+
+                double d = co_a - co_a * pow(sin(theta),2.0) + co_b * pow(sin(theta),2.0);
+                double f = co_b - co_b * pow(sin(theta),2.0) + co_a * pow(sin(theta),2.0);
+                double e = (co_a-co_b) * sin(2.0*theta);
+
+                // name = "input1.txt";
+                // input.open(name, std::ios_base::app);
+                // input << d << "," << f << "," << e << "\n";
+                // input.close();
+
+                name = "input1.txt";
+                input.open(name, std::ios_base::app);
+                if (co_a < 0)
+                {
+                    input << -2*sqrt(1/-co_a) << "," << theta << "\n";
+                }
+                else
+                {
+                    input << 2*sqrt(1/co_a) << "," << theta << "\n";
+                }
+                input.close();
+
+                name = "input2.txt";
+                input.open(name, std::ios_base::app);
+                input << origin[0] << "," << origin[1] << "," << origin[2] << "\n";
+                input.close();   
+
+                // name = "fractions_origin.txt";
+                // input.open(name, std::ios_base::app);
+                // if (co_a < 0)
+                // {
+                //     input << fractions[(fractions.size()-7)/2] << "," << fractions[(fractions.size()-7)/2+1] << "," << fractions[(fractions.size()-7)/2+2] << "," << fractions[(fractions.size()-7)/2+3] << "," << fractions[(fractions.size()-7)/2+4] << "," << fractions[(fractions.size()-7)/2+5] << "," << fractions[(fractions.size()-7)/2+6] << "," << axis[0] << "," << axis[1] << "," << axis[2] << "," << -2*sqrt(1/-co_a) << "," << theta << "," << "\n";
+                // }
+                // else
+                // {
+                //     input << fractions[(fractions.size()-7)/2] << "," << fractions[(fractions.size()-7)/2+1] << "," << fractions[(fractions.size()-7)/2+2] << "," << fractions[(fractions.size()-7)/2+3] << "," << fractions[(fractions.size()-7)/2+4] << "," << fractions[(fractions.size()-7)/2+5] << "," << fractions[(fractions.size()-7)/2+6] << "," << axis[0] << "," << axis[1] << "," << axis[2] << "," << 2*sqrt(1/co_a) << "," << theta << "," << "\n";
+                // }
+                // input.close();  
+            }           
+        };
+
         void generate_two_paraboloids(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
         {
             for (int n = 0; n < Ntests; ++n) 
@@ -686,8 +993,8 @@ namespace IRL
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
-                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, interface);
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, interface);
                 auto surface = surface_and_moments.getSurface();
                 auto surface1 = surface_and_moments1.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
@@ -751,8 +1058,8 @@ namespace IRL
                 // const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
                 // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
 
-                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
                 // const double length_scale = 0.05;
                 // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
                 // IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
@@ -959,8 +1266,8 @@ namespace IRL
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
-                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, interface);
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, interface);
                 auto surface = surface_and_moments.getSurface();
                 auto surface1 = surface_and_moments1.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
@@ -1024,8 +1331,8 @@ namespace IRL
                 const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
                 const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
 
-                const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
                 const double length_scale = 0.05;
                 IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
                 IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
@@ -1298,8 +1605,8 @@ namespace IRL
                                 cell = IRL::RectangularCuboid::fromBoundingPts(
                                             IRL::Pt(-number_of_cells/2.0+i,-number_of_cells/2.0+j,-number_of_cells/2.0+k),
                                             IRL::Pt(-number_of_cells/2.0+1+i,-number_of_cells/2.0+1+j,-number_of_cells/2.0+1+k));
-                                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
                                 auto surface = surface_and_moments.getSurface();
                                 auto surface1 = surface_and_moments1.getSurface();
                                 normal = normal + surface.getAverageNormalNonAligned();
@@ -1389,8 +1696,8 @@ namespace IRL
                 // const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
                 // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
 
-                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
                 // const double length_scale = 0.05;
                 // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
                 // IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
@@ -1683,8 +1990,8 @@ namespace IRL
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
-                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, interface);
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface_and_moments1 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, interface);
                 auto surface = surface_and_moments.getSurface();
                 auto surface1 = surface_and_moments1.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
@@ -1748,8 +2055,8 @@ namespace IRL
                 // const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
                 // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
 
-                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
-                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, paraboloid);
+                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cell, interface);
                 // const double length_scale = 0.05;
                 // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
                 // IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
@@ -1788,7 +2095,7 @@ namespace IRL
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid[13]);
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid[13]);
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
                 normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
@@ -1804,7 +2111,7 @@ namespace IRL
                         for (int k = 0; k < 3; ++k)
                         {
                             auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5+(i-1), -0.5+(j-1), -0.5+(k-1)), IRL::Pt(0.5+(i-1), 0.5+(j-1), 0.5+(k-1)));
-                            auto moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid[k+3*j+9*i]);
+                            auto moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid[k+3*j+9*i]);
                             if (moments.getMoments().volume() > IRL::global_constants::VF_LOW)
                             {
                                 moments.getMoments().centroid()[0] = moments.getMoments().centroid()[0] / moments.getMoments().volume() - (i-1);
@@ -1827,6 +2134,128 @@ namespace IRL
                 output.close();                    
             }           
         };
+
+
+
+
+
+
+
+        //************************************************************
+        //**************CYLINDERS*************************************
+        //************************************************************
+
+
+        void generate_cylinders(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double r_l, double r_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
+        {
+            for (int n = 0; n < Ntests; ++n) 
+            {
+                torch::Tensor result;
+                std::cout << n << endl;
+                IRL::Cylinder cylinder = gen->new_random_cylinder(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, r_l, r_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string name = "coefficients.txt";
+                coefficients.open(name, std::ios_base::app);
+                coefficients << cylinder.getDatum().x() << "," << cylinder.getDatum().y() << "," << cylinder.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << cylinder.getAlignedCylinder().r() << "," << cylinder.getAlignedCylinder().b() << "\n";
+                coefficients.close();
+                
+                bool flip = false;
+                result = gen->get_fractions_all(cylinder);
+                if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                {
+                    flip = true;
+                    result = gen->get_fractions_gas_all(cylinder);
+                }                    
+
+                std::vector<double> fractions;
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    fractions.push_back(result[i].item<double>());
+                }
+                
+
+                int direction = 0;
+                std::vector<double> center;
+                auto sm = IRL::spatial_moments();
+                if (!all)
+                {
+                    center = sm.get_mass_centers(fractions);
+                    direction = rotateFractions(&fractions,center);
+                }
+                else
+                {
+                    center = sm.get_mass_centers_all(&fractions);
+                    direction = rotateFractions_all(&fractions,center);
+                }
+                
+                std::ofstream output;
+                std::string data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    output << fractions[i] << ",";
+                }
+                output << "\n";
+                output.close();  
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::CylinderParametrizedSurfaceOutput>>(cube, cylinder);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+
+                switch (direction)
+                {
+                    case 1:
+                    normal[0] = -normal[0];
+                    break;
+                    case 2:
+                    normal[1] = -normal[1];
+                    break;
+                    case 3:
+                    normal[2] = -normal[2];
+                    break;
+                    case 4:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    break;
+                    case 5:
+                    normal[0] = -normal[0];
+                    normal[2] = -normal[2];
+                    break;
+                    case 6:
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    break;
+                    case 7:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    break;
+                }
+                if (!flip)
+                {
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                }
+
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();                  
+            }  
+        }; 
+
+
+
+
+
 
 
         //************************************************************
@@ -4591,7 +5020,7 @@ namespace IRL
                 std::string normals_name = "normals.txt";
                 normals.open(normals_name, std::ios_base::app);
                 auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
-                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParametrizedSurfaceOutput>>(cube, paraboloid);
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cube, paraboloid);
                 auto surface = surface_and_moments.getSurface();
                 auto normal = surface.getAverageNormalNonAligned();
 

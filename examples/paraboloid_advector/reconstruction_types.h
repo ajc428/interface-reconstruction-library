@@ -77,7 +77,8 @@ struct ML_QUAD {
                                  Data<IRL::Paraboloid>* a_interface);
 };
 
-IRL::Paraboloid gradientDescent(IRL::Paraboloid paraboloid,IRL::RectangularCuboid cell,IRL::Pt bary,double VF);
+IRL::Paraboloid gradientDescent(IRL::Paraboloid paraboloid,IRL::RectangularCuboid cell,IRL::Pt bary,IRL::Pt bary_gas,double VF);
+IRL::Paraboloid gaussNewton(IRL::Paraboloid paraboloid,IRL::RectangularCuboid cell,IRL::Pt bary,IRL::Pt bary_gas,double VF);
 
 void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface);
 

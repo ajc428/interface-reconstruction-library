@@ -23,7 +23,7 @@
 #include "irl/interface_reconstruction_methods/reconstruction_cleaning.h"
 #include "irl/planar_reconstruction/planar_separator.h"
 //#include "irl/machine_learning_reconstruction/trainer.h"
-#include "irl/machine_learning_reconstruction/data_gen.h"
+//s#include "irl/machine_learning_reconstruction/data_gen.h"
 //#include "irl/machine_learning_reconstruction/trainer_cuda.h"
 
 namespace IRL {
@@ -35,8 +35,8 @@ namespace IRL {
 /*IRL::trainer_cuda tc = IRL::trainer_cuda(4);
 IRL::trainer_cuda tc2 = IRL::trainer_cuda(4);
 IRL::trainer_cuda bc = IRL::trainer_cuda(6);*/
-IRL::Normal previous = IRL::Normal();
-double volume_loss = 0;
+//IRL::Normal previous = IRL::Normal();
+//double volume_loss = 0;
 
 /// \brief Perform R2P reconstruction for a 2D problem in the x-y plane.
 template <class CellType>
@@ -79,20 +79,20 @@ inline PlanarSeparator reconstructionWithELVIRA3D(
 inline PlanarSeparator reconstructionWithELVIRA3D(
     const ELVIRANeighborhood& a_neighborhood_geometry, double* weights);
 
-/// \brief Perform ML Reconstruction for 3D.
-template <class CellType>
-inline PlanarSeparator reconstructionWithML3(
-    /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
+// /// \brief Perform ML Reconstruction for 3D.
+// template <class CellType>
+// inline PlanarSeparator reconstructionWithML3(
+//     /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
 
-/// \brief Perform ML Reconstruction for 3D.
-template <class CellType>
-inline PlanarSeparator reconstructionWithML2(
-    /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
+// /// \brief Perform ML Reconstruction for 3D.
+// template <class CellType>
+// inline PlanarSeparator reconstructionWithML2(
+//     /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
 
-inline PlanarSeparator reconstructionWithML(const double* normal, const double* vf_center, const double* cell_bound, PlanarSeparator p); 
+// inline PlanarSeparator reconstructionWithML(const double* normal, const double* vf_center, const double* cell_bound, PlanarSeparator p); 
 
-void loadML(std::string name/*, std::string name1, std::string name2*/);
-void loadML2(std::string name/*, std::string name1, std::string name2*/);
+// void loadML(std::string name/*, std::string name1, std::string name2*/);
+// void loadML2(std::string name/*, std::string name1, std::string name2*/);
 
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>

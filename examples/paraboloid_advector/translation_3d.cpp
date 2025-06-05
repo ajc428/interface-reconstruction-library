@@ -34,7 +34,7 @@
 constexpr int NX = 20;
 constexpr int NY = 20;
 constexpr int NZ = 20;
-constexpr int GC = 2;
+constexpr int GC = 3;
 constexpr IRL::Pt lower_domain(0.0, 0.0, 0.0);
 constexpr IRL::Pt upper_domain(1.0, 1.0, 1.0);
 
@@ -87,9 +87,9 @@ void Translation3D::initialize(Data<double>* a_U, Data<double>* a_V,
   double ellipsoid_rx = sphere_radius;
   double ellipsoid_ry = sphere_radius;
   double ellipsoid_rz = sphere_radius;
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
         const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
         const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
                                         mesh.z(k + 1));
@@ -127,10 +127,20 @@ void Translation3D::initialize(Data<double>* a_U, Data<double>* a_V,
         (*a_interface)(i, j, k) =
             details::fromSphere(ellipsoid_center, cell_radius, ellipsoid_normal);
         }
-
-        // IRL::ReferenceFrame frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
-        // IRL::Pt datum = IRL::Pt(mesh.xm(4), mesh.ym(4), mesh.zm(4));
-        // IRL::Paraboloid p = IRL::Paraboloid(datum,frame,20,20);
+        //IRL::Normal normal = IRL::Normal(1/sqrt(3.0),1/sqrt(3.0),1/sqrt(3.0));
+        // IRL::Normal normal = IRL::Normal(1.0,0.0,0.0);
+        // normal.normalize();
+        // double n2 = normal[0]/(sqrt(normal[1]*normal[1]+normal[0]*normal[0]));
+        // double n1 = (-n2*normal[1])/normal[0];
+        // IRL::Normal v1;
+        // v1[0] = n1; v1[1] = n2; v1[2] = 0;
+        // IRL::Normal b = IRL::crossProduct(normal,v1);
+        // b.normalize();
+        // IRL::Normal a = IRL::crossProduct(b,normal);
+        // a.normalize();
+        // IRL::ReferenceFrame frame = IRL::ReferenceFrame(a, b, normal);
+        // IRL::Pt datum = IRL::Pt(mesh.xm(9), mesh.ym(9), mesh.zm(9));
+        // IRL::Paraboloid p = IRL::Paraboloid(datum,frame,3,0.25);
         // auto cell = IRL::RectangularCuboid::fromBoundingPts(
         //   IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
         //   IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));

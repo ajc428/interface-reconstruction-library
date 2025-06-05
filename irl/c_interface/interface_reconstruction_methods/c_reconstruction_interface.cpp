@@ -54,8 +54,8 @@ void c_reconstructML3(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LV
   assert(a_separator != nullptr);
   assert(a_separator->obj_ptr != nullptr);
   assert(flag != nullptr);
-  *a_separator->obj_ptr =
-      reconstructionWithML3(/**a_elvira_neighborhood->obj_ptr, */*a_lvira_neighborhood->obj_ptr, *a_r2p_neighborhood->obj_ptr, a_liquid_centroids, a_gas_centroids, *a_separator->obj_ptr, flag);
+  //*a_separator->obj_ptr =
+  //    reconstructionWithML3(/**a_elvira_neighborhood->obj_ptr, */*a_lvira_neighborhood->obj_ptr, *a_r2p_neighborhood->obj_ptr, a_liquid_centroids, a_gas_centroids, *a_separator->obj_ptr, flag);
 }
 
 void c_reconstructML2(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LVIRANeigh_RectCub* a_lvira_neighborhood, const double* a_liquid_centroids, const double* a_gas_centroids,
@@ -67,8 +67,8 @@ void c_reconstructML2(/*const c_ELVIRANeigh* a_elvira_neighborhood, */const c_LV
   assert(a_separator != nullptr);
   assert(a_separator->obj_ptr != nullptr);
   assert(flag != nullptr);
-  *a_separator->obj_ptr =
-      reconstructionWithML2(/**a_elvira_neighborhood->obj_ptr, */*a_lvira_neighborhood->obj_ptr, a_liquid_centroids, a_gas_centroids, *a_separator->obj_ptr, flag);
+  //*a_separator->obj_ptr =
+  //    reconstructionWithML2(/**a_elvira_neighborhood->obj_ptr, */*a_lvira_neighborhood->obj_ptr, a_liquid_centroids, a_gas_centroids, *a_separator->obj_ptr, flag);
 }
 
 void c_reconstructML(const double* normal, const double* vf_center, const double* cell_bound, c_PlanarSep* a_separator)
@@ -78,22 +78,22 @@ void c_reconstructML(const double* normal, const double* vf_center, const double
   assert(a_separator != nullptr);
   assert(a_separator->obj_ptr != nullptr);
   assert(cell_bound != nullptr);
-  *a_separator->obj_ptr =
-      reconstructionWithML(normal, vf_center, cell_bound, *a_separator->obj_ptr);
+  //*a_separator->obj_ptr =
+  //    reconstructionWithML(normal, vf_center, cell_bound, *a_separator->obj_ptr);
 }
 
 void c_loadML(const char* name/*, const char* name1, const char* name2*/) {
   assert(name != nullptr);
   //assert(name1 != nullptr);
   //assert(name2 != nullptr);
-  IRL::loadML(name/*, name1, name2*/);
+  //IRL::loadML(name/*, name1, name2*/);
 }
 
 void c_loadML2(const char* name/*, const char* name1, const char* name2*/) {
   assert(name != nullptr);
   //assert(name1 != nullptr);
   //assert(name2 != nullptr);
-  IRL::loadML2(name/*, name1, name2*/);
+  //IRL::loadML2(name/*, name1, name2*/);
 }
 
 void c_reconstructMOF2D_RectCub(const c_RectCub* a_cell,

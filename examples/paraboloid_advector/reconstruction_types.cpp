@@ -447,7 +447,12 @@ void Jibben_ML::getReconstruction(const Data<double>& a_liquid_volume_fraction,c
                                const Data<double>& a_V, const Data<double>& a_W,
                                Data<IRL::Paraboloid>* a_interface) {
   const BasicMesh& mesh = a_U.getMesh();
-
+  // Data<IRL::PlanarSeparator> interface(&mesh);
+  // updateReconstructionELVIRA(a_liquid_volume_fraction, &interface);
+  // updateReconstructionLVIRA(a_liquid_volume_fraction, 1, &interface);
+  // Data<IRL::Polygon> polygon(&mesh);
+  // updatePolygon(a_liquid_volume_fraction, interface, &polygon);
+  // polygon.updateBorder();
   Data<IRL::PlanarSeparator> interface(&mesh);
 
 
@@ -1628,192 +1633,188 @@ void Jibben_ML::getReconstruction(const Data<double>& a_liquid_volume_fraction,c
   polygon.updateBorder();
 
   // x- boundary
-  for (int i = mesh.imino(); i < mesh.imin(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        for (auto& pt : polygon(i, j, k)) {
-          pt[0] -= mesh.lx();
-        }
-      }
-    }
+for (int i = mesh.imino(); i < mesh.imin(); ++i) {
+  for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+  for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+  for (auto& pt : polygon(i, j, k)) {
+  pt[0] -= mesh.lx();
   }
-
+  }
+  }
+  }
+  
   // x+ boundary
   for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        for (auto& pt : polygon(i, j, k)) {
-          pt[0] += mesh.lx();
-        }
-      }
-    }
+  for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+  for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+  for (auto& pt : polygon(i, j, k)) {
+  pt[0] += mesh.lx();
   }
-
+  }
+  }
+  }
+  
   // y- boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        for (auto& pt : polygon(i, j, k)) {
-          pt[1] -= mesh.ly();
-        }
-      }
-    }
+  for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
+  for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+  for (auto& pt : polygon(i, j, k)) {
+  pt[1] -= mesh.ly();
   }
-
+  }
+  }
+  }
+  
   // y+ boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        for (auto& pt : polygon(i, j, k)) {
-          pt[1] += mesh.ly();
-        }
-      }
-    }
+  for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
+  for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+  for (auto& pt : polygon(i, j, k)) {
+  pt[1] += mesh.ly();
   }
-
+  }
+  }
+  }
+  
   // z- boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
-        for (auto& pt : polygon(i, j, k)) {
-          pt[2] -= mesh.lz();
-        }
-      }
-    }
+  for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+  for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
+  for (auto& pt : polygon(i, j, k)) {
+  pt[2] -= mesh.lz();
   }
-
+  }
+  }
+  }
+  
   // z+ boundary
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
-        for (auto& pt : polygon(i, j, k)) {
-          pt[2] += mesh.lz();
-        }
-      }
-    }
+  for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+  for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+  for (auto& pt : polygon(i, j, k)) {
+  pt[2] += mesh.lz();
   }
-
+  }
+  }
+  }
+  
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
-        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) {
-          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
-        } else if (a_liquid_volume_fraction(i, j, k) >
-                   IRL::global_constants::VF_HIGH) {
-          (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
-          // continue;
-        } else {
-          const IRL::Normal norm_poly = polygon(i, j, k).calculateNormal();
-          const double poly_area = polygon(i, j, k).calculateVolume();
-          const IRL::Pt pref = polygon(i, j, k).calculateCentroid();
-          IRL::ReferenceFrame fit_frame;
-          int largest_dir = 0;
-          if (std::fabs(norm_poly[largest_dir]) < std::fabs(norm_poly[1]))
-            largest_dir = 1;
-          if (std::fabs(norm_poly[largest_dir]) < std::fabs(norm_poly[2]))
-            largest_dir = 2;
-          if (largest_dir == 0)
-            fit_frame[0] = crossProduct(norm_poly, IRL::Normal(0.0, 1.0, 0.0));
-          else if (largest_dir == 1)
-            fit_frame[0] = crossProduct(norm_poly, IRL::Normal(0.0, 0.0, 1.0));
-          else
-            fit_frame[0] = crossProduct(norm_poly, IRL::Normal(1.0, 0.0, 0.0));
-          fit_frame[0].normalize();
-          fit_frame[1] = crossProduct(norm_poly, fit_frame[0]);
-          fit_frame[2] = norm_poly;
-          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
-          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
-                                      mesh.z(k + 1));
-          const IRL::Pt cell_center = 0.5 * (lower_cell_pt + upper_cell_pt);
-          IRL::Paraboloid paraboloid;
-
-          double sum_vfrac = 0.0;
-          for (int kk = -1; kk < 2; ++kk) {
-            for (int jj = -1; jj < 2; ++jj) {
-              for (int ii = -1; ii < 2; ++ii) {
-                sum_vfrac += a_liquid_volume_fraction(i + ii, j + jj, k + kk);
-              }
-            }
-          }
-
-          auto sol_fit =
-              fitParaboloidToPLICHeights(polygon, a_liquid_volume_fraction,
-                                         pref, fit_frame, i, j, k, 1, 0.0);
-          const double a = sol_fit[0], b = sol_fit[1], c = sol_fit[2],
-                       d = sol_fit[3], e = sol_fit[4], f = sol_fit[5];
-          const double theta = 0.5 * std::atan2(e, (IRL::safelyTiny(d - f)));
-          const double cos_t = std::cos(theta);
-          const double sin_t = std::sin(theta);
-          const double A =
-              -(d * cos_t * cos_t + f * sin_t * sin_t + e * cos_t * sin_t);
-          const double B =
-              -(f * cos_t * cos_t + d * sin_t * sin_t - e * cos_t * sin_t);
-          // Translation to coordinate system R' where aligned paraboloid
-          // valid Translation is R' = {x' = x + u, y' = y + v, z' = z + w}
-          const double denominator = IRL::safelyTiny(4.0 * d * f - e * e);
-          const double u = (2.0 * b * f - c * e) / denominator;
-          const double v = -(b * e - 2.0 * d * c) / denominator;
-          const double w =
-              -(a + (-b * b * f + b * c * e - c * c * d) / denominator);
-
-          IRL::UnitQuaternion rotation(theta, fit_frame[2]);
-          IRL::Pt datum =
-              pref - u * fit_frame[0] - v * fit_frame[1] - w * fit_frame[2];
-          auto new_frame = rotation * fit_frame;
-          const double max_curvature_dx = 1.0;
-          double a_coeff = A;
-          double b_coeff = B;
-          if (std::sqrt(u * u + v * v + w * w) > 10.0 * mesh.dx() ||
-              std::fabs(A) * mesh.dx() > max_curvature_dx ||
-              std::fabs(B) * mesh.dx() > max_curvature_dx) {
-            paraboloid = IRL::Paraboloid(pref, fit_frame, 1.0e-3, -1.0e-3);
-          } else {
-            if (fabs(a_coeff) < 1.0e-3) {
-              a_coeff = std::copysign(1.0e-3, a_coeff);
-            }
-            if (fabs(b_coeff) < 1.0e-3) {
-              b_coeff = std::copysign(1.0e-3, b_coeff);
-            }
-            paraboloid = IRL::Paraboloid(datum, new_frame, 0, 0);
-          }
-
-          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
-                                                              upper_cell_pt);
-          IRL::ProgressiveDistanceSolverParaboloid<IRL::RectangularCuboid>
-              solver_distance(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
-                              paraboloid);
-
-          if (solver_distance.getDistance() == -DBL_MAX) {
-            paraboloid = IRL::Paraboloid(pref, fit_frame, 1.0e-3, -1.0e-3);
-            IRL::ProgressiveDistanceSolverParaboloid<IRL::RectangularCuboid>
-                new_solver_distance(cell, a_liquid_volume_fraction(i, j, k),
-                                    1.0e-14, paraboloid);
-            if (new_solver_distance.getDistance() == -DBL_MAX) {
-              (*a_interface)(i, j, k) =
-                  IRL::Paraboloid(pref, fit_frame, 1.0e-3, -1.0e-3);
-            } else {
-              auto new_datum =
-                  IRL::Pt(paraboloid.getDatum() +
-                          new_solver_distance.getDistance() * fit_frame[2]);
-              paraboloid.setDatum(new_datum);
-              //paraboloid = gradientDescent(paraboloid,cell,a_liquid_centroid(i, j, k),a_liquid_volume_fraction(i, j, k));
-              (*a_interface)(i, j, k) = paraboloid;
-            }
-          } else {
-            auto new_datum =
-                IRL::Pt(paraboloid.getDatum() +
-                        solver_distance.getDistance() * fit_frame[2]);
-            paraboloid.setDatum(new_datum);
-            //paraboloid = gradientDescent(paraboloid,cell,a_liquid_centroid(i, j, k),a_liquid_volume_fraction(i, j, k));
-            (*a_interface)(i, j, k) = paraboloid;
-          }
-          //std::cout << paraboloid.getAlignedParaboloid().a() << std::endl;
-          //std::cout << paraboloid.getReferenceFrame()[2] << std::endl;
-        }
-      }
-    }
+  for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+  for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+  if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) {
+  (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
+  } else if (a_liquid_volume_fraction(i, j, k) >
+  IRL::global_constants::VF_HIGH) {
+  (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysAbove();
+  // continue;
+  } else {
+  const IRL::Normal norm_poly = polygon(i, j, k).calculateNormal();
+  const double poly_area = polygon(i, j, k).calculateVolume();
+  const IRL::Pt pref = polygon(i, j, k).calculateCentroid();
+  IRL::ReferenceFrame fit_frame;
+  int largest_dir = 0;
+  if (std::fabs(norm_poly[largest_dir]) < std::fabs(norm_poly[1]))
+  largest_dir = 1;
+  if (std::fabs(norm_poly[largest_dir]) < std::fabs(norm_poly[2]))
+  largest_dir = 2;
+  if (largest_dir == 0)
+  fit_frame[0] = crossProduct(norm_poly, IRL::Normal(0.0, 1.0, 0.0));
+  else if (largest_dir == 1)
+  fit_frame[0] = crossProduct(norm_poly, IRL::Normal(0.0, 0.0, 1.0));
+  else
+  fit_frame[0] = crossProduct(norm_poly, IRL::Normal(1.0, 0.0, 0.0));
+  fit_frame[0].normalize();
+  fit_frame[1] = crossProduct(norm_poly, fit_frame[0]);
+  fit_frame[2] = norm_poly;
+  const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+  const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+           mesh.z(k + 1));
+  const IRL::Pt cell_center = 0.5 * (lower_cell_pt + upper_cell_pt);
+  IRL::Paraboloid paraboloid;
+  
+  double sum_vfrac = 0.0;
+  for (int kk = -1; kk < 2; ++kk) {
+  for (int jj = -1; jj < 2; ++jj) {
+  for (int ii = -1; ii < 2; ++ii) {
+  sum_vfrac += a_liquid_volume_fraction(i + ii, j + jj, k + kk);
   }
-
+  }
+  }
+  
+  auto sol_fit =
+  fitParaboloidToPLICHeights(polygon, a_liquid_volume_fraction,
+              pref, fit_frame, i, j, k, 1, 0.0);
+  const double a = sol_fit[0], b = sol_fit[1], c = sol_fit[2],
+  d = sol_fit[3], e = sol_fit[4], f = sol_fit[5];
+  const double theta = 0.5 * std::atan2(e, (IRL::safelyTiny(d - f)));
+  const double cos_t = std::cos(theta);
+  const double sin_t = std::sin(theta);
+  const double A =
+  -(d * cos_t * cos_t + f * sin_t * sin_t + e * cos_t * sin_t);
+  const double B =
+  -(f * cos_t * cos_t + d * sin_t * sin_t - e * cos_t * sin_t);
+  // Translation to coordinate system R' where aligned paraboloid
+  // valid Translation is R' = {x' = x + u, y' = y + v, z' = z + w}
+  const double denominator = IRL::safelyTiny(4.0 * d * f - e * e);
+  const double u = (2.0 * b * f - c * e) / denominator;
+  const double v = -(b * e - 2.0 * d * c) / denominator;
+  const double w =
+  -(a + (-b * b * f + b * c * e - c * c * d) / denominator);
+  
+  IRL::UnitQuaternion rotation(theta, fit_frame[2]);
+  IRL::Pt datum =
+  pref - u * fit_frame[0] - v * fit_frame[1] - w * fit_frame[2];
+  auto new_frame = rotation * fit_frame;
+  const double max_curvature_dx = 1.0;
+  double a_coeff = A;
+  double b_coeff = B;
+  if (std::sqrt(u * u + v * v + w * w) > 10.0 * mesh.dx() ||
+  std::fabs(A) * mesh.dx() > max_curvature_dx ||
+  std::fabs(B) * mesh.dx() > max_curvature_dx) {
+  paraboloid = IRL::Paraboloid(pref, fit_frame, 1.0e-3, -1.0e-3);
+  } else {
+  if (fabs(a_coeff) < 1.0e-3) {
+  a_coeff = std::copysign(1.0e-3, a_coeff);
+  }
+  if (fabs(b_coeff) < 1.0e-3) {
+  b_coeff = std::copysign(1.0e-3, b_coeff);
+  }
+  paraboloid = IRL::Paraboloid(datum, new_frame, a_coeff, b_coeff);
+  }
+  
+  auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
+                                   upper_cell_pt);
+  IRL::ProgressiveDistanceSolverParaboloid<IRL::RectangularCuboid>
+  solver_distance(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
+   paraboloid);
+  
+  if (solver_distance.getDistance() == -DBL_MAX) {
+  paraboloid = IRL::Paraboloid(pref, fit_frame, 1.0e-3, -1.0e-3);
+  IRL::ProgressiveDistanceSolverParaboloid<IRL::RectangularCuboid>
+  new_solver_distance(cell, a_liquid_volume_fraction(i, j, k),
+         1.0e-14, paraboloid);
+  if (new_solver_distance.getDistance() == -DBL_MAX) {
+  (*a_interface)(i, j, k) =
+  IRL::Paraboloid(pref, fit_frame, 1.0e-3, -1.0e-3);
+  } else {
+  auto new_datum =
+  IRL::Pt(paraboloid.getDatum() +
+  new_solver_distance.getDistance() * fit_frame[2]);
+  paraboloid.setDatum(new_datum);
+  (*a_interface)(i, j, k) = paraboloid;
+  }
+  } else {
+  auto new_datum =
+  IRL::Pt(paraboloid.getDatum() +
+  solver_distance.getDistance() * fit_frame[2]);
+  paraboloid.setDatum(new_datum);
+  (*a_interface)(i, j, k) = paraboloid;
+  }
+  }
+  }
+  }
+  }
+  
   // Update border with simple ghost-cell fill and correct datum for
   // assumed periodic boundary
   a_interface->updateBorder();
@@ -2491,9 +2492,9 @@ void ML_QUAD::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
   // Loop over cells in domain. Skip if cell is not mixed phase.
   int count = 0;
   vector<double> fractions;
-  for (int i = mesh.imin()+1; i <= mesh.imax()-1; ++i) {
-    for (int j = mesh.jmin()+1; j <= mesh.jmax()-1; ++j) {
-      for (int k = mesh.kmin()+1; k <= mesh.kmax()-1; ++k) {
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
         if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
         {
           (*a_interface)(i, j, k) = IRL::Paraboloid::createAlwaysBelow();
@@ -3744,8 +3745,9 @@ void ML_QUAD::getReconstruction(const Data<double>& a_liquid_volume_fraction, co
           auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
                                                               upper_cell_pt);
           //IRL::Paraboloid paraboloid = IRL::Paraboloid(datum, f, curv, curv);
-          //paraboloid = gradientDescent(paraboloid,cell,a_liquid_centroid(i, j, k),a_liquid_volume_fraction(i, j, k));
           IRL::Paraboloid paraboloid = IRL::Paraboloid(datum, f, coa, cob);
+          paraboloid = gradientDescent(paraboloid,cell,a_liquid_centroid(i, j, k),a_gas_centroid(i, j, k),a_liquid_volume_fraction(i, j, k));
+          //paraboloid = gaussNewton(paraboloid,cell,a_liquid_centroid(i, j, k),a_gas_centroid(i, j, k),a_liquid_volume_fraction(i, j, k));
           IRL::ProgressiveDistanceSolverParaboloid<IRL::RectangularCuboid>
               solver_distance(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
                               paraboloid);
@@ -3857,20 +3859,42 @@ void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface) {
   }
 }
 
-IRL::Paraboloid gradientDescent(IRL::Paraboloid paraboloid,IRL::RectangularCuboid cell,IRL::Pt bary,double VF)
+IRL::Paraboloid gradientDescent(IRL::Paraboloid paraboloid,IRL::RectangularCuboid cell,IRL::Pt bary,IRL::Pt bary_gas,double VF)
 {
   double e = std::sqrt(DBL_EPSILON);
   double alpha = 0.01;
   double f = 10;
   double tol = 1e-6;
   int count = 0;
+  double update1 = 0;
+  double update2 = 0;
+  double update3 = 0;
+  double gamma = 0;
 
-  while (f > tol && count < 1000)
+  double m1 = 0;
+  double m2 = 0;
+  double m3 = 0;
+  double m_hat1 = 0;
+  double m_hat2 = 0;
+  double m_hat3 = 0;
+  double v1 = 0;
+  double v2 = 0;
+  double v3 = 0;
+  double v_hat1 = 0;
+  double v_hat2 = 0;
+  double v_hat3 = 0;
+  double beta1 = 0.9;
+  double beta2 = 0.999;
+  double beta1_t = 1.0;
+  double beta2_t = 1.0;
+  double epsilon = 1e-8;
+
+  while (f > tol && count < 50)
   {
     IRL::Paraboloid paraboloidn = paraboloid;
 
     auto moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloid);
-    f = std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0);
+    f = std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0) + std::pow(moments[1].centroid()[0]-bary_gas[0],2.0) + std::pow(moments[1].centroid()[1]-bary_gas[1],2.0) + std::pow(moments[1].centroid()[2]-bary_gas[2],2.0);
     
     IRL::Pt datum = paraboloid.getDatum();
     IRL::Normal axis = paraboloid.getReferenceFrame()[2];
@@ -3881,96 +3905,162 @@ IRL::Paraboloid gradientDescent(IRL::Paraboloid paraboloid,IRL::RectangularCuboi
     datumn[0] = datumn[0] + e;
     paraboloidn.setDatum(datumn);
     moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
-    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0));
+    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0) + std::pow(moments[1].centroid()[0]-bary_gas[0],2.0) + std::pow(moments[1].centroid()[1]-bary_gas[1],2.0) + std::pow(moments[1].centroid()[2]-bary_gas[2],2.0));
     
     datumn = paraboloid.getDatum();
     datumn[1] = datumn[1] + e;
     paraboloidn.setDatum(datumn);
     moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
-    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0));
+    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0) + std::pow(moments[1].centroid()[0]-bary_gas[0],2.0) + std::pow(moments[1].centroid()[1]-bary_gas[1],2.0) + std::pow(moments[1].centroid()[2]-bary_gas[2],2.0));
 
     datumn = paraboloid.getDatum();
     datumn[2] = datumn[2] + e;
     paraboloidn.setDatum(datumn);
     moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
-    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0));
-    
-    paraboloidn = paraboloid;
-    axisn[0] = axisn[0] + e;
-    axisn.normalize();
-    IRL::Normal b = IRL::crossProduct(axisn,IRL::Normal(1,0,0));
-    IRL::Normal a = IRL::crossProduct(b,axisn);
-    paraboloidn.setReferenceFrame(IRL::ReferenceFrame(a, b, axisn));
-    moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
-    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0));
-    
-    axisn = axis;
-    axisn[1] = axisn[1] + e;
-    axisn.normalize();
-    b = IRL::crossProduct(axisn,IRL::Normal(1,0,0));
-    a = IRL::crossProduct(b,axisn);
-    paraboloidn.setReferenceFrame(IRL::ReferenceFrame(a, b, axisn));
-    moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
-    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0));
-    
-    axisn = axis;
-    axisn[2] = axisn[2] + e;
-    axisn.normalize();
-    b = IRL::crossProduct(axisn,IRL::Normal(1,0,0));
-    a = IRL::crossProduct(b,axisn);
-    paraboloidn.setReferenceFrame(IRL::ReferenceFrame(a, b, axisn));
-    moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
-    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0));
-        
+    fn.push_back(std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0) + std::pow(moments[1].centroid()[0]-bary_gas[0],2.0) + std::pow(moments[1].centroid()[1]-bary_gas[1],2.0) + std::pow(moments[1].centroid()[2]-bary_gas[2],2.0));
 
-    datum[0] = datum[0] - alpha*(fn[0]-f)/(e);
-    datum[1] = datum[1] - alpha*(fn[1]-f)/(e);
-    datum[2] = datum[2] - alpha*(fn[2]-f)/(e);
-    axis[0] = axis[0] - alpha*(fn[3]-f)/(e);
-    axis[1] = axis[1] - alpha*(fn[4]-f)/(e);
-    axis[2] = axis[2] - alpha*(fn[5]-f)/(e);
-    axis.normalize();
-    
-    /*if (datum[0] < cell.calculateCentroid()[0]-cell.calculateSideLength(0)/2)
-    {
-      datum[0] = cell.calculateCentroid()[0]-cell.calculateSideLength(0)/2;
-    }
-    else if (datum[0] > cell.calculateCentroid()[0]+cell.calculateSideLength(0)/2)
-    {
-      datum[0] = cell.calculateCentroid()[0]+cell.calculateSideLength(0)/2;
-    }
-    if (datum[1] < cell.calculateCentroid()[1]-cell.calculateSideLength(1)/2)
-    {
-      datum[1] = cell.calculateCentroid()[1]-cell.calculateSideLength(1)/2;
-    }
-    else if (datum[1] > cell.calculateCentroid()[1]+cell.calculateSideLength(1)/2)
-    {
-      datum[1] = cell.calculateCentroid()[1]+cell.calculateSideLength(1)/2;
-    }
-    if (datum[2] < cell.calculateCentroid()[2]-cell.calculateSideLength(2)/2)
-    {
-      datum[2] = cell.calculateCentroid()[2]-cell.calculateSideLength(2)/2;
-    }
-    else if (datum[2] > cell.calculateCentroid()[2]+cell.calculateSideLength(2)/2)
-    {
-      datum[2] = cell.calculateCentroid()[2]+cell.calculateSideLength(2)/2;
-    }*/
+    update1 = alpha*(fn[0]-f)/(e) + update1*gamma;
+    // m1 = beta1 * m1 + (1.0 - beta1) * (fn[0]-f)/(e);
+    // v1 = beta2 * v1 + (1.0 - beta2) * (fn[0]-f)/(e) * (fn[0]-f)/(e);
+
+    update2 = alpha*(fn[1]-f)/(e) + update2*gamma;
+    // m2 = beta1 * m2 + (1.0 - beta1) * (fn[1]-f)/(e);
+    // v2 = beta2 * v2 + (1.0 - beta2) * (fn[1]-f)/(e) * (fn[1]-f)/(e);
+
+    update3 = alpha*(fn[2]-f)/(e) + update3*gamma;
+    // m3 = beta1 * m3 + (1.0 - beta1) * (fn[2]-f)/(e);
+    // v3 = beta2 * v3 + (1.0 - beta2) * (fn[2]-f)/(e) * (fn[2]-f)/(e);
+
+    // beta1_t *= beta1;
+    // m_hat1 = m1 / (1.0 - beta1_t);
+    // m_hat2 = m2 / (1.0 - beta1_t);
+    // m_hat3 = m3 / (1.0 - beta1_t);
+    // beta2_t *= beta2;
+    // v_hat1 = v1 / (1.0 - beta2_t);
+    // v_hat2 = v2 / (1.0 - beta2_t);
+    // v_hat3 = v3 / (1.0 - beta2_t);
+
+    // update1 =  alpha * m_hat1 / (v_hat1*v_hat1 + epsilon);
+    // update2 =  alpha * m_hat2 / (v_hat1*v_hat2 + epsilon);
+    // update3 =  alpha * m_hat3 / (v_hat1*v_hat3 + epsilon);
+
+    datum[0] = datum[0] - update1;
+    datum[1] = datum[1] - update2;
+    datum[2] = datum[2] - update3;
     
     paraboloid.setDatum(datum);
-    axis.normalize();
-    b = IRL::crossProduct(axis,IRL::Normal(1,0,0));
-    a = IRL::crossProduct(b,axis);
-    paraboloid.setReferenceFrame(IRL::ReferenceFrame(a, b, axis));
     moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloid);
-    f = std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0);
-    //std::cout << f << std::endl;
+    f = std::pow(moments[0].volume()-VF,2.0) + std::pow(moments[0].centroid()[0]-bary[0],2.0) + std::pow(moments[0].centroid()[1]-bary[1],2.0) + std::pow(moments[0].centroid()[2]-bary[2],2.0) + std::pow(moments[1].centroid()[0]-bary_gas[0],2.0) + std::pow(moments[1].centroid()[1]-bary_gas[1],2.0) + std::pow(moments[1].centroid()[2]-bary_gas[2],2.0);
     ++count;
   }
-  //auto moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloid);
-  // std::cout << moments[0].centroid() << std::endl;
-  // std::cout << bary << std::endl;
-  // std::cout << paraboloid.getDatum() << std::endl << std::endl;
-  //std::cout << abs(VF-moments[0].volume()) << std::endl;
-  //std::cout << abs(VF-moments[1].volume()) << std::endl << std::endl;
+  // if (sqrt(update1*update1 + update2*update2 + update3*update3) < 1e-8)
+  // {
+  //   count = 100;
+  // }
+  //std::cout << f << " " << count << std::endl << std::endl;
+  return paraboloid;
+}
+
+IRL::Paraboloid gaussNewton(IRL::Paraboloid paraboloid,IRL::RectangularCuboid cell,IRL::Pt bary,IRL::Pt bary_gas,double VF)
+{
+  double e = std::sqrt(DBL_EPSILON);
+  double res = 100;
+  double tol = 1e-6;
+  double lam = 0.01;
+  int count = 0;
+
+  while (res > tol && count < 100)
+  {
+    IRL::Paraboloid paraboloidn = paraboloid;
+
+    auto moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloid);
+    Eigen::VectorXd f(7);
+    f(0) = moments[0].volume()-VF;
+    f(1) = moments[0].centroid()[0]-bary[0];
+    f(2) = moments[0].centroid()[1]-bary[1];
+    f(3) = moments[0].centroid()[2]-bary[2];
+    f(4) = moments[1].centroid()[0]-bary_gas[0];
+    f(5) = moments[1].centroid()[1]-bary_gas[1];
+    f(6) = moments[1].centroid()[2]-bary_gas[2];
+    
+    IRL::Pt datum = paraboloid.getDatum();
+    IRL::Pt datumn = paraboloid.getDatum();
+
+    Eigen::MatrixXd J(7,3);
+    
+    datumn[0] = datumn[0] + e;
+    paraboloidn.setDatum(datumn);
+    moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
+    J(0,0) = (moments[0].volume()-VF - f(0))/e;
+    J(1,0) = (moments[0].centroid()[0]-bary[0] - f(1))/e;
+    J(2,0) = (moments[0].centroid()[1]-bary[1] - f(2))/e;
+    J(3,0) = (moments[0].centroid()[2]-bary[2] - f(3))/e;
+    J(4,0) = (moments[1].centroid()[0]-bary_gas[0] - f(4))/e;
+    J(5,0) = (moments[1].centroid()[1]-bary_gas[1] - f(5))/e;
+    J(6,0) = (moments[1].centroid()[2]-bary_gas[2] - f(6))/e;
+    
+    datumn = paraboloid.getDatum();
+    datumn[1] = datumn[1] + e;
+    paraboloidn.setDatum(datumn);
+    moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
+    J(0,1) = (moments[0].volume()-VF - f(0))/e;
+    J(1,1) = (moments[0].centroid()[0]-bary[0] - f(1))/e;
+    J(2,1) = (moments[0].centroid()[1]-bary[1] - f(2))/e;
+    J(3,1) = (moments[0].centroid()[2]-bary[2] - f(3))/e;
+    J(4,1) = (moments[1].centroid()[0]-bary_gas[0] - f(4))/e;
+    J(5,1) = (moments[1].centroid()[1]-bary_gas[1] - f(5))/e;
+    J(6,1) = (moments[1].centroid()[2]-bary_gas[2] - f(6))/e;
+
+    datumn = paraboloid.getDatum();
+    datumn[2] = datumn[2] + e;
+    paraboloidn.setDatum(datumn);
+    moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloidn);
+    J(0,2) = (moments[0].volume()-VF - f(0))/e;
+    J(1,2) = (moments[0].centroid()[0]-bary[0] - f(1))/e;
+    J(2,2) = (moments[0].centroid()[1]-bary[1] - f(2))/e;
+    J(3,2) = (moments[0].centroid()[2]-bary[2] - f(3))/e;
+    J(4,2) = (moments[1].centroid()[0]-bary_gas[0] - f(4))/e;
+    J(5,2) = (moments[1].centroid()[1]-bary_gas[1] - f(5))/e;
+    J(6,2) = (moments[1].centroid()[2]-bary_gas[2] - f(6))/e;
+
+    Eigen::VectorXd d(3);
+
+    Eigen::MatrixXd A = J.transpose()*J + lam*(J.transpose()*J).diagonal();
+    Eigen::VectorXd b = -J.transpose()*f;
+    d = A.colPivHouseholderQr().solve(b);
+
+    moments = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cell, paraboloid);
+    f(0) = moments[0].volume()-VF;
+    f(1) = moments[0].centroid()[0]-bary[0];
+    f(2) = moments[0].centroid()[1]-bary[1];
+    f(3) = moments[0].centroid()[2]-bary[2];
+    f(4) = moments[1].centroid()[0]-bary_gas[0];
+    f(5) = moments[1].centroid()[1]-bary_gas[1];
+    f(6) = moments[1].centroid()[2]-bary_gas[2];
+    if (f.squaredNorm() < res)
+    {
+      lam = lam/3.0;
+      datum[0] = datum[0] + d(0);
+      datum[1] = datum[1] + d(1);
+      datum[2] = datum[2] + d(2);
+      
+      paraboloid.setDatum(datum);
+      res = f.squaredNorm();
+    }
+    else
+    {
+      lam = 2.0*lam;
+    }
+    ++count;
+    if (res > 0.2 && count > 10)
+    {
+      break;
+    }
+    if (res > 0.1 && count > 20)
+    {
+      break;
+    }
+  }
+  //std::cout << res << " " << count << std::endl << std::endl;
   return paraboloid;
 }

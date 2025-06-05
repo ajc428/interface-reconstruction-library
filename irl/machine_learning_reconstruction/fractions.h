@@ -21,10 +21,13 @@
 #include "irl/geometry/polyhedrons/rectangular_cuboid.h"
 #include "irl/paraboloid_reconstruction/aligned_paraboloid.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
-#include "irl/paraboloid_reconstruction/parametrized_surface.h"
+#include "irl/paraboloid_reconstruction/paraboloid_parametrized_surface.h"
+#include "irl/cylinder_reconstruction/aligned_cylinder.h"
+#include "irl/cylinder_reconstruction/cylinder.h"
+#include "irl/cylinder_reconstruction/cylinder_parametrized_surface.h"
 #include "irl/geometry/general/pt_with_data.h"
-#include "irl/geometry/half_edge_structures/half_edge_polyhedron_paraboloid.h"
-#include "irl/geometry/half_edge_structures/segmented_half_edge_polyhedron_paraboloid.h"
+#include "irl/geometry/half_edge_structures/half_edge_polyhedron_quadratic.h"
+#include "irl/geometry/half_edge_structures/segmented_half_edge_polyhedron_quadratic.h"
 #include "irl/generic_cutting/generic_cutting_definitions.h"
 #include "irl/generic_cutting/generic_cutting.h"
 #include "irl/moments/volume_with_gradient.h"
@@ -40,6 +43,7 @@ namespace IRL
     class fractions
     {
     private:
+        //int current = 0;
         double a1;
         double b1;
         double a2;
@@ -54,6 +58,7 @@ namespace IRL
 
         Mesh initializeMesh(const int); 
         bool isParaboloidInCenterCell(const IRL::Paraboloid&, const DataMesh<double>&);
+        bool isCylinderInCenterCell(const IRL::Cylinder&, const DataMesh<double>&);
         bool isPlaneInCenterCell(const IRL::Plane&, const DataMesh<double>&);
         bool arePlanesInCenterCell(const IRL::PlanarSeparator&, const DataMesh<double>&);
         bool areParaboloidsInSameCell(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);
@@ -66,6 +71,10 @@ namespace IRL
         IRL::Paraboloid new_parabaloid(double, double, double, IRL::ReferenceFrame, double, double);
         IRL::PlanarSeparator new_random_plane(double, double, double, double, double, double);
         IRL::Paraboloid new_random_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
+        IRL::Cylinder new_cylinder(double, double, double, double, double, double, double, double);
+        IRL::Cylinder new_random_cylinder(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
+        IRL::Paraboloid new_random_sub_grid1_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
+        IRL::Paraboloid new_random_sub_grid2_parabaloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double);
         IRL::PlanarSeparator new_step_R2P(bool, int, int);
         IRL::PlanarSeparator new_random_R2P(double, double, double, double, double, double, double, double, double, double, double, double, bool, bool);
         IRL::Paraboloid new_random_parabaloid_not_center(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
@@ -80,6 +89,8 @@ namespace IRL
         torch::Tensor get_fractions3_all(IRL::Paraboloid);
         torch::Tensor get_fractions2_gas_all(IRL::Paraboloid);
         torch::Tensor get_fractions3_gas_all(IRL::Paraboloid);
+        torch::Tensor get_fractions_all(IRL::Cylinder);
+        torch::Tensor get_fractions_gas_all(IRL::Cylinder);
         torch::Tensor get_fractions_all(IRL::PlanarSeparator);
         torch::Tensor get_fractions_only(IRL::PlanarSeparator);
         torch::Tensor get_fractions_gas_all(IRL::PlanarSeparator);
@@ -101,6 +112,12 @@ namespace IRL
         GeneralMoments3D<2> getCellMoments2(const IRL::Paraboloid&,const DataMesh<double>&, int, int, int); 
 
         GeneralMoments3D<2> getCellMomentsGas2(const IRL::Paraboloid&, const DataMesh<double>&, int, int, int);
+
+        template <class MomentType>
+        MomentType getCellMoments(const IRL::Cylinder&,const DataMesh<double>&, int, int, int); 
+
+        template <class MomentType>
+        MomentType getCellMomentsGas(const IRL::Cylinder&, const DataMesh<double>&, int, int, int);
 
         template <class MomentType>
         MomentType getCellMoments(const IRL::PlanarSeparator&,const DataMesh<double>&, int, int, int); 

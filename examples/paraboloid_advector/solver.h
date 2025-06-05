@@ -130,10 +130,12 @@ int runSimulation(const std::string& a_advection_method,
   {
     load();
   }
+  // writeInterfaceToFile(liquid_volume_fraction, interface, simulation_time,
+  //   &vtk_io);
   getReconstruction(a_reconstruction_method, liquid_volume_fraction,
                     liquid_centroid, gas_centroid, link_localized_paraboloids,
                     0.0, velU, velV, velW, &interface);
-
+  //simulation_time += a_dt;
   writeInterfaceToFile(liquid_volume_fraction, interface, simulation_time,
                        &vtk_io);
   if (rank == 0) {
