@@ -59,6 +59,7 @@ namespace IRL
         Mesh initializeMesh(const int); 
         bool isParaboloidInCenterCell(const IRL::Paraboloid&, const DataMesh<double>&);
         bool isCylinderInCenterCell(const IRL::Cylinder&, const DataMesh<double>&);
+        bool doesCylinderIntersectWalls(const IRL::Cylinder&, const DataMesh<double>&);
         bool isPlaneInCenterCell(const IRL::Plane&, const DataMesh<double>&);
         bool arePlanesInCenterCell(const IRL::PlanarSeparator&, const DataMesh<double>&);
         bool areParaboloidsInSameCell(IRL::Paraboloid&, IRL::Paraboloid&, const DataMesh<double>&);

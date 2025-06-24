@@ -253,10 +253,20 @@ CylinderParametrizedSurfaceOutput::operator=(
   return *this;
 }
 
+inline const std::vector<int> CylinderParametrizedSurfaceOutput::get_indexes_of_flip(void) const
+{
+  return indexes_of_flip_m;
+}
+
 inline void CylinderParametrizedSurfaceOutput::setCylinder(
     const Cylinder& a_cylinder) {
   indexes_of_flip_m.push_back(arc_list_m.size());
   cylinder_m.push_back(a_cylinder);
+}
+
+inline const std::vector<Cylinder> CylinderParametrizedSurfaceOutput::getCylinder(
+    void) const {
+  return cylinder_m;
 }
 
 inline void CylinderParametrizedSurfaceOutput::setScale(double a_scale) {
@@ -622,7 +632,7 @@ inline Normal CylinderParametrizedSurfaceOutput::getAverageNormalNonAligned(
         }
       }
     }
-    avg_normal_m.normalize();
+    avg_normal_m;
     knows_avg_normal_m = true;
   }
   return avg_normal_m;
@@ -1260,8 +1270,7 @@ inline void CylinderParametrizedSurfaceOutput::triangulate_fromPtr(
       // vertices.\n"; myfile << "Refining with length-scale " <<
       // length_scale << ".\n"; sleep(1.0e-4);
       CGAL::refine_Delaunay_mesh_2(cdt,
-                                   CGAL::parameters::seeds(list_of_seeds)
-                                       .criteria(Criteria(0.15, length_scale)));
+                                   Criteria(0.15, length_scale));
       // , CGAL::parameters::seeds_are_in_domain(false));
       // myfile << "Mesh has " << cdt.number_of_vertices() << "
       // vertices.\n"; myfile << "Mesh has " << cdt.number_of_faces() << "

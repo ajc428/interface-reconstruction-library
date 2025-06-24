@@ -451,10 +451,10 @@ namespace IRL
 
                 axis.normalize();
                 std::ofstream input;
-                name = "input.txt";
-                input.open(name, std::ios_base::app);
-                input << axis[0] << "," << axis[1] << "," << axis[2] << "\n";
-                input.close();   
+                // name = "input.txt";
+                // input.open(name, std::ios_base::app);
+                // input << axis[0] << "," << axis[1] << "," << axis[2] << "\n";
+                // input.close();   
 
                 a_dir.normalize();
                 // name = "input1.txt";
@@ -476,10 +476,10 @@ namespace IRL
                 // input << co_a << "," << co_b << "," << (co_a-co_b)*theta << "\n";
                 // input.close();
 
-                name = "input1.txt";
-                input.open(name, std::ios_base::app);
-                input << d << "," << f << "," << e << "\n";
-                input.close();
+                // name = "input1.txt";
+                // input.open(name, std::ios_base::app);
+                // input << d << "," << f << "," << e << "\n";
+                // input.close();
 
                 // name = "input2.txt";
                 // input.open(name, std::ios_base::app);
@@ -2248,7 +2248,185 @@ namespace IRL
                 }
 
                 normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
-                normals.close();                  
+                normals.close();  
+                
+                // const auto bottom_corner = IRL::Pt(-0.5, -0.5, -0.5);
+                // const auto top_corner = IRL::Pt(0.5, 0.5, 0.5);
+                // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::CylinderParametrizedSurfaceOutput>>(cell, cylinder);
+                // const double length_scale = 0.05;
+                // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                // string name3 = "p" + to_string(n);
+                // triangulated_surface.write(name3);
+
+                // IRL::HalfEdgePolyhedronQuadratic<IRL::Pt> half_edge;
+                // cell.setHalfEdgeVersion(&half_edge);
+                // auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+                // std::ofstream myfile;
+                // myfile.open(name3 + ".vtu");
+                // myfile << seg_half_edge;
+                // myfile.close();
+            }  
+        }; 
+
+        void generate_cylinders_with_disturbance(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double r_l, double r_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool all)
+        {
+            for (int n = 0; n < Ntests; ++n) 
+            {
+                torch::Tensor result;
+                std::cout << n << endl;
+                IRL::Cylinder cylinder = gen->new_random_cylinder(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, r_l, r_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h);
+                angles = gen->getAngles();
+
+                std::ofstream coefficients;
+                std::string name = "coefficients.txt";
+                coefficients.open(name, std::ios_base::app);
+                coefficients << cylinder.getDatum().x() << "," << cylinder.getDatum().y() << "," << cylinder.getDatum().z()
+                << "," << angles[0] << "," << angles[1] << "," << angles[2]
+                << "," << cylinder.getAlignedCylinder().r() << "," << cylinder.getAlignedCylinder().b() << "\n";
+                coefficients.close();
+                
+                bool flip = false;
+                result = gen->get_fractions_all(cylinder);
+                if (result[((result.sizes()[0]-7)/2)].item<double>() > 0.5)
+                {
+                    flip = true;
+                    result = gen->get_fractions_gas_all(cylinder);
+                }                    
+
+                std::vector<double> fractions;
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    fractions.push_back(result[i].item<double>());
+                }
+                
+
+                int direction = 0;
+                std::vector<double> center;
+                auto sm = IRL::spatial_moments();
+                if (!all)
+                {
+                    center = sm.get_mass_centers(fractions);
+                    direction = rotateFractions(&fractions,center);
+                }
+                else
+                {
+                    center = sm.get_mass_centers_all(&fractions);
+                    direction = rotateFractions_all(&fractions,center);
+                }
+                
+                std::ofstream output;
+                std::string data_name = "fractions.txt";
+                output.open(data_name, std::ios_base::app);
+
+                int p = rand() % 8;
+                int mod = 4;
+                if (all)
+                {
+                    mod = 7;
+                }
+                for (int i = 0; i < result.sizes()[0]; ++i)
+                {
+                    if (p == 0)
+                    {
+                        output << fractions[i] << ",";
+                    }
+                    else
+                    {
+                        double c = (rand() % 201 - 100) / 1000.0;
+                        if (i % mod != 0)
+                        {
+                            if (fractions[i] + c > 0.5)
+                            {
+                                fractions[i] = 0.5;
+                                output << 0.5 << ",";
+                            }
+                            else if (fractions[i] + c < -0.5)
+                            {
+                                fractions[i] = -0.5;
+                                output << -0.5 << ",";
+                            }
+                            else
+                            {
+                                output << fractions[i] + c << ",";
+                                fractions[i] = fractions[i] + c;
+                            }
+                        }
+                        else
+                        {
+                            output << fractions[i] << ",";
+                        }
+                    }
+                }
+                output << "\n";
+                output.close();  
+
+                std::ofstream normals;
+                std::string normals_name = "normals.txt";
+                normals.open(normals_name, std::ios_base::app);
+                auto cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(-0.5, -0.5, -0.5), IRL::Pt(0.5, 0.5, 0.5));
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::CylinderParametrizedSurfaceOutput>>(cube, cylinder);
+                auto surface = surface_and_moments.getSurface();
+                auto normal = surface.getAverageNormalNonAligned();
+                normal.normalize();
+
+                switch (direction)
+                {
+                    case 1:
+                    normal[0] = -normal[0];
+                    break;
+                    case 2:
+                    normal[1] = -normal[1];
+                    break;
+                    case 3:
+                    normal[2] = -normal[2];
+                    break;
+                    case 4:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    break;
+                    case 5:
+                    normal[0] = -normal[0];
+                    normal[2] = -normal[2];
+                    break;
+                    case 6:
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    break;
+                    case 7:
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                    break;
+                }
+                if (!flip)
+                {
+                    normal[0] = -normal[0];
+                    normal[1] = -normal[1];
+                    normal[2] = -normal[2];
+                }
+
+                normals << normal[0] << "," << normal[1] << "," << normal[2] << "\n";
+                normals.close();  
+                
+                // const auto bottom_corner = IRL::Pt(-0.5, -0.5, -0.5);
+                // const auto top_corner = IRL::Pt(0.5, 0.5, 0.5);
+                // const auto cell = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::CylinderParametrizedSurfaceOutput>>(cell, cylinder);
+                // const double length_scale = 0.05;
+                // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                // string name3 = "p" + to_string(n);
+                // triangulated_surface.write(name3);
+
+                // IRL::HalfEdgePolyhedronQuadratic<IRL::Pt> half_edge;
+                // cell.setHalfEdgeVersion(&half_edge);
+                // auto seg_half_edge = half_edge.generateSegmentedPolyhedron();
+                // std::ofstream myfile;
+                // myfile.open(name3 + ".vtu");
+                // myfile << seg_half_edge;
+                // myfile.close();
             }  
         }; 
 

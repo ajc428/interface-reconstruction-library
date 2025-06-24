@@ -21,8 +21,8 @@ namespace IRL
         mesh = initializeMesh(a_number_of_cells);
         IRL::setVolumeFractionBounds(1.0e-14);
         std::cout.precision(15);
-        distribution1 = std::normal_distribution<double>(0.0,0.1);
-        distribution2 = std::normal_distribution<double>(0.0,0.1);
+        distribution1 = std::normal_distribution<double>(0.0,0.3);
+        distribution2 = std::normal_distribution<double>(0.0,0.3);
     }
 
     IRL::Paraboloid fractions::new_parabaloid(double x, double y, double z, double a, double b, double c, double alpha, double beta)
@@ -68,8 +68,8 @@ namespace IRL
         std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
         IRL::Paraboloid p;
 
-        alpha = random_coeffsa(a_eng);
-        beta = random_coeffsb(a_eng);
+        alpha = random_coeffsa(a_eng);//distribution1(generator);//
+        beta = random_coeffsb(a_eng);//distribution2(generator);//
         do
         {
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
@@ -195,22 +195,72 @@ namespace IRL
         std::uniform_real_distribution<double> random_translationx(ox_l, ox_h);
         std::uniform_real_distribution<double> random_translationy(oy_l, oy_h);
         std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
+        std::uniform_real_distribution<double> random_face(1, 2);
         IRL::Cylinder p;
 
+        frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
+        angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
+        IRL::UnitQuaternion x_rotation(angles[0], frame[0]);
+        IRL::UnitQuaternion y_rotation(angles[1], frame[1]);
+        IRL::UnitQuaternion z_rotation(angles[2], frame[2]);
         r = random_radius(a_eng);
         b = random_coeffsb(a_eng);
+        frame = x_rotation * y_rotation * z_rotation * frame;
+        int f = round(random_face(a_eng));
+        bool flag = false;
         do
         {
-            frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
-            datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
-            angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
+            flag = false;
+            double x,y,z;
+            // if (abs(frame[2][0]) >= abs(frame[2][1]) && abs(frame[2][0]) >= abs(frame[2][2]))
+            // {
+            //     x = 0.5;
+            //     if (f < 1.5)
+            //     {
+            //         x = -0.5;
+            //     }
+            //     y = random_translationy(a_eng);
+            //     z = random_translationz(a_eng);
+            //     if ((r >= 0.5 && sqrt(y*y+z*z) < r-0.5) || (r < 0.5 && sqrt(0.5*0.5+0.5*0.5) - sqrt(y*y+z*z) > r))
+            //     {
+            //         flag = true;
+            //     }
+            // }
+            // else if (abs(frame[2][1]) >= abs(frame[2][0]) && abs(frame[2][1]) >= abs(frame[2][2]))
+            // {
+            //     y = 0.5;
+            //     if (f < 1.5)
+            //     {
+            //         y = -0.5;
+            //     }
+            //     x = random_translationx(a_eng);
+            //     z = random_translationz(a_eng);
+            //     if ((r >= 0.5 && sqrt(x*x+z*z) < r-0.5) || (r < 0.5 && sqrt(0.5*0.5+0.5*0.5) - sqrt(x*x+z*z) > r))
+            //     {
+            //         flag = true;
+            //     }
 
-            IRL::UnitQuaternion x_rotation(angles[0], frame[0]);
-            IRL::UnitQuaternion y_rotation(angles[1], frame[1]);
-            IRL::UnitQuaternion z_rotation(angles[2], frame[2]);
-            frame = x_rotation * y_rotation * z_rotation * frame;
+            // }
+            // else
+            // {
+            //     z = 0.5;
+            //     if (f < 1.5)
+            //     {
+            //         z = -0.5;
+            //     }
+            //     x = random_translationx(a_eng);
+            //     y = random_translationy(a_eng);
+            //     if ((r >= 0.5 && sqrt(x*x+y*y) < r-0.5) || (r < 0.5 && sqrt(0.5*0.5+0.5*0.5) - sqrt(x*x+y*y) > r))
+            //     {
+            //         flag = true;
+            //     }
+            // }
+            x = random_translationx(a_eng);
+            y = random_translationy(a_eng);
+            z = random_translationy(a_eng);
+            datum = IRL::Pt(x, y, z);
             p = IRL::Cylinder(datum, frame, b, r*r);
-        } while (!(isCylinderInCenterCell(p, liquid_volume_fraction)));
+        } while (!(isCylinderInCenterCell(p, liquid_volume_fraction)) || !(doesCylinderIntersectWalls(p, liquid_volume_fraction)) || flag);
 
         return p;
     }
@@ -1609,6 +1659,20 @@ namespace IRL
             IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
         const double volume_fraction = IRL::getVolumeMoments<IRL::Volume, IRL::HalfEdgeCutting>(cell, a_interface);
         return volume_fraction < IRL::global_constants::VF_HIGH && volume_fraction > IRL::global_constants::VF_LOW;
+    }
+
+    bool fractions::doesCylinderIntersectWalls(const IRL::Cylinder& a_interface, const DataMesh<double>& a_liquid_volume_fraction) 
+    {
+        const Mesh& mesh = a_liquid_volume_fraction.getMesh();
+        const int i(mesh.ic()), j(mesh.jc()), k(mesh.kc());
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+            IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+        auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::CylinderParametrizedSurfaceOutput>>(cell, a_interface);
+        auto surface = surface_and_moments.getSurface();
+        auto normal = surface.getAverageNormalNonAligned();
+        //std::cout << normal.calculateMagnitude()/(surface.getSurfaceArea()*surface.getSurfaceArea()) << std::endl;//.45
+        return normal.calculateMagnitude()/(surface.getSurfaceArea()*surface.getSurfaceArea()) > 0.44;
     }
 
     bool fractions::isPlaneInCenterCell(const IRL::Plane& a_interface, const DataMesh<double>& a_liquid_volume_fraction) 
