@@ -55,7 +55,31 @@ struct Jibben {
                                 Data<IRL::Paraboloid>* a_interface);
 };
 
-struct CylinderRecon {
+struct Cylinder_PCA {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::Cylinder>* a_interface);
+};
+
+struct Cylinder_Spline {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::Cylinder>* a_interface);
+};
+
+struct Cylinder_Curve_Global {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::Cylinder>* a_interface);
+};
+
+struct Cylinder_Curve_Local {
   static void getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
                                 const double a_dt, const Data<double>& a_U,
                                 const Data<double>& a_V,
@@ -92,5 +116,33 @@ inline IRL::Paraboloid fromSphere(const IRL::Pt& a_center,
                          0.5 * curvature);
 }
 }
+
+class PrincipalCurve {
+public:
+    PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs);
+
+    void fit(int max_iterations = 100, double tolerance = 1e-5);
+    IRL::Normal fitSpline();
+
+    const Eigen::MatrixXd& getCurve() const;
+
+private:
+    int res = 3;
+    Eigen::MatrixXd data;
+    Eigen::VectorXd VF;
+    Eigen::MatrixXd curve;
+    Eigen::VectorXi projection_indices;
+    Eigen::VectorXd lambda;
+
+    void initializeWithPCA();
+    
+    void projectDataOntoCurve();
+    
+    void updateCurve();
+
+    void smoothCurve(int window_size = 3);
+
+    void orderCurvePoints();
+};
 
 #endif  // EXAMPLES_CYLINDER_ADVECTOR_RECONSTRUCTION_TYPES_H_

@@ -65,7 +65,10 @@ static int startSimulation(const std::string& a_simulation_type,
                            const double a_time_duration,
                            const int a_viz_frequency) {
   if (a_simulation_type == "Deformation3D") {
-    return runSimulation<Deformation3D>(
+    // return runSimulation<Deformation3D>(
+    //     a_advection_method, a_reconstruction_method, a_time_step_size,
+    //     a_time_duration, a_viz_frequency);
+    return runSimulation2<Deformation3D>(
         a_advection_method, a_reconstruction_method, a_time_step_size,
         a_time_duration, a_viz_frequency);
   } else if (a_simulation_type == "Translation3D") {

@@ -64,13 +64,22 @@ void getReconstruction(const std::string& a_reconstruction_method,
                        const double a_dt, const Data<double>& a_U,
                        const Data<double>& a_V, const Data<double>& a_W,
                        Data<IRL::Cylinder>* a_interface) {
-  if (a_reconstruction_method == "Cylinder") {
-    CylinderRecon::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, a_dt, a_U, a_V, a_W,
+  if (a_reconstruction_method == "Cylinder_PCA") {
+    Cylinder_PCA::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, a_dt, a_U, a_V, a_W,
+                              a_interface);
+  } else if (a_reconstruction_method == "Cylinder_Spline") {
+    Cylinder_Spline::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, a_dt, a_U, a_V, a_W,
+                              a_interface);
+  } else if (a_reconstruction_method == "Cylinder_Curve_Local") {
+    Cylinder_Curve_Local::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, a_dt, a_U, a_V, a_W,
+                              a_interface);
+  } else if (a_reconstruction_method == "Cylinder_Curve_Global") {
+    Cylinder_Curve_Global::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, a_dt, a_U, a_V, a_W,
                               a_interface);
   } else {
     std::cout << "Unknown reconstruction method of : "
               << a_reconstruction_method << '\n';
-    std::cout << "Valid entries are: Cylinder. \n";
+    std::cout << "Valid entries are: Cylinder_PCA, Cylinder_Spline, Cylinder_Curve_Local, Cylinder_Curve_Global. \n";
     std::exit(-1);
   }
 }
@@ -758,7 +767,7 @@ void PLIC::getReconstruction(const Data<double>& a_liquid_volume_fraction,
 }
 
 
-void CylinderRecon::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+void Cylinder_PCA::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
   const double a_dt, const Data<double>& a_U,
   const Data<double>& a_V, const Data<double>& a_W,
   Data<IRL::Cylinder>* a_interface) 
@@ -899,9 +908,9 @@ void CylinderRecon::getReconstruction(const Data<double>& b_liquid_volume_fracti
               {
                 if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
                 {
-                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
-                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
-                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
+                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0]/mesh.dx();
+                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1]/mesh.dy();
+                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2]/mesh.dz();
                   ++count;
                   datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
                   VF = VF + a_liquid_volume_fraction(ii,jj,kk);
@@ -916,14 +925,10 @@ void CylinderRecon::getReconstruction(const Data<double>& b_liquid_volume_fracti
           Eigen::Index maxL;
           es.eigenvalues().real().maxCoeff(&maxL);
           Eigen::VectorXd dir = es.eigenvectors().real().col(maxL);
-          //Eigen::VectorXd origin = bary.colwise().mean();
           IRL::Normal direction;
           direction[0] = dir(0);
           direction[1] = dir(1);
           direction[2] = dir(2);
-          // datum[0] = origin(0);
-          // datum[1] = origin(1);
-          // datum[2] = origin(2);
 
           direction.normalize();
           double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
@@ -950,6 +955,1071 @@ void CylinderRecon::getReconstruction(const Data<double>& b_liquid_volume_fracti
 
           cylinder = solver_radius.getCylinder();
 
+          (*a_interface)(i, j, k) = cylinder;
+        }
+      }
+    }
+  }
+
+  // Update border with simple ghost-cell fill and correct datum for
+  // assumed periodic boundary
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void Cylinder_Spline::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+  const double a_dt, const Data<double>& a_U,
+  const Data<double>& a_V, const Data<double>& a_W,
+  Data<IRL::Cylinder>* a_interface) 
+{
+  const BasicMesh& mesh = a_U.getMesh();
+  Data<double> a_liquid_volume_fraction = b_liquid_volume_fraction;
+  Data<IRL::Pt> a_liquid_centroid = b_liquid_centroid;
+
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imax(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imax(),j,k)[0] - mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imax(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imax(),j,k)[2];
+      }
+    }
+  }
+
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imin(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imin(),j,k)[0] + mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imin(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imin(),j,k)[2];
+      }
+    }
+  }
+
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmax(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmax(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmax(),k)[1] - mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmax(),k)[2];
+      }
+    }
+  }
+
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmin(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmin(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmin(),k)[1] + mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmin(),k)[2];
+      }
+    }
+  }
+
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmax());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmax())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmax())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmax())[2] - mesh.lz();
+      }
+    }
+  }
+
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmin());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmin())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmin())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmin())[2] + mesh.lz();
+      }
+    }
+  }
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
+  {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
+    {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) 
+      {
+        IRL::Cylinder cylinder;
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysBelow();
+        } 
+        else if (a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysAbove();
+        } 
+        else 
+        {
+          Eigen::MatrixXd bary(27,3);
+          int count = 0;
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  ++count;
+                }
+              }
+            }
+          }
+          bary.resize(count,3);
+
+          count = 0;
+          double VF = 0;
+          IRL::Pt datum = IRL::Pt(0,0,0);
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0]/mesh.dx();
+                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1]/mesh.dy();
+                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2]/mesh.dz();
+                  ++count;
+                  datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
+                  VF = VF + a_liquid_volume_fraction(ii,jj,kk);
+                }
+              }
+            }
+          }
+          datum = datum / VF;
+          Eigen::MatrixXd centered = bary.rowwise() - bary.colwise().mean(); 
+          IRL::Normal direction;
+          
+          Eigen::VectorXd dist(count);
+          dist(0) = 0;
+          for (int ii = 1; ii < count; ++ii)
+          {
+            dist(ii) = (centered.row(ii) - centered.row(ii-1)).norm() + dist(ii-1);
+          }
+          Eigen::VectorXd t(count);
+          for (int ii = 0; ii < count; ++ii)
+          {
+            t(ii) = dist(ii) / dist(count-1);
+          }
+
+          // Eigen::MatrixXd T(count,4);
+          // T.col(0) = t.array().pow(3.0);
+          // T.col(1) = t.array().pow(2.0);
+          // T.col(2) = t;
+          // T.col(3) = Eigen::VectorXd::Ones(count);
+
+          // Eigen::MatrixXd M(4,4);
+          // M(0,0) = -1;
+          // M(1,0) = 3;
+          // M(2,0) = -3;
+          // M(3,0) = 1;
+          // M(0,1) = 3;
+          // M(1,1) = -6;
+          // M(2,1) = 3;
+          // M(3,1) = 0;
+          // M(0,2) = -3;
+          // M(1,2) = 3;
+          // M(2,2) = 0;
+          // M(3,2) = 0;
+          // M(0,3) = 1;
+          // M(1,3) = 0;
+          // M(2,3) = 0;
+          // M(3,3) = 0;
+
+          // Eigen::MatrixXd T_prime(count,4);
+          // T_prime.col(0) = Eigen::VectorXd::Zero(count);
+          // T_prime.col(1) = Eigen::VectorXd::Zero(count);
+          // T_prime.col(2) = t;
+          // T_prime.col(3) = Eigen::VectorXd::Ones(count);
+
+          // Eigen::MatrixXd M_prime(4,4);
+          // M_prime(0,0) = 0;
+          // M_prime(1,0) = 0;
+          // M_prime(2,0) = 0;
+          // M_prime(3,0) = 0;
+          // M_prime(0,1) = 0;
+          // M_prime(1,1) = 0;
+          // M_prime(2,1) = 0;
+          // M_prime(3,1) = 0;
+          // M_prime(0,2) = -6;
+          // M_prime(1,2) = 18;
+          // M_prime(2,2) = -18;
+          // M_prime(3,2) = 6;
+          // M_prime(0,3) = 6;
+          // M_prime(1,3) = -12;
+          // M_prime(2,3) = 6;
+          // M_prime(3,3) = 0;
+
+          // double lambda = 0;
+          // Eigen::VectorXd P_x = (M.transpose()*T.transpose()*T*M+lambda*M_prime.transpose()*T_prime.transpose()*T_prime*M_prime).inverse()*M.transpose()*T.transpose()*centered.col(0);
+          // Eigen::VectorXd P_y = (M.transpose()*T.transpose()*T*M+lambda*M_prime.transpose()*T_prime.transpose()*T_prime*M_prime).inverse()*M.transpose()*T.transpose()*centered.col(1);
+          // Eigen::VectorXd P_z = (M.transpose()*T.transpose()*T*M+lambda*M_prime.transpose()*T_prime.transpose()*T_prime*M_prime).inverse()*M.transpose()*T.transpose()*centered.col(2);
+
+          // // Eigen::VectorXd P_x = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(0);
+          // // Eigen::VectorXd P_y = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(1);
+          // // Eigen::VectorXd P_z = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(2);
+          // // Eigen::VectorXd P_x = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(0);
+          // // Eigen::VectorXd P_y = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(1);
+          // // Eigen::VectorXd P_z = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(2);
+          // Eigen::MatrixXd p(4,3);
+          // p.col(0) = P_x; 
+          // p.col(1) = P_y; 
+          // p.col(2) = P_z; 
+
+          // double par = 0;
+          // double d = 100;
+          // for (int ii = 0; ii <= 100; ++ii)
+          // {
+          //   Eigen::VectorXd tT(4);
+          //   tT(0) = (ii/100.0)*(ii/100.0)*(ii/100.0);
+          //   tT(1) = (ii/100.0)*(ii/100.0);
+          //   tT(2) = (ii/100.0);
+          //   tT(3) = 1;
+          //   Eigen::VectorXd loc = tT.transpose()*M*p;
+          //   double temp = loc.norm();
+          //   if (temp < d)
+          //   {
+          //     d = temp;
+          //     par = ii/100.0;
+          //   }
+          // }
+
+          // direction[0] = -3*P_x(0)*(1-par)*(1-par) + 3*P_x(1)*(1-4*par+3*par*par) + 3*P_x(2)*par*(2-3*par) + 3*P_x(3)*par*par;
+          // direction[1] = -3*P_y(0)*(1-par)*(1-par) + 3*P_y(1)*(1-4*par+3*par*par) + 3*P_y(2)*par*(2-3*par) + 3*P_y(3)*par*par;
+          // direction[2] = -3*P_z(0)*(1-par)*(1-par) + 3*P_z(1)*(1-4*par+3*par*par) + 3*P_z(2)*par*(2-3*par) + 3*P_z(3)*par*par;
+
+
+
+          Eigen::MatrixXd T(count,3);
+          T.col(0) = t.array().pow(2.0);
+          T.col(1) = t;
+          T.col(2) = Eigen::VectorXd::Ones(count);
+
+          Eigen::MatrixXd M(3,3);
+          M(0,0) = 1;
+          M(1,0) = -2;
+          M(2,0) = -1;
+          M(0,1) = -2;
+          M(1,1) = 2;
+          M(2,1) = 0;
+          M(0,2) = 1;
+          M(1,2) = 0;
+          M(2,2) = 0;
+
+          Eigen::MatrixXd T_prime(count,3);
+          T_prime.col(0) = Eigen::VectorXd::Zero(count);
+          T_prime.col(1) = Eigen::VectorXd::Zero(count);
+          T_prime.col(2) = Eigen::VectorXd::Ones(count);
+
+          Eigen::MatrixXd M_prime(3,3);
+          M_prime(0,0) = 0;
+          M_prime(1,0) = 0;
+          M_prime(2,0) = 0;
+          M_prime(0,1) = 0;
+          M_prime(1,1) = 0;
+          M_prime(2,1) = 0;
+          M_prime(0,2) = 2;
+          M_prime(1,2) = -4;
+          M_prime(2,2) = -2;
+
+          double lambda = 0;
+          Eigen::VectorXd P_x = (M.transpose()*T.transpose()*T*M+lambda*M_prime.transpose()*T_prime.transpose()*T_prime*M_prime).inverse()*M.transpose()*T.transpose()*centered.col(0);
+          Eigen::VectorXd P_y = (M.transpose()*T.transpose()*T*M+lambda*M_prime.transpose()*T_prime.transpose()*T_prime*M_prime).inverse()*M.transpose()*T.transpose()*centered.col(1);
+          Eigen::VectorXd P_z = (M.transpose()*T.transpose()*T*M+lambda*M_prime.transpose()*T_prime.transpose()*T_prime*M_prime).inverse()*M.transpose()*T.transpose()*centered.col(2);
+
+          // Eigen::VectorXd P_x = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(0);
+          // Eigen::VectorXd P_y = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(1);
+          // Eigen::VectorXd P_z = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(2);
+          // Eigen::VectorXd P_x = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(0);
+          // Eigen::VectorXd P_y = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(1);
+          // Eigen::VectorXd P_z = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(2);
+          Eigen::MatrixXd p(3,3);
+          p.col(0) = P_x; 
+          p.col(1) = P_y; 
+          p.col(2) = P_z; 
+
+          std::cout << p << std::endl << std::endl;
+
+          double par = 0;
+          double d = 100;
+          Eigen::VectorXd point;
+          for (int ii = 0; ii <= 100; ++ii)
+          {
+            Eigen::VectorXd tT(3);
+            tT(0) = (ii/100.0)*(ii/100.0);
+            tT(1) = (ii/100.0);
+            tT(2) = 1;
+            Eigen::VectorXd loc = tT.transpose()*M*p;
+            double temp = loc.norm();
+            if (temp < d)
+            {
+              d = temp;
+              par = ii/100.0;
+              point = loc;
+            }
+          }
+          //std::cout << point << std::endl << std::endl;
+          direction[0] = par*(2*P_x(0)-4*P_x(1)-2*P_x(2)) + (-2*P_x(0)+2*P_x(1));
+          direction[1] = par*(2*P_y(0)-4*P_y(1)-2*P_y(2)) + (-2*P_y(0)+2*P_y(1));
+          direction[2] = par*(2*P_z(0)-4*P_z(1)-2*P_z(2)) + (-2*P_z(0)+2*P_z(1));
+          std::cout << direction << std::endl << std::endl;
+
+
+
+
+
+
+          // Eigen::MatrixXd T(count,2);
+          // T.col(0) = t;
+          // T.col(1) = Eigen::VectorXd::Ones(count);
+
+          // Eigen::MatrixXd M(2,2);
+          // M(0,0) = -1;
+          // M(1,0) = 1;
+          // M(0,1) = 1;
+          // M(1,1) = 0;
+
+          // Eigen::VectorXd P_x = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(0);
+          // Eigen::VectorXd P_y = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(1);
+          // Eigen::VectorXd P_z = M.inverse() * (T.transpose()*T).inverse() * T.transpose() * centered.col(2);
+          // // Eigen::VectorXd P_x = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(0);
+          // // Eigen::VectorXd P_y = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(1);
+          // // Eigen::VectorXd P_z = (M.transpose()*T.transpose()*T*M).inverse() * M.transpose() * T.transpose() * centered.col(2);
+          // Eigen::MatrixXd p(2,3);
+          // p.col(0) = P_x; 
+          // p.col(1) = P_y; 
+          // p.col(2) = P_z; 
+
+          // std::cout << p << std::endl << std::endl;
+
+          // double par = 0;
+          // double d = 100;
+          // Eigen::VectorXd point;
+          // for (int ii = 0; ii <= 100; ++ii)
+          // {
+          //   Eigen::VectorXd tT(2);
+          //   tT(0) = (ii/100.0);
+          //   tT(1) = 1;
+          //   Eigen::VectorXd loc = tT.transpose()*M*p;
+          //   double temp = loc.norm();
+          //   if (temp < d)
+          //   {
+          //     d = temp;
+          //     par = ii/100.0;
+          //     point = loc;
+          //   }
+          // }
+          // //std::cout << point << std::endl << std::endl;
+          // direction[0] = P_x(1) - P_x(0);
+          // direction[1] = P_y(1) - P_y(0);
+          // direction[2] = P_z(1) - P_z(0);
+          // std::cout << direction << std::endl << std::endl;
+
+          direction.normalize();
+          std::cout << direction << std::endl << std::endl << std::endl << std::endl;
+          double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+          double n1 = (-n2*direction[1])/direction[0];
+          IRL::Normal v1;
+          v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          IRL::Normal b = IRL::crossProduct(direction,v1);
+          b.normalize();
+          IRL::Normal a = IRL::crossProduct(b,direction);
+          a.normalize();
+          IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+
+          cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
+
+          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+                  mesh.z(k + 1));
+
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
+                                          upper_cell_pt);
+          IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
+          solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
+          cylinder);
+
+          cylinder = solver_radius.getCylinder();
+
+          (*a_interface)(i, j, k) = cylinder;
+        }
+      }
+    }
+  }
+
+  // Update border with simple ghost-cell fill and correct datum for
+  // assumed periodic boundary
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+bool myfunction (Eigen::VectorXd i,Eigen::VectorXd j) { return (i.sum()<j.sum()); }
+
+void Cylinder_Curve_Local::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+  const double a_dt, const Data<double>& a_U,
+  const Data<double>& a_V, const Data<double>& a_W,
+  Data<IRL::Cylinder>* a_interface) 
+{
+  const BasicMesh& mesh = a_U.getMesh();
+  Data<double> a_liquid_volume_fraction = b_liquid_volume_fraction;
+  Data<IRL::Pt> a_liquid_centroid = b_liquid_centroid;
+
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imax(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imax(),j,k)[0] - mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imax(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imax(),j,k)[2];
+      }
+    }
+  }
+
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imin(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imin(),j,k)[0] + mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imin(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imin(),j,k)[2];
+      }
+    }
+  }
+
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmax(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmax(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmax(),k)[1] - mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmax(),k)[2];
+      }
+    }
+  }
+
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmin(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmin(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmin(),k)[1] + mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmin(),k)[2];
+      }
+    }
+  }
+
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmax());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmax())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmax())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmax())[2] - mesh.lz();
+      }
+    }
+  }
+
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmin());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmin())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmin())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmin())[2] + mesh.lz();
+      }
+    }
+  }
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
+  {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
+    {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) 
+      {
+        IRL::Cylinder cylinder;
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysBelow();
+        } 
+        else if (a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysAbove();
+        } 
+        else 
+        {
+          Eigen::MatrixXd bary(27,3);
+          int count = 0;
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  ++count;
+                }
+              }
+            }
+          }
+          bary.resize(count,3);
+
+          count = 0;
+          double VF = 0;
+          IRL::Pt datum = IRL::Pt(0,0,0);
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  //std::cout << a_liquid_centroid(ii,jj,kk) << std::endl;
+                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0]/mesh.dx();
+                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1]/mesh.dy();
+                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2]/mesh.dz();
+                  ++count;
+                  datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
+                  VF = VF + a_liquid_volume_fraction(ii,jj,kk);
+                }
+              }
+            }
+          }
+          datum = datum / VF;
+          Eigen::MatrixXd centered = bary.rowwise() - bary.colwise().mean(); 
+
+          Eigen::VectorXd x = centered.row(0);
+          // Eigen::VectorXd x(3);
+          Eigen::VectorXd x_origin(3);
+          // x(0) = datum[0]/mesh.dx() - bary.colwise().mean()(0);
+          // x(1) = datum[1]/mesh.dy() - bary.colwise().mean()(1);
+          // x(2) = datum[2]/mesh.dz() - bary.colwise().mean()(2);
+          x_origin = x;
+
+          Eigen::MatrixXd local(count,3);
+          Eigen::VectorXd dir = Eigen::VectorXd::Zero(3);
+          std::vector<Eigen::VectorXd> mus;
+          Eigen::VectorXd mu = Eigen::VectorXd::Zero(3);
+          bool flag = true;
+          while (flag)
+          {
+            mu = Eigen::VectorXd::Zero(3);
+            count = 0;
+            int count1 = 0;
+            VF = 0;
+            for (int ii = i-1; ii <= i+1; ++ii) 
+            {
+              for (int jj = j-1; jj <= j+1; ++jj) 
+              {
+                for (int kk = k-1; kk <= k+1; ++kk) 
+                {
+                  if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                  {
+                    //std::cout << count << " " << (x-centered.row(count)).norm() << std::endl;
+                    if ((x-centered.row(count)).norm() <= 1.01)
+                    {
+                      double v = a_liquid_volume_fraction(ii,jj,kk);
+                      mu(0) = mu(0) + centered.row(count)(0) * v;
+                      mu(1) = mu(1) + centered.row(count)(1) * v;
+                      mu(2) = mu(2) + centered.row(count)(2) * v;
+                      VF = VF + v;
+                      ++count1;
+                    }
+                    ++count;
+                  }
+                }
+              }
+            }
+            //std::cout << count1 << std::endl;
+            if (VF > IRL::global_constants::VF_LOW)
+            {
+              mu = mu / VF;
+            }
+            //std::cout << mu << std::endl;
+            //std::cout << count1 << std::endl;
+            // if (mus.size() > 0 && (mu - mus[mus.size()-1]).norm() < 0.001)
+            // {
+            //   flag = false;
+            // }
+            if (count1 <= 1)
+            {
+              flag = false;
+            }
+            else if (abs(x(0)) > 1.5 || abs(x(1)) > 1.5 || abs(x(2)) > 1.5)
+            {
+              flag = false;
+            }
+            else
+            {
+              if ((x - x_origin).norm() < 1e-5 || (mus.size() > 0 && (mu - mus[mus.size()-1]).norm() > 0.001))
+              {
+                mus.push_back(mu);
+              }
+
+              local.resize(count1, 3);
+              count1 = 0;
+              count = 0;
+              for (int ii = i-1; ii <= i+1; ++ii) 
+              {
+                for (int jj = j-1; jj <= j+1; ++jj) 
+                {
+                  for (int kk = k-1; kk <= k+1; ++kk) 
+                  {
+                    if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                    {
+                      if ((x-centered.row(count)).norm() <= 1.01)
+                      {
+                        local.row(count1) = centered.row(count);
+                        ++count1;
+                      }
+                      ++count;
+                    }
+                  }
+                }
+              }
+              Eigen::MatrixXd cov = (local.transpose()*local) / (local.rows()-1);
+              Eigen::EigenSolver<Eigen::MatrixXd> es(cov);
+              Eigen::Index maxL;
+              es.eigenvalues().real().maxCoeff(&maxL);
+              Eigen::VectorXd dir_new = es.eigenvectors().real().col(maxL);
+              // std::cout << bary << std::endl << std::endl;
+              //std::cout << centered << std::endl << std::endl;
+              //std::cout << local << std::endl << std::endl;
+              // std::cout << dir_new << std::endl << std::endl;
+              dir_new.normalize();
+              //std::cout << dir_new << std::endl << std::endl << std::endl << std::endl;
+              if (dir_new.dot(dir) < 0)
+              {
+                dir_new = -dir_new;
+              }
+              dir = dir_new;
+              //std::cout << mu << std::endl << std::endl;
+              //std::cout << dir << std::endl << std::endl;
+              x(0) = x(0) + 1.0*dir(0);
+              x(1) = x(1) + 1.0*dir(1);
+              x(2) = x(2) + 1.0*dir(2);
+              //std::cout << x << std::endl << std::endl << std::endl << std::endl;
+            }
+          }
+          // x(0) = datum[0]/mesh.dx() - bary.colwise().mean()(0);
+          // x(1) = datum[1]/mesh.dy() - bary.colwise().mean()(1);
+          // x(2) = datum[2]/mesh.dz() - bary.colwise().mean()(2);
+          x = centered.row(0);
+          local = Eigen::MatrixXd::Zero(count,3);
+          dir = Eigen::VectorXd::Zero(3);
+          flag = true;
+          while (flag)
+          {
+            Eigen::VectorXd mu = Eigen::VectorXd::Zero(3);
+            count = 0;
+            int count1 = 0;
+            VF = 0;
+            for (int ii = i-1; ii <= i+1; ++ii) 
+            {
+              for (int jj = j-1; jj <= j+1; ++jj) 
+              {
+                for (int kk = k-1; kk <= k+1; ++kk) 
+                {
+                  if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                  {
+                    if ((x-centered.row(count)).norm() <= 1.01)
+                    {
+                      double v = a_liquid_volume_fraction(ii,jj,kk);
+                      mu(0) = mu(0) + centered.row(count)(0) * v;
+                      mu(1) = mu(1) + centered.row(count)(1) * v;
+                      mu(2) = mu(2) + centered.row(count)(2) * v;
+                      VF = VF + v;
+                      ++count1;
+                    }
+                    ++count;
+                  }
+                }
+              }
+            }
+            if (VF > IRL::global_constants::VF_LOW)
+            {
+              mu = mu / VF;
+            }
+            // if (mus.size() > 0 && (mu - mus[mus.size()-1]).norm() < 0.001)
+            // {
+            //   flag = false;
+            // }
+            if (count1 <= 1)
+            {
+              flag = false;
+            }
+            else if (abs(x(0)) > 1.5 || abs(x(1)) > 1.5 || abs(x(2)) > 1.5)
+            {
+              flag = false;
+            }
+            else
+            {
+              if ((x - x_origin).norm() > 1e-5 && (mus.size() > 0 && (mu - mus[mus.size()-1]).norm() > 0.001))
+              {
+                mus.push_back(mu);
+              }
+              local.resize(count1, 3);
+              count1 = 0;
+              count = 0;
+              for (int ii = i-1; ii <= i+1; ++ii) 
+              {
+                for (int jj = j-1; jj <= j+1; ++jj) 
+                {
+                  for (int kk = k-1; kk <= k+1; ++kk) 
+                  {
+                    if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                    {
+                      if ((x-centered.row(count)).norm() <= 1.01)
+                      {
+                        local.row(count1) = centered.row(count);
+                        ++count1;
+                      }
+                      ++count;
+                    }
+                  }
+                }
+              }
+              Eigen::MatrixXd cov = (local.transpose()*local) / (local.rows()-1);
+              Eigen::EigenSolver<Eigen::MatrixXd> es(cov);
+              Eigen::Index maxL;
+              es.eigenvalues().real().maxCoeff(&maxL);
+              Eigen::VectorXd dir_new = es.eigenvectors().real().col(maxL);
+              dir_new.normalize();
+              dir_new(0) = -dir_new(0);
+              dir_new(1) = -dir_new(1);
+              dir_new(2) = -dir_new(2);
+              if (dir_new.dot(dir) < 0)
+              {
+                dir_new = -dir_new;
+              }
+              dir = dir_new;
+              x(0) = x(0) + 1.0*dir(0);
+              x(1) = x(1) + 1.0*dir(1);
+              x(2) = x(2) + 1.0*dir(2);
+            }
+          }
+          //std::cout << "hi " << mus.size() << std::endl;
+          IRL::Normal direction = IRL::Normal(0.0,0.0,0.0);
+          //for (int n = 0; n < mus.size()-1; ++n)
+          {
+            // std::cout << mus[n] << std::endl;
+            // direction[0] = direction[0] + (mus[n+1](0) - mus[n](0));
+            // direction[1] = direction[1] + (mus[n+1](1) - mus[n](1));
+            // direction[2] = direction[2] + (mus[n+1](2) - mus[n](2));
+          }
+          //std::cout << mus[mus.size()-1] << std::endl;
+          //std::cout << std::endl << std::endl;
+
+          if (mus.size() <= 1)
+          {
+              Eigen::MatrixXd centered = bary.rowwise() - bary.colwise().mean(); 
+              Eigen::MatrixXd cov = (centered.transpose()*centered) / (centered.rows()-1);
+              Eigen::EigenSolver<Eigen::MatrixXd> es(cov);
+              Eigen::Index maxL;
+              es.eigenvalues().real().maxCoeff(&maxL);
+              Eigen::VectorXd dir = es.eigenvectors().real().col(maxL);
+              direction[0] = dir(0);
+              direction[1] = dir(1);
+              direction[2] = dir(2);
+          }
+          else
+          {
+            std::sort(mus.begin(),mus.end(),myfunction);
+            for (int n = 0; n < mus.size()-1; ++n)
+            {
+              direction[0] = direction[0] + (mus[n+1](0) - mus[n](0));
+              direction[1] = direction[1] + (mus[n+1](1) - mus[n](1));
+              direction[2] = direction[2] + (mus[n+1](2) - mus[n](2));
+            }
+            // direction[0] = mus[mus.size()/2](0) - mus[mus.size()/2-1](0);
+            // direction[1] = mus[mus.size()/2](1) - mus[mus.size()/2-1](1);
+            // direction[2] = mus[mus.size()/2](2) - mus[mus.size()/2-1](2);
+          }
+
+          direction.normalize();
+          //std::cout << direction << std::endl << std::endl << std::endl << std::endl;
+          double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+          double n1 = (-n2*direction[1])/direction[0];
+          IRL::Normal v1;
+          v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          IRL::Normal b = IRL::crossProduct(direction,v1);
+          b.normalize();
+          IRL::Normal a = IRL::crossProduct(b,direction);
+          a.normalize();
+          IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+
+          cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
+
+          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+                  mesh.z(k + 1));
+
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
+                                          upper_cell_pt);
+          IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
+          solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
+          cylinder);
+
+          cylinder = solver_radius.getCylinder();
+          //std::cout << i << " " << j << " " << k << " " << (*a_interface)(i, j, k) << " " << cylinder << std::endl << std::endl << std::endl << std::endl;
+          (*a_interface)(i, j, k) = cylinder;
+        }
+      }
+    }
+  }
+
+  // Update border with simple ghost-cell fill and correct datum for
+  // assumed periodic boundary
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+  const double a_dt, const Data<double>& a_U,
+  const Data<double>& a_V, const Data<double>& a_W,
+  Data<IRL::Cylinder>* a_interface) 
+{
+  const BasicMesh& mesh = a_U.getMesh();
+  Data<double> a_liquid_volume_fraction = b_liquid_volume_fraction;
+  Data<IRL::Pt> a_liquid_centroid = b_liquid_centroid;
+
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imax(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imax(),j,k)[0] - mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imax(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imax(),j,k)[2];
+      }
+    }
+  }
+
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imin(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imin(),j,k)[0] + mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imin(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imin(),j,k)[2];
+      }
+    }
+  }
+
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmax(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmax(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmax(),k)[1] - mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmax(),k)[2];
+      }
+    }
+  }
+
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmin(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmin(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmin(),k)[1] + mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmin(),k)[2];
+      }
+    }
+  }
+
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmax());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmax())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmax())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmax())[2] - mesh.lz();
+      }
+    }
+  }
+
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmin());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmin())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmin())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmin())[2] + mesh.lz();
+      }
+    }
+  }
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
+  {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
+    {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) 
+      {
+        IRL::Cylinder cylinder;
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysBelow();
+        } 
+        else if (a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysAbove();
+        } 
+        else 
+        {
+          Eigen::MatrixXd bary(27,3);
+          Eigen::VectorXd VFs(27);
+          int count = 0;
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  ++count;
+                }
+              }
+            }
+          }
+          bary.resize(count,3);
+          VFs.resize(count);
+
+          count = 0;
+          double VF = 0;
+          IRL::Pt datum = IRL::Pt(0,0,0);
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  //std::cout << a_liquid_centroid(ii,jj,kk) << std::endl;
+                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0]/mesh.dx();
+                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1]/mesh.dy();
+                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2]/mesh.dz();
+                  VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
+                  ++count;
+                  datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
+                  VF = VF + a_liquid_volume_fraction(ii,jj,kk);
+                }
+              }
+            }
+          }
+          datum = datum / VF;
+
+          PrincipalCurve pc = PrincipalCurve(bary, VFs);
+          pc.fit();
+          Eigen::MatrixXd curve = pc.getCurve();
+          //std::cout << curve << std::endl << std::endl;
+
+          IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
+          //direction = pc.fitSpline();
+          direction[0] = curve(1,0) - curve(0,0) + curve(2,0) - curve(1,0);
+          direction[1] = curve(1,1) - curve(0,1) + curve(2,1) - curve(1,1);
+          direction[2] = curve(1,2) - curve(0,2) + curve(2,2) - curve(1,2);
+
+          direction.normalize();
+          double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+          double n1 = (-n2*direction[1])/direction[0];
+          IRL::Normal v1;
+          v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          IRL::Normal b = IRL::crossProduct(direction,v1);
+          b.normalize();
+          IRL::Normal a = IRL::crossProduct(b,direction);
+          a.normalize();
+          IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+
+          cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
+
+          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+                  mesh.z(k + 1));
+
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
+                                          upper_cell_pt);
+          IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
+          solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
+          cylinder);
+
+          cylinder = solver_radius.getCylinder();
           (*a_interface)(i, j, k) = cylinder;
         }
       }
@@ -1102,4 +2172,187 @@ void correctInterfacePlaneBorders(Data<IRL::Cylinder>* a_interface) {
       }
     }
   }
+}
+
+
+PrincipalCurve::PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs)
+{
+  data = d;
+  VF = VFs;
+}
+
+void PrincipalCurve::fit(int max_iterations, double tolerance) 
+{
+    initializeWithPCA();
+    //std::cout << curve << std::endl << std::endl;
+
+    bool flag = true;
+    int i = 0;
+    while(flag && i < max_iterations)
+    {
+        Eigen::MatrixXd old_curve = curve;
+
+        projectDataOntoCurve();
+        updateCurve();
+        //smoothCurve(3);
+        orderCurvePoints();
+
+        double change = (curve - old_curve).squaredNorm();
+        //std::cout << "Iteration " << i + 1 << ", Change: " << change << std::endl;
+        if (change < tolerance) 
+        {
+            //std::cout << "Converged!" << std::endl;
+            flag = false;
+        }
+        ++i;
+    }
+}
+
+const Eigen::MatrixXd& PrincipalCurve::getCurve() const 
+{
+    return curve;
+}
+
+void PrincipalCurve::initializeWithPCA() 
+{
+    Eigen::MatrixXd centered = data.rowwise() - data.colwise().mean(); 
+    //std::cout << centered << std::endl << std::endl;
+    Eigen::MatrixXd cov = (centered.transpose()*centered) / (centered.rows()-1);
+    Eigen::EigenSolver<Eigen::MatrixXd> es(cov);
+    Eigen::Index maxL;
+    es.eigenvalues().real().maxCoeff(&maxL);
+    Eigen::VectorXd dir = es.eigenvectors().real().col(maxL);
+
+    Eigen::VectorXd projections = centered * dir;
+    //std::cout << projections << std::endl << std::endl;
+
+    double min_proj = projections.minCoeff();
+    double max_proj = projections.maxCoeff();
+    
+    curve = Eigen::MatrixXd(res, data.cols());
+    for (int i = 0; i < res; ++i) 
+    {
+        double p = min_proj + (max_proj - min_proj) * i / (res-1);
+        curve.row(i) = data.colwise().mean() + p * dir.transpose();
+    }
+    //std::cout << curve << std::endl << std::endl;
+    orderCurvePoints();
+}
+
+void PrincipalCurve::projectDataOntoCurve() 
+{
+    projection_indices.resize(data.rows());
+
+    for (int i = 0; i < data.rows(); ++i) 
+    {
+        double min_dist_sq = -1.0;
+        int best_idx = 0;
+
+        for (int j = 0; j < curve.rows(); ++j) 
+        {
+            double dist_sq = (data.row(i) - curve.row(j)).squaredNorm();
+            if (min_dist_sq < 0 || dist_sq < min_dist_sq) 
+            {
+                min_dist_sq = dist_sq;
+                best_idx = j;
+            }
+        }
+        projection_indices(i) = best_idx;
+    }
+}
+
+void PrincipalCurve::updateCurve() 
+{
+    Eigen::MatrixXd new_curve = Eigen::MatrixXd::Zero(curve.rows(), curve.cols());
+    Eigen::VectorXi counts = Eigen::VectorXi::Zero(curve.rows());
+    Eigen::VectorXd VF_total = Eigen::VectorXd::Zero(curve.rows());
+    for (int i = 0; i < data.rows(); ++i) 
+    {
+        int idx = projection_indices(i);
+        new_curve.row(idx) += data.row(i)*VF(i);
+        counts(idx)++;
+        VF_total(idx) +=  VF(i);
+    }
+
+    for (int i = 0; i < curve.rows(); ++i) 
+    {
+        if (counts(i) > 0) 
+        {
+            //curve.row(i) = new_curve.row(i) / counts(i);
+            curve.row(i) = new_curve.row(i) / VF_total(i);
+        }
+    }
+}
+
+void PrincipalCurve::smoothCurve(int window_size) 
+{
+    if (window_size >= 2) 
+    {
+      Eigen::MatrixXd smoothed_curve = curve;
+      int half_window = window_size / 2;
+
+      for (int i = 0; i < curve.rows(); ++i) 
+      {
+          Eigen::RowVectorXd sum = Eigen::RowVectorXd::Zero(curve.cols());
+          int count = 0;
+          for (int j = -half_window; j <= half_window; ++j) 
+          {
+              int idx = i + j;
+              if (idx >= 0 && idx < curve.rows()) 
+              {
+                  sum += curve.row(idx);
+                  count++;
+              }
+          }
+          if (count > 0) 
+          {
+              smoothed_curve.row(i) = sum / count;
+          }
+      }
+      curve = smoothed_curve;
+    }
+}
+
+void PrincipalCurve::orderCurvePoints() 
+{
+    lambda.resize(curve.rows());
+    lambda(0) = 0.0;
+    for (int i = 1; i < curve.rows(); ++i) 
+    {
+        lambda(i) = lambda(i - 1) + (curve.row(i) - curve.row(i - 1)).norm();
+    }
+
+    std::vector<int> indices(curve.rows());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::sort(indices.begin(), indices.end(),
+              [&](int a, int b) { return lambda(a) < lambda(b); });
+
+    Eigen::MatrixXd sorted_curve(curve.rows(), curve.cols());
+    Eigen::VectorXd sorted_lambda(lambda.size());
+    for (int i = 0; i < curve.rows(); ++i) 
+    {
+        sorted_curve.row(i) = curve.row(indices[i]);
+        sorted_lambda(i) = lambda(indices[i]);
+    }
+    curve = sorted_curve;
+    lambda = sorted_lambda;
+}
+
+IRL::Normal PrincipalCurve::fitSpline()
+{
+    Eigen::VectorXd t(curve.rows());
+    for (int i = 0; i < curve.rows(); ++i)
+    {
+      t(i) = lambda(i) / lambda(curve.rows()-1);
+    }
+
+    double par = t(1);
+    IRL::Normal direction;
+    Eigen::MatrixXd points = curve.rowwise() - curve.colwise().mean(); 
+    direction[0] = points(0,0)*((2*par-t(1)-t(2))/(t(0)-t(1))*(t(0)-t(2)))+points(1,0)*((2*par-t(0)-t(2))/(t(1)-t(0))*(t(1)-t(2)))+points(2,0)*((2*par-t(0)-t(1))/(t(2)-t(0))*(t(2)-t(1)));
+    direction[1] = points(0,1)*((2*par-t(1)-t(2))/(t(0)-t(1))*(t(0)-t(2)))+points(1,1)*((2*par-t(0)-t(2))/(t(1)-t(0))*(t(1)-t(2)))+points(2,1)*((2*par-t(0)-t(1))/(t(2)-t(0))*(t(2)-t(1)));
+    direction[2] = points(0,2)*((2*par-t(1)-t(2))/(t(0)-t(1))*(t(0)-t(2)))+points(1,2)*((2*par-t(0)-t(2))/(t(1)-t(0))*(t(1)-t(2)))+points(2,2)*((2*par-t(0)-t(1))/(t(2)-t(0))*(t(2)-t(1)));
+    std::cout << direction << std::endl << std::endl;
+    return direction;
 }

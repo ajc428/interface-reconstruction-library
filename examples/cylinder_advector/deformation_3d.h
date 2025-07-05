@@ -11,6 +11,7 @@
 #define EXAMPLES_CYLINDER_ADVECTOR_DEFORMATION_3D_H_
 
 #include "irl/paraboloid_reconstruction/paraboloid.h"
+#include "irl/cylinder_reconstruction/cylinder.h"
 
 #include "examples/cylinder_advector/basic_mesh.h"
 #include "examples/cylinder_advector/data.h"
@@ -21,8 +22,14 @@ struct Deformation3D {
   static void initialize(Data<double>* a_U, Data<double>* a_V,
                          Data<double>* a_W, Data<IRL::Paraboloid>* a_interface);
 
+  static void initialize(Data<double>* a_U, Data<double>* a_V,
+                         Data<double>* a_W, Data<IRL::Cylinder>* a_interface);
+
   static void setVelocity(const double a_time, Data<double>* a_U,
                           Data<double>* a_V, Data<double>* a_W);
+
+  static void setVelocity2(const double a_time, Data<double>* a_U,
+                          Data<double>* a_V, Data<double>* a_W);                          
 };
 
 #endif  // EXAMPLES_CYLINDER_ADVECTOR_DEFORMATION_2D_H_

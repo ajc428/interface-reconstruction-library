@@ -185,7 +185,7 @@ void Translation3D::initialize(Data<double>* a_U, Data<double>* a_V,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Normal normal = IRL::Normal(1.0,1.0,1.0);
+        IRL::Normal normal = IRL::Normal(1.0,0.0,0.0);
         normal.normalize();
         double n2 = normal[0]/(sqrt(normal[1]*normal[1]+normal[0]*normal[0]));
         double n1 = (-n2*normal[1])/normal[0];
@@ -247,6 +247,9 @@ void Translation3D::setVelocity2(const double a_time, Data<double>* a_U,
         (*a_U)(i, j, k) = 1.0;
         (*a_V)(i, j, k) = 1.0 / 1.5;
         (*a_W)(i, j, k) = 1.0 / 3.0;
+        // (*a_U)(i, j, k) = 0.0;
+        // (*a_V)(i, j, k) = 0.0;
+        // (*a_W)(i, j, k) = 0.0;
       }
     }
   }

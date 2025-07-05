@@ -809,8 +809,15 @@ void VTKOutput::writeVTKInterface(
   //////////////////// WRITING TRIANGLES
   std::vector<IRL::TriangulatedSurfaceOutput> triangulated_surface;
   triangulated_surface.resize(a_surface.size());
+  int ii = 0;
   for (std::size_t i = 0; i < a_surface.size(); ++i) {
-    triangulated_surface[i] = a_surface[i].triangulate();
+    //auto x = a_surface[i].triangulate();
+    //if (x.getVertexList().size() < 10000)
+    if (a_surface[i].getSurfaceArea() > 5e-7)
+    {
+      triangulated_surface[ii] = a_surface[i].triangulate();
+      ++ii;
+    }
   }
 
   int number_of_vertices = 0;
