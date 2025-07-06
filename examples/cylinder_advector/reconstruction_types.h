@@ -122,7 +122,7 @@ public:
     PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs);
 
     void fit(int max_iterations = 100, double tolerance = 1e-5);
-    IRL::Normal fitSpline();
+    void fitSpline(IRL::Normal *direction, IRL::Pt *pt);
 
     const Eigen::MatrixXd& getCurve() const;
 

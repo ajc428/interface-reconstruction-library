@@ -1972,9 +1972,9 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
                 if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
                 {
                   //std::cout << a_liquid_centroid(ii,jj,kk) << std::endl;
-                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0]/mesh.dx();
-                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1]/mesh.dy();
-                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2]/mesh.dz();
+                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
+                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
+                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
                   VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
                   ++count;
                   datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
@@ -1989,12 +1989,12 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
           pc.fit();
           Eigen::MatrixXd curve = pc.getCurve();
           //std::cout << curve << std::endl << std::endl;
-
+          //std::cout << datum << std::endl;
           IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
-          //direction = pc.fitSpline();
-          direction[0] = curve(1,0) - curve(0,0) + curve(2,0) - curve(1,0);
-          direction[1] = curve(1,1) - curve(0,1) + curve(2,1) - curve(1,1);
-          direction[2] = curve(1,2) - curve(0,2) + curve(2,2) - curve(1,2);
+          pc.fitSpline(&direction, &datum);
+          // direction[0] = curve(1,0) - curve(0,0) + curve(2,0) - curve(1,0);
+          // direction[1] = curve(1,1) - curve(0,1) + curve(2,1) - curve(1,1);
+          // direction[2] = curve(1,2) - curve(0,2) + curve(2,2) - curve(1,2);
 
           direction.normalize();
           double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
@@ -2206,6 +2206,7 @@ void PrincipalCurve::fit(int max_iterations, double tolerance)
         }
         ++i;
     }
+    //std::cout << curve << std::endl << std::endl;
 }
 
 const Eigen::MatrixXd& PrincipalCurve::getCurve() const 
@@ -2339,20 +2340,24 @@ void PrincipalCurve::orderCurvePoints()
     lambda = sorted_lambda;
 }
 
-IRL::Normal PrincipalCurve::fitSpline()
+void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt)
 {
     Eigen::VectorXd t(curve.rows());
     for (int i = 0; i < curve.rows(); ++i)
     {
       t(i) = lambda(i) / lambda(curve.rows()-1);
     }
-
-    double par = t(1);
-    IRL::Normal direction;
-    Eigen::MatrixXd points = curve.rowwise() - curve.colwise().mean(); 
-    direction[0] = points(0,0)*((2*par-t(1)-t(2))/(t(0)-t(1))*(t(0)-t(2)))+points(1,0)*((2*par-t(0)-t(2))/(t(1)-t(0))*(t(1)-t(2)))+points(2,0)*((2*par-t(0)-t(1))/(t(2)-t(0))*(t(2)-t(1)));
-    direction[1] = points(0,1)*((2*par-t(1)-t(2))/(t(0)-t(1))*(t(0)-t(2)))+points(1,1)*((2*par-t(0)-t(2))/(t(1)-t(0))*(t(1)-t(2)))+points(2,1)*((2*par-t(0)-t(1))/(t(2)-t(0))*(t(2)-t(1)));
-    direction[2] = points(0,2)*((2*par-t(1)-t(2))/(t(0)-t(1))*(t(0)-t(2)))+points(1,2)*((2*par-t(0)-t(2))/(t(1)-t(0))*(t(1)-t(2)))+points(2,2)*((2*par-t(0)-t(1))/(t(2)-t(0))*(t(2)-t(1)));
-    std::cout << direction << std::endl << std::endl;
-    return direction;
+    //std::cout << t << std::endl;
+    double par = 0.5;
+    Eigen::MatrixXd points = curve; 
+    //std::cout << points << std::endl;
+    pt[0][0] = points(0,0)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+    pt[0][1] = points(0,1)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+    pt[0][2] = points(0,2)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+    //std::cout << *pt << std::endl << std::endl;
+    points = curve.rowwise() - curve.colwise().mean(); 
+    direction[0][0] = points(0,0)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+    direction[0][1] = points(0,1)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+    direction[0][2] = points(0,2)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+    //std::cout << *direction << std::endl << std::endl;
 }

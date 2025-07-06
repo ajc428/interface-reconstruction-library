@@ -173,18 +173,21 @@ void Deformation3D::setVelocity2(const double a_time, Data<double>* a_U,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_U)(i, j, k) = 2.0 * std::pow(sin(M_PI * mesh.xm(i)), 2) *
-                          sin(2.0 * M_PI * mesh.ym(j)) *
-                          sin(2.0 * M_PI * mesh.zm(k)) *
-                          cos(M_PI * (a_time) / 3.0);
-        (*a_V)(i, j, k) = -std::pow(sin(M_PI * mesh.ym(j)), 2) *
-                          sin(2.0 * M_PI * mesh.xm(i)) *
-                          sin(2.0 * M_PI * mesh.zm(k)) *
-                          cos(M_PI * (a_time) / 3.0);
-        (*a_W)(i, j, k) = -std::pow(sin(M_PI * mesh.zm(k)), 2) *
-                          sin(2.0 * M_PI * mesh.xm(i)) *
-                          sin(2.0 * M_PI * mesh.ym(j)) *
-                          cos(M_PI * (a_time) / 3.0);
+        // (*a_U)(i, j, k) = 2.0 * std::pow(sin(M_PI * mesh.xm(i)), 2) *
+        //                   sin(2.0 * M_PI * mesh.ym(j)) *
+        //                   sin(2.0 * M_PI * mesh.zm(k)) *
+        //                   cos(M_PI * (a_time) / 3.0);
+        // (*a_V)(i, j, k) = -std::pow(sin(M_PI * mesh.ym(j)), 2) *
+        //                   sin(2.0 * M_PI * mesh.xm(i)) *
+        //                   sin(2.0 * M_PI * mesh.zm(k)) *
+        //                   cos(M_PI * (a_time) / 3.0);
+        // (*a_W)(i, j, k) = -std::pow(sin(M_PI * mesh.zm(k)), 2) *
+        //                   sin(2.0 * M_PI * mesh.xm(i)) *
+        //                   sin(2.0 * M_PI * mesh.ym(j)) *
+        //                   cos(M_PI * (a_time) / 3.0);
+        (*a_U)(i, j, k) = 0.0;
+        (*a_V)(i, j, k) = 2*sin(2 * M_PI * mesh.xm(i));
+        (*a_W)(i, j, k) = 0.0;
       }
     }
   }
