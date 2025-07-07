@@ -931,10 +931,32 @@ void Cylinder_PCA::getReconstruction(const Data<double>& b_liquid_volume_fractio
           direction[2] = dir(2);
 
           direction.normalize();
-          double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-          double n1 = (-n2*direction[1])/direction[0];
+          double n3 = 0;
+          double n2 = 0;
+          double n1 = 0;
           IRL::Normal v1;
-          v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
+          {
+            double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n1 = (-n2*direction[1])/direction[0];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
+          {
+            double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n2 = (-n1*direction[0])/direction[1];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
+          {
+            double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
+            double n3 = (-n2*direction[1])/direction[2];
+            v1[0] = 0; v1[1] = n2; v1[2] = n3;
+          }
+          else
+          {
+            v1[0] = 0; v1[1] = 0; v1[2] = 0;
+          }
           IRL::Normal b = IRL::crossProduct(direction,v1);
           b.normalize();
           IRL::Normal a = IRL::crossProduct(b,direction);
@@ -966,6 +988,586 @@ void Cylinder_PCA::getReconstruction(const Data<double>& b_liquid_volume_fractio
   a_interface->updateBorder();
   correctInterfacePlaneBorders(a_interface);
 }
+
+void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+  const double a_dt, const Data<double>& a_U,
+  const Data<double>& a_V, const Data<double>& a_W,
+  Data<IRL::Cylinder>* a_interface) 
+{
+  const BasicMesh& mesh = a_U.getMesh();
+  Data<double> a_liquid_volume_fraction = b_liquid_volume_fraction;
+  Data<IRL::Pt> a_liquid_centroid = b_liquid_centroid;
+
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imax(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imax(),j,k)[0] - mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imax(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imax(),j,k)[2];
+      }
+    }
+  }
+
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imin(), j, k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imin(),j,k)[0] + mesh.lx();
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imin(),j,k)[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imin(),j,k)[2];
+      }
+    }
+  }
+
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmax(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmax(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmax(),k)[1] - mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmax(),k)[2];
+      }
+    }
+  }
+
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmin(), k);
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmin(),k)[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmin(),k)[1] + mesh.ly();
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmin(),k)[2];
+      }
+    }
+  }
+
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
+  {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
+    {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) 
+      {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmax());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmax())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmax())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmax())[2] - mesh.lz();
+      }
+    }
+  }
+
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmin());
+        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmin())[0];
+        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmin())[1];
+        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmin())[2] + mesh.lz();
+      }
+    }
+  }
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
+  {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
+    {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) 
+      {
+        IRL::Cylinder cylinder;
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysBelow();
+        } 
+        else if (a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) 
+        {
+          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysAbove();
+        } 
+        else 
+        {
+          Eigen::MatrixXd bary(27,3);
+          Eigen::VectorXd VFs(27);
+          int count = 0;
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  ++count;
+                }
+              }
+            }
+          }
+          bary.resize(count,3);
+          VFs.resize(count);
+
+          count = 0;
+          double VF = 0;
+          IRL::Pt datum = IRL::Pt(0,0,0);
+          for (int ii = i-1; ii <= i+1; ++ii) 
+          {
+            for (int jj = j-1; jj <= j+1; ++jj) 
+            {
+              for (int kk = k-1; kk <= k+1; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
+                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
+                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
+                  VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
+                  ++count;
+                  datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
+                  VF = VF + a_liquid_volume_fraction(ii,jj,kk);
+                }
+              }
+            }
+          }
+          datum = datum / VF;
+
+          PrincipalCurve pc = PrincipalCurve(bary, VFs);
+          pc.fit();
+          Eigen::MatrixXd curve = pc.getCurve();
+          IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
+          pc.fitSpline(&direction, &datum, IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k)));//a_liquid_centroid(i,j,k));//
+
+          direction.normalize();
+          double n3 = 0;
+          double n2 = 0;
+          double n1 = 0;
+          IRL::Normal v1;
+          if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
+          {
+            double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n1 = (-n2*direction[1])/direction[0];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
+          {
+            double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n2 = (-n1*direction[0])/direction[1];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
+          {
+            double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
+            double n3 = (-n2*direction[1])/direction[2];
+            v1[0] = 0; v1[1] = n2; v1[2] = n3;
+          }
+          else
+          {
+            v1[0] = 0; v1[1] = 0; v1[2] = 0;
+          }
+          IRL::Normal b = IRL::crossProduct(direction,v1);
+          b.normalize();
+          IRL::Normal a = IRL::crossProduct(b,direction);
+          a.normalize();
+          IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+
+          cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
+
+          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+                  mesh.z(k + 1));
+
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
+                                          upper_cell_pt);
+          IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
+          solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
+          cylinder);
+
+          cylinder = solver_radius.getCylinder();
+          (*a_interface)(i, j, k) = cylinder;
+        }
+      }
+    }
+  }
+
+  // Update border with simple ghost-cell fill and correct datum for
+  // assumed periodic boundary
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface) {
+  const BasicMesh& mesh = (*a_interface).getMesh();
+  // Fix distances in reconstruction for periodic boundary
+
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[0] -= mesh.lx();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[0] += mesh.lx();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[1] -= mesh.ly();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[1] += mesh.ly();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[2] -= mesh.lz();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[2] += mesh.lz();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+}
+
+void correctInterfacePlaneBorders(Data<IRL::Cylinder>* a_interface) {
+  const BasicMesh& mesh = (*a_interface).getMesh();
+  // Fix distances in reconstruction for periodic boundary
+
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[0] -= mesh.lx();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[0] += mesh.lx();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[1] -= mesh.ly();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[1] += mesh.ly();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[2] -= mesh.lz();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
+        datum[2] += mesh.lz();
+        (*a_interface)(i, j, k).setDatum(datum);
+      }
+    }
+  }
+}
+
+
+PrincipalCurve::PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs)
+{
+  data = d;
+  VF = VFs;
+}
+
+void PrincipalCurve::fit(int max_iterations, double tolerance) 
+{
+    initializeWithPCA();
+
+    bool flag = true;
+    int i = 0;
+    while(flag && i < max_iterations)
+    {
+        Eigen::MatrixXd old_curve = curve;
+
+        projectDataOntoCurve();
+        updateCurve();
+        //smoothCurve(3);
+        orderCurvePoints();
+
+        double change = (curve - old_curve).squaredNorm();
+        //std::cout << "Iteration " << i + 1 << ", Change: " << change << std::endl;
+        if (change < tolerance) 
+        {
+            //std::cout << "Converged!" << std::endl;
+            flag = false;
+        }
+        ++i;
+    }
+}
+
+const Eigen::MatrixXd& PrincipalCurve::getCurve() const 
+{
+    return curve;
+}
+
+void PrincipalCurve::initializeWithPCA() 
+{
+    Eigen::MatrixXd centered = data.rowwise() - data.colwise().mean(); 
+    Eigen::MatrixXd cov = (centered.transpose()*centered) / (centered.rows()-1);
+    Eigen::EigenSolver<Eigen::MatrixXd> es(cov);
+    Eigen::Index maxL;
+    es.eigenvalues().real().maxCoeff(&maxL);
+    Eigen::VectorXd dir = es.eigenvectors().real().col(maxL);
+
+    Eigen::VectorXd projections = centered * dir;
+
+    double min_proj = projections.minCoeff();
+    double max_proj = projections.maxCoeff();
+    
+    curve = Eigen::MatrixXd(res, data.cols());
+    for (int i = 0; i < res; ++i) 
+    {
+        double p = min_proj + (max_proj - min_proj) * i / (res-1);
+        curve.row(i) = data.colwise().mean() + p * dir.transpose();
+    }
+    orderCurvePoints();
+}
+
+void PrincipalCurve::projectDataOntoCurve() 
+{
+    projection_indices.resize(data.rows());
+
+    for (int i = 0; i < data.rows(); ++i) 
+    {
+        double min_dist_sq = -1.0;
+        int best_idx = 0;
+
+        for (int j = 0; j < curve.rows(); ++j) 
+        {
+            double dist_sq = (data.row(i) - curve.row(j)).squaredNorm();
+            if (min_dist_sq < 0 || dist_sq < min_dist_sq) 
+            {
+                min_dist_sq = dist_sq;
+                best_idx = j;
+            }
+        }
+        projection_indices(i) = best_idx;
+    }
+}
+
+void PrincipalCurve::updateCurve() 
+{
+    Eigen::MatrixXd new_curve = Eigen::MatrixXd::Zero(curve.rows(), curve.cols());
+    Eigen::VectorXi counts = Eigen::VectorXi::Zero(curve.rows());
+    Eigen::VectorXd VF_total = Eigen::VectorXd::Zero(curve.rows());
+    for (int i = 0; i < data.rows(); ++i) 
+    {
+        int idx = projection_indices(i);
+        new_curve.row(idx) += data.row(i)*VF(i);
+        counts(idx)++;
+        VF_total(idx) +=  VF(i);
+    }
+
+    for (int i = 0; i < curve.rows(); ++i) 
+    {
+        if (counts(i) > 0) 
+        {
+            //curve.row(i) = new_curve.row(i) / counts(i);
+            curve.row(i) = new_curve.row(i) / VF_total(i);
+        }
+    }
+}
+
+void PrincipalCurve::smoothCurve(int window_size) 
+{
+    if (window_size >= 2) 
+    {
+      Eigen::MatrixXd smoothed_curve = curve;
+      int half_window = window_size / 2;
+
+      for (int i = 0; i < curve.rows(); ++i) 
+      {
+          Eigen::RowVectorXd sum = Eigen::RowVectorXd::Zero(curve.cols());
+          int count = 0;
+          for (int j = -half_window; j <= half_window; ++j) 
+          {
+              int idx = i + j;
+              if (idx >= 0 && idx < curve.rows()) 
+              {
+                  sum += curve.row(idx);
+                  count++;
+              }
+          }
+          if (count > 0) 
+          {
+              smoothed_curve.row(i) = sum / count;
+          }
+      }
+      curve = smoothed_curve;
+    }
+}
+
+void PrincipalCurve::orderCurvePoints() 
+{
+    lambda.resize(curve.rows());
+    lambda(0) = 0.0;
+    for (int i = 1; i < curve.rows(); ++i) 
+    {
+        lambda(i) = lambda(i - 1) + (curve.row(i) - curve.row(i - 1)).norm();
+    }
+
+    std::vector<int> indices(curve.rows());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::sort(indices.begin(), indices.end(),
+              [&](int a, int b) { return lambda(a) < lambda(b); });
+
+    Eigen::MatrixXd sorted_curve(curve.rows(), curve.cols());
+    Eigen::VectorXd sorted_lambda(lambda.size());
+    for (int i = 0; i < curve.rows(); ++i) 
+    {
+        sorted_curve.row(i) = curve.row(indices[i]);
+        sorted_lambda(i) = lambda(indices[i]);
+    }
+    curve = sorted_curve;
+    lambda = sorted_lambda;
+}
+
+void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target)
+{
+    Eigen::MatrixXd points = curve; 
+    Eigen::VectorXd t(curve.rows());
+    for (int i = 0; i < curve.rows(); ++i)
+    {
+      t(i) = lambda(i) / lambda(curve.rows()-1);
+    }
+    IRL::Pt origin;
+    double par = 0;
+    double mag = 100;
+    for (int i = 0; i < 100; ++i) 
+    {
+      double par2 = i/99.0;
+      origin[0] = points(0,0)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+      origin[1] = points(0,1)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+      origin[2] = points(0,2)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+      double mag2 = pow(origin[0]-target[0],2.0)+pow(origin[1]-target[1],2.0)+pow(origin[2]-target[2],2.0);
+      //double mag2 = pow(origin[0]-curve(1,0),2.0)+pow(origin[1]-curve(1,1),2.0)+pow(origin[2]-curve(1,2),2.0);
+      if (mag2 < mag)
+      {
+        mag = mag2;
+        par = par2;
+      }
+    }
+    //par=0.5;
+    pt[0][0] = points(0,0)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+    pt[0][1] = points(0,1)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+    pt[0][2] = points(0,2)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+
+    points = curve.rowwise() - curve.colwise().mean(); 
+    direction[0][0] = points(0,0)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+    direction[0][1] = points(0,1)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+    direction[0][2] = points(0,2)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+}
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
 
 void Cylinder_Spline::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
   const double a_dt, const Data<double>& a_U,
@@ -1349,10 +1951,32 @@ void Cylinder_Spline::getReconstruction(const Data<double>& b_liquid_volume_frac
 
           direction.normalize();
           std::cout << direction << std::endl << std::endl << std::endl << std::endl;
-          double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-          double n1 = (-n2*direction[1])/direction[0];
+          double n3 = 0;
+          double n2 = 0;
+          double n1 = 0;
           IRL::Normal v1;
-          v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
+          {
+            double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n1 = (-n2*direction[1])/direction[0];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
+          {
+            double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n2 = (-n1*direction[0])/direction[1];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
+          {
+            double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
+            double n3 = (-n2*direction[1])/direction[2];
+            v1[0] = 0; v1[1] = n2; v1[2] = n3;
+          }
+          else
+          {
+            v1[0] = 0; v1[1] = 0; v1[2] = 0;
+          }
           IRL::Normal b = IRL::crossProduct(direction,v1);
           b.normalize();
           IRL::Normal a = IRL::crossProduct(b,direction);
@@ -1792,10 +2416,32 @@ void Cylinder_Curve_Local::getReconstruction(const Data<double>& b_liquid_volume
 
           direction.normalize();
           //std::cout << direction << std::endl << std::endl << std::endl << std::endl;
-          double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-          double n1 = (-n2*direction[1])/direction[0];
+          double n3 = 0;
+          double n2 = 0;
+          double n1 = 0;
           IRL::Normal v1;
-          v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
+          {
+            double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n1 = (-n2*direction[1])/direction[0];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
+          {
+            double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n2 = (-n1*direction[0])/direction[1];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
+          {
+            double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
+            double n3 = (-n2*direction[1])/direction[2];
+            v1[0] = 0; v1[1] = n2; v1[2] = n3;
+          }
+          else
+          {
+            v1[0] = 0; v1[1] = 0; v1[2] = 0;
+          }
           IRL::Normal b = IRL::crossProduct(direction,v1);
           b.normalize();
           IRL::Normal a = IRL::crossProduct(b,direction);
@@ -1826,538 +2472,4 @@ void Cylinder_Curve_Local::getReconstruction(const Data<double>& b_liquid_volume
   // assumed periodic boundary
   a_interface->updateBorder();
   correctInterfacePlaneBorders(a_interface);
-}
-
-void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volume_fraction,const Data<IRL::Pt>& b_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
-  const double a_dt, const Data<double>& a_U,
-  const Data<double>& a_V, const Data<double>& a_W,
-  Data<IRL::Cylinder>* a_interface) 
-{
-  const BasicMesh& mesh = a_U.getMesh();
-  Data<double> a_liquid_volume_fraction = b_liquid_volume_fraction;
-  Data<IRL::Pt> a_liquid_centroid = b_liquid_centroid;
-
-  // x- boundary
-  for (int i = mesh.imino(); i < mesh.imin(); ++i) 
-  {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
-    {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
-      {
-        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imax(), j, k);
-        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imax(),j,k)[0] - mesh.lx();
-        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imax(),j,k)[1];
-        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imax(),j,k)[2];
-      }
-    }
-  }
-
-  // x+ boundary
-  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) 
-  {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
-    {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
-      {
-        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(mesh.imin(), j, k);
-        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(mesh.imin(),j,k)[0] + mesh.lx();
-        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(mesh.imin(),j,k)[1];
-        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(mesh.imin(),j,k)[2];
-      }
-    }
-  }
-
-  // y- boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
-  {
-    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) 
-    {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
-      {
-        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmax(), k);
-        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmax(),k)[0];
-        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmax(),k)[1] - mesh.ly();
-        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmax(),k)[2];
-      }
-    }
-  }
-
-  // y+ boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
-  {
-    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) 
-    {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) 
-      {
-        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, mesh.jmin(), k);
-        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,mesh.jmin(),k)[0];
-        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,mesh.jmin(),k)[1] + mesh.ly();
-        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,mesh.jmin(),k)[2];
-      }
-    }
-  }
-
-  // z- boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) 
-  {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) 
-    {
-      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) 
-      {
-        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmax());
-        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmax())[0];
-        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmax())[1];
-        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmax())[2] - mesh.lz();
-      }
-    }
-  }
-
-  // z+ boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
-        a_liquid_volume_fraction(i, j, k) = a_liquid_volume_fraction(i, j, mesh.kmin());
-        a_liquid_centroid(i,j,k)[0] = a_liquid_centroid(i,j,mesh.kmin())[0];
-        a_liquid_centroid(i,j,k)[1] = a_liquid_centroid(i,j,mesh.kmin())[1];
-        a_liquid_centroid(i,j,k)[2] = a_liquid_centroid(i,j,mesh.kmin())[2] + mesh.lz();
-      }
-    }
-  }
-
-  for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
-  {
-    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
-    {
-      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) 
-      {
-        IRL::Cylinder cylinder;
-        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW) 
-        {
-          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysBelow();
-        } 
-        else if (a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) 
-        {
-          (*a_interface)(i, j, k) = IRL::Cylinder::createAlwaysAbove();
-        } 
-        else 
-        {
-          Eigen::MatrixXd bary(27,3);
-          Eigen::VectorXd VFs(27);
-          int count = 0;
-          for (int ii = i-1; ii <= i+1; ++ii) 
-          {
-            for (int jj = j-1; jj <= j+1; ++jj) 
-            {
-              for (int kk = k-1; kk <= k+1; ++kk) 
-              {
-                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
-                {
-                  ++count;
-                }
-              }
-            }
-          }
-          bary.resize(count,3);
-          VFs.resize(count);
-
-          count = 0;
-          double VF = 0;
-          IRL::Pt datum = IRL::Pt(0,0,0);
-          for (int ii = i-1; ii <= i+1; ++ii) 
-          {
-            for (int jj = j-1; jj <= j+1; ++jj) 
-            {
-              for (int kk = k-1; kk <= k+1; ++kk) 
-              {
-                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
-                {
-                  //std::cout << a_liquid_centroid(ii,jj,kk) << std::endl;
-                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
-                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
-                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
-                  VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
-                  ++count;
-                  datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
-                  VF = VF + a_liquid_volume_fraction(ii,jj,kk);
-                }
-              }
-            }
-          }
-          datum = datum / VF;
-
-          PrincipalCurve pc = PrincipalCurve(bary, VFs);
-          pc.fit();
-          Eigen::MatrixXd curve = pc.getCurve();
-          //std::cout << curve << std::endl << std::endl;
-          //std::cout << datum << std::endl;
-          IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
-          pc.fitSpline(&direction, &datum);
-          // direction[0] = curve(1,0) - curve(0,0) + curve(2,0) - curve(1,0);
-          // direction[1] = curve(1,1) - curve(0,1) + curve(2,1) - curve(1,1);
-          // direction[2] = curve(1,2) - curve(0,2) + curve(2,2) - curve(1,2);
-
-          direction.normalize();
-          double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-          double n1 = (-n2*direction[1])/direction[0];
-          IRL::Normal v1;
-          v1[0] = n1; v1[1] = n2; v1[2] = 0;
-          IRL::Normal b = IRL::crossProduct(direction,v1);
-          b.normalize();
-          IRL::Normal a = IRL::crossProduct(b,direction);
-          a.normalize();
-          IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
-
-          cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
-
-          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
-          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
-                  mesh.z(k + 1));
-
-          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
-                                          upper_cell_pt);
-          IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
-          solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
-          cylinder);
-
-          cylinder = solver_radius.getCylinder();
-          (*a_interface)(i, j, k) = cylinder;
-        }
-      }
-    }
-  }
-
-  // Update border with simple ghost-cell fill and correct datum for
-  // assumed periodic boundary
-  a_interface->updateBorder();
-  correctInterfacePlaneBorders(a_interface);
-}
-
-void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface) {
-  const BasicMesh& mesh = (*a_interface).getMesh();
-  // Fix distances in reconstruction for periodic boundary
-
-  // x- boundary
-  for (int i = mesh.imino(); i < mesh.imin(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[0] -= mesh.lx();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // x+ boundary
-  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[0] += mesh.lx();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // y- boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[1] -= mesh.ly();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // y+ boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[1] += mesh.ly();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // z- boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[2] -= mesh.lz();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // z+ boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[2] += mesh.lz();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-}
-
-void correctInterfacePlaneBorders(Data<IRL::Cylinder>* a_interface) {
-  const BasicMesh& mesh = (*a_interface).getMesh();
-  // Fix distances in reconstruction for periodic boundary
-
-  // x- boundary
-  for (int i = mesh.imino(); i < mesh.imin(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[0] -= mesh.lx();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // x+ boundary
-  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[0] += mesh.lx();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // y- boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[1] -= mesh.ly();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // y+ boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[1] += mesh.ly();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // z- boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[2] -= mesh.lz();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-
-  // z+ boundary
-  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
-    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
-      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
-        IRL::Pt datum = (*a_interface)(i, j, k).getDatum();
-        datum[2] += mesh.lz();
-        (*a_interface)(i, j, k).setDatum(datum);
-      }
-    }
-  }
-}
-
-
-PrincipalCurve::PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs)
-{
-  data = d;
-  VF = VFs;
-}
-
-void PrincipalCurve::fit(int max_iterations, double tolerance) 
-{
-    initializeWithPCA();
-    //std::cout << curve << std::endl << std::endl;
-
-    bool flag = true;
-    int i = 0;
-    while(flag && i < max_iterations)
-    {
-        Eigen::MatrixXd old_curve = curve;
-
-        projectDataOntoCurve();
-        updateCurve();
-        //smoothCurve(3);
-        orderCurvePoints();
-
-        double change = (curve - old_curve).squaredNorm();
-        //std::cout << "Iteration " << i + 1 << ", Change: " << change << std::endl;
-        if (change < tolerance) 
-        {
-            //std::cout << "Converged!" << std::endl;
-            flag = false;
-        }
-        ++i;
-    }
-    //std::cout << curve << std::endl << std::endl;
-}
-
-const Eigen::MatrixXd& PrincipalCurve::getCurve() const 
-{
-    return curve;
-}
-
-void PrincipalCurve::initializeWithPCA() 
-{
-    Eigen::MatrixXd centered = data.rowwise() - data.colwise().mean(); 
-    //std::cout << centered << std::endl << std::endl;
-    Eigen::MatrixXd cov = (centered.transpose()*centered) / (centered.rows()-1);
-    Eigen::EigenSolver<Eigen::MatrixXd> es(cov);
-    Eigen::Index maxL;
-    es.eigenvalues().real().maxCoeff(&maxL);
-    Eigen::VectorXd dir = es.eigenvectors().real().col(maxL);
-
-    Eigen::VectorXd projections = centered * dir;
-    //std::cout << projections << std::endl << std::endl;
-
-    double min_proj = projections.minCoeff();
-    double max_proj = projections.maxCoeff();
-    
-    curve = Eigen::MatrixXd(res, data.cols());
-    for (int i = 0; i < res; ++i) 
-    {
-        double p = min_proj + (max_proj - min_proj) * i / (res-1);
-        curve.row(i) = data.colwise().mean() + p * dir.transpose();
-    }
-    //std::cout << curve << std::endl << std::endl;
-    orderCurvePoints();
-}
-
-void PrincipalCurve::projectDataOntoCurve() 
-{
-    projection_indices.resize(data.rows());
-
-    for (int i = 0; i < data.rows(); ++i) 
-    {
-        double min_dist_sq = -1.0;
-        int best_idx = 0;
-
-        for (int j = 0; j < curve.rows(); ++j) 
-        {
-            double dist_sq = (data.row(i) - curve.row(j)).squaredNorm();
-            if (min_dist_sq < 0 || dist_sq < min_dist_sq) 
-            {
-                min_dist_sq = dist_sq;
-                best_idx = j;
-            }
-        }
-        projection_indices(i) = best_idx;
-    }
-}
-
-void PrincipalCurve::updateCurve() 
-{
-    Eigen::MatrixXd new_curve = Eigen::MatrixXd::Zero(curve.rows(), curve.cols());
-    Eigen::VectorXi counts = Eigen::VectorXi::Zero(curve.rows());
-    Eigen::VectorXd VF_total = Eigen::VectorXd::Zero(curve.rows());
-    for (int i = 0; i < data.rows(); ++i) 
-    {
-        int idx = projection_indices(i);
-        new_curve.row(idx) += data.row(i)*VF(i);
-        counts(idx)++;
-        VF_total(idx) +=  VF(i);
-    }
-
-    for (int i = 0; i < curve.rows(); ++i) 
-    {
-        if (counts(i) > 0) 
-        {
-            //curve.row(i) = new_curve.row(i) / counts(i);
-            curve.row(i) = new_curve.row(i) / VF_total(i);
-        }
-    }
-}
-
-void PrincipalCurve::smoothCurve(int window_size) 
-{
-    if (window_size >= 2) 
-    {
-      Eigen::MatrixXd smoothed_curve = curve;
-      int half_window = window_size / 2;
-
-      for (int i = 0; i < curve.rows(); ++i) 
-      {
-          Eigen::RowVectorXd sum = Eigen::RowVectorXd::Zero(curve.cols());
-          int count = 0;
-          for (int j = -half_window; j <= half_window; ++j) 
-          {
-              int idx = i + j;
-              if (idx >= 0 && idx < curve.rows()) 
-              {
-                  sum += curve.row(idx);
-                  count++;
-              }
-          }
-          if (count > 0) 
-          {
-              smoothed_curve.row(i) = sum / count;
-          }
-      }
-      curve = smoothed_curve;
-    }
-}
-
-void PrincipalCurve::orderCurvePoints() 
-{
-    lambda.resize(curve.rows());
-    lambda(0) = 0.0;
-    for (int i = 1; i < curve.rows(); ++i) 
-    {
-        lambda(i) = lambda(i - 1) + (curve.row(i) - curve.row(i - 1)).norm();
-    }
-
-    std::vector<int> indices(curve.rows());
-    std::iota(indices.begin(), indices.end(), 0);
-
-    std::sort(indices.begin(), indices.end(),
-              [&](int a, int b) { return lambda(a) < lambda(b); });
-
-    Eigen::MatrixXd sorted_curve(curve.rows(), curve.cols());
-    Eigen::VectorXd sorted_lambda(lambda.size());
-    for (int i = 0; i < curve.rows(); ++i) 
-    {
-        sorted_curve.row(i) = curve.row(indices[i]);
-        sorted_lambda(i) = lambda(indices[i]);
-    }
-    curve = sorted_curve;
-    lambda = sorted_lambda;
-}
-
-void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt)
-{
-    Eigen::VectorXd t(curve.rows());
-    for (int i = 0; i < curve.rows(); ++i)
-    {
-      t(i) = lambda(i) / lambda(curve.rows()-1);
-    }
-    //std::cout << t << std::endl;
-    double par = 0.5;
-    Eigen::MatrixXd points = curve; 
-    //std::cout << points << std::endl;
-    pt[0][0] = points(0,0)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-    pt[0][1] = points(0,1)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-    pt[0][2] = points(0,2)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-    //std::cout << *pt << std::endl << std::endl;
-    points = curve.rowwise() - curve.colwise().mean(); 
-    direction[0][0] = points(0,0)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
-    direction[0][1] = points(0,1)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
-    direction[0][2] = points(0,2)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
-    //std::cout << *direction << std::endl << std::endl;
 }
