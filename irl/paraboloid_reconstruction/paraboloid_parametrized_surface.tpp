@@ -1193,7 +1193,7 @@ inline void ParaboloidParametrizedSurfaceOutput::triangulate_fromPtr(
     // myfile << "Refining with length-scale " << length_scale << ".\n";
     // sleep(1.0e-4);
     CGAL::refine_Delaunay_mesh_2(cdt,
-                                 Criteria(0.15, length_scale));
+                                 CGAL::parameters::criteria(Criteria(0.15, length_scale)));
     // , CGAL::parameters::seeds_are_in_domain(false));
     // myfile << "Mesh has " << cdt.number_of_vertices() << " vertices.\n";
     // myfile << "Mesh has " << cdt.number_of_faces() << " faces.\n";
