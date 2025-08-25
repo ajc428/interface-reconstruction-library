@@ -1105,11 +1105,31 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
           Eigen::MatrixXd bary(27,3);
           Eigen::VectorXd VFs(27);
           int count = 0;
-          for (int ii = i-1; ii <= i+1; ++ii) 
+          bool stop = false;
+          int lim = 2;
+          // while (!stop)
+          // {
+          //   ++lim;
+          //   for (int ii = i-lim; ii <= i+lim; ++ii) 
+          //   {
+          //     for (int jj = j-lim; jj <= j+lim; ++jj) 
+          //     {
+          //       for (int kk = k-lim; kk <= k+lim; ++kk) 
+          //       {
+          //         if (a_liquid_volume_fraction(ii, jj, kk) <= IRL::global_constants::VF_LOW)
+          //         {
+          //           stop = true;
+          //           break;
+          //         }
+          //       }
+          //     }
+          //   }
+          // }
+          for (int ii = i-lim; ii <= i+lim; ++ii) 
           {
-            for (int jj = j-1; jj <= j+1; ++jj) 
+            for (int jj = j-lim; jj <= j+lim; ++jj) 
             {
-              for (int kk = k-1; kk <= k+1; ++kk) 
+              for (int kk = k-lim; kk <= k+lim; ++kk) 
               {
                 if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
                 {
@@ -1124,11 +1144,11 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
           count = 0;
           double VF = 0;
           IRL::Pt datum = IRL::Pt(0,0,0);
-          for (int ii = i-1; ii <= i+1; ++ii) 
+          for (int ii = i-lim; ii <= i+lim; ++ii) 
           {
-            for (int jj = j-1; jj <= j+1; ++jj) 
+            for (int jj = j-lim; jj <= j+lim; ++jj) 
             {
-              for (int kk = k-1; kk <= k+1; ++kk) 
+              for (int kk = k-lim; kk <= k+lim; ++kk) 
               {
                 if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
                 {
@@ -1529,6 +1549,7 @@ void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt targ
       origin[0] = points(0,0)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
       origin[1] = points(0,1)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
       origin[2] = points(0,2)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
+      //std::cout << origin << std::endl;
       double mag2 = pow(origin[0]-target[0],2.0)+pow(origin[1]-target[1],2.0)+pow(origin[2]-target[2],2.0);
       //double mag2 = pow(origin[0]-curve(1,0),2.0)+pow(origin[1]-curve(1,1),2.0)+pow(origin[2]-curve(1,2),2.0);
       if (mag2 < mag)
