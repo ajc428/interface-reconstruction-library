@@ -12,6 +12,12 @@
 
 namespace IRL {
 
+Cylinder reconstructionWithCylinder3D(
+    const cylinderNeighborhood& a_neighborhood_geometry) {
+  cylinder_reconstruction cylinder_solver;
+  return cylinder_solver.solve(&a_neighborhood_geometry);
+}
+
 Paraboloid reconstructionWithJibben3D(
     const JibbenNeighborhood& a_neighborhood_geometry, const double a_delta) {
   Jibben_3D jibben_solver;

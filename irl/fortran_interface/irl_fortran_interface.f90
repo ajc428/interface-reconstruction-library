@@ -99,5 +99,7 @@ module irl_fortran_interface
   use f_JibbenNeigh_class
   use f_ObjServer_MixedPolygonBezierSurface_class
   use f_MixedPolygonBezierSurface_class
+  use f_cylinderNeigh_class
+  use f_Cylinder_class
 
 end module irl_fortran_interface

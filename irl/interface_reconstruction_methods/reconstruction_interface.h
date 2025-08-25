@@ -13,7 +13,9 @@
 #include "irl/interface_reconstruction_methods/advected_plane_reconstruction.h"
 #include "irl/interface_reconstruction_methods/elvira.h"
 #include "irl/interface_reconstruction_methods/jibben.h"
+#include "irl/interface_reconstruction_methods/cylinder_reconstruction.h"
 #include "irl/interface_reconstruction_methods/jibben_neighborhood.h"
+#include "irl/interface_reconstruction_methods/cylinder_neighborhood.h"
 #include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
 #include "irl/interface_reconstruction_methods/lvira_optimization.h"
 #include "irl/interface_reconstruction_methods/mof.h"
@@ -23,6 +25,10 @@
 #include "irl/planar_reconstruction/planar_separator.h"
 
 namespace IRL {
+
+/// \brief Perform Cylinder reconstruction for a 3D problem.
+inline Cylinder reconstructionWithCylinder3D(
+    const cylinderNeighborhood& a_neighborhood_geometry);
 
 /// \brief Perform Jibben reconstruction for a 3D problem.
 inline Paraboloid reconstructionWithJibben3D(
