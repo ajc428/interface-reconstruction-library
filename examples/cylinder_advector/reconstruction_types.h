@@ -122,7 +122,7 @@ public:
     PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs);
 
     void fit(int max_iterations = 100, double tolerance = 1e-5);
-    void fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target);
+    void fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target);
 
     const Eigen::MatrixXd& getCurve() const;
 
@@ -143,6 +143,8 @@ private:
     void smoothCurve(int window_size = 3);
 
     void orderCurvePoints();
+
+    std::vector<double> solveCubic(double, double, double, double);
 };
 
 #endif  // EXAMPLES_CYLINDER_ADVECTOR_RECONSTRUCTION_TYPES_H_

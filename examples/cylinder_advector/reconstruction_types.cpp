@@ -1169,7 +1169,7 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
           pc.fit();
           Eigen::MatrixXd curve = pc.getCurve();
           IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
-          pc.fitSpline(&direction, &datum, IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k)));//a_liquid_centroid(i,j,k));//
+          pc.fitPoly(&direction, &datum, IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k)));//a_liquid_centroid(i,j,k));//
 
           direction.normalize();
           double n3 = 0;
@@ -1532,7 +1532,7 @@ void PrincipalCurve::orderCurvePoints()
     lambda = sorted_lambda;
 }
 
-void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target)
+void PrincipalCurve::fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target)
 {
     Eigen::MatrixXd points = curve; 
     Eigen::VectorXd t(curve.rows());
@@ -1540,35 +1540,107 @@ void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt targ
     {
       t(i) = lambda(i) / lambda(curve.rows()-1);
     }
-    IRL::Pt origin;
     double par = 0;
     double mag = 100;
-    for (int i = 0; i < 100; ++i) 
-    {
-      double par2 = i/99.0;
-      origin[0] = points(0,0)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-      origin[1] = points(0,1)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-      origin[2] = points(0,2)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-      //std::cout << origin << std::endl;
-      double mag2 = pow(origin[0]-target[0],2.0)+pow(origin[1]-target[1],2.0)+pow(origin[2]-target[2],2.0);
-      //double mag2 = pow(origin[0]-curve(1,0),2.0)+pow(origin[1]-curve(1,1),2.0)+pow(origin[2]-curve(1,2),2.0);
-      if (mag2 < mag)
-      {
-        mag = mag2;
-        par = par2;
-      }
-    }
-    //par=0.5;
-    pt[0][0] = points(0,0)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-    pt[0][1] = points(0,1)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-    pt[0][2] = points(0,2)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
 
-    points = curve.rowwise() - curve.colwise().mean(); 
-    direction[0][0] = points(0,0)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
-    direction[0][1] = points(0,1)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
-    direction[0][2] = points(0,2)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+    const double d0 = (t(0) - t(1)) * (t(0) - t(2));
+    const double d1 = (t(1) - t(0)) * (t(1) - t(2));
+    const double d2 = (t(2) - t(0)) * (t(2) - t(1));
+    const Eigen::Vector3d A = points.row(0) / d0 + points.row(1) / d1 + points.row(2) / d2;
+    const Eigen::Vector3d B = -points.row(0) * (t(1) + t(2)) / d0 - points.row(1) * (t(0) + t(2)) / d1 - points.row(2) * (t(0) + t(1)) / d2;
+    const Eigen::Vector3d C = points.row(0) * (t(1) * t(2)) / d0 + points.row(1) * (t(0) * t(2)) / d1 + points.row(2) * (t(0) * t(1)) / d2;
+    const Eigen::Vector3d T(target[0], target[1], target[2]);
+    const double a = 2.0 * A.dot(A);
+    const double b = 3.0 * A.dot(B);
+    const double c = 2.0 * A.dot(C-T) + B.dot(B);
+    const double d = B.dot(C-T);
+    std::vector<double> candidates = solveCubic(a, b, c, d);
+    candidates.push_back(t(0));
+    candidates.push_back(t(2));
+
+    for (int i = 0; i < candidates.size(); ++i)
+    {
+        double t_cand = candidates[i];
+        if (t_cand < t(0) || t_cand > t(2)) 
+        {
+            continue;
+        }
+        Eigen::Vector3d P_cand = A * t_cand * t_cand + B * t_cand + C;
+        double mag2 = (P_cand - T).squaredNorm();
+        if (mag2 < mag)
+        {
+            mag = mag2;
+            par = t_cand;
+        }
+    }
+    Eigen::Vector3d P = A * par * par + B * par + C;
+    pt[0][0] = P(0);
+    pt[0][1] = P(1);
+    pt[0][2] = P(2);
+
+    Eigen::Vector3d D = 2 * A * par + B;
+    direction[0][0] = D(0);
+    direction[0][1] = D(1);
+    direction[0][2] = D(2);
+
+    // std::cout << points << std::endl;
+    // std::cout << t << std::endl;
+    // std::cout << target << std::endl;
+    // std::cout << par << std::endl;
+    // std::cout << pt[0] << std::endl;
+    // std::cout << direction[0] << std::endl;
 }
 
+std::vector<double> PrincipalCurve::solveCubic(double a, double b, double c, double d) 
+{
+    constexpr double ep = 1e-12;
+
+    if (std::abs(a) < ep) 
+    {
+        if (std::abs(b) < ep) 
+        {
+            if (std::abs(c) < ep) return {};
+            return {-d / c};
+        }
+        double delta = c * c - 4.0 * b * d;
+        if (delta > -ep)
+        {
+            double sqrt_delta = std::sqrt(std::max(delta,0.0));
+            return {(-c + sqrt_delta) / (2.0 * b), (-c - sqrt_delta) / (2.0 * b)};
+        }
+        return {};
+    }
+    const double p = (3.0 * a * c - b * b) / (3.0 * a * a);
+    const double q = (2.0 * b * b * b - 9.0 * a * b * c + 27.0 * a * a * d) / (27.0 * a * a * a);
+    const double offset = -b / (3.0 * a);
+    double discriminant = std::pow(q / 2.0, 2) + std::pow(p / 3.0, 3);
+    std::vector<double> roots;
+
+    if (discriminant > ep) 
+    {
+        const double sqrt_d = std::sqrt(discriminant);
+        const double u = std::cbrt(-q / 2.0 + sqrt_d);
+        const double v = (std::abs(u) > ep) ? -p / (3.0 * u) : 0.0;
+        roots.push_back(u + v);
+
+    } 
+    else 
+    {
+        const double m = 2.0 * std::sqrt(-p / 3.0);
+        const double phi = std::acos(std::max(-1.0, std::min(1.0, -q / (2.0 * std::sqrt(-std::pow(p / 3.0, 3))))));
+        roots.push_back(m * std::cos(phi / 3.0));
+        roots.push_back(m * std::cos((phi + 2.0 * M_PI) / 3.0));
+        roots.push_back(m * std::cos((phi + 4.0 * M_PI) / 3.0));
+    }
+    
+    for (double& root : roots) 
+    {
+        root += offset;
+    }
+    std::sort(roots.begin(), roots.end());
+    roots.erase(std::unique(roots.begin(), roots.end()), roots.end());
+    return roots;
+}
 
 
 
