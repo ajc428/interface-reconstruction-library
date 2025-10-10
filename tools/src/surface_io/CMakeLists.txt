@@ -7,7 +7,7 @@ set_target_properties(surface_io
     CXX_STANDARD 17)
 set_property(TARGET irl_c PROPERTY CXX_STANDARD 17)
 target_include_directories(surface_io PRIVATE "${PROJECT_SOURCE_DIR}")
-target_link_libraries(surface_io irl)
+target_link_libraries(surface_io irl  CGAL::CGAL)
 
 target_sources(surface_io PRIVATE "${IRL_TOOLS_SRC_DIR}/surface_io/surface_io.h")
 target_sources(surface_io PRIVATE "${IRL_TOOLS_SRC_DIR}/surface_io/surface_io.cpp")

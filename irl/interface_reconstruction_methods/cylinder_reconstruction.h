@@ -48,16 +48,17 @@ public:
     PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs);
 
     void fit(int max_iterations = 100, double tolerance = 1e-5);
-    void fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target);
+    void fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target);
 
     const Eigen::MatrixXd& getCurve() const;
 
 private:
     int res = 3;
+    double tol = 1e-8;
     Eigen::MatrixXd data;
     Eigen::VectorXd VF;
     Eigen::MatrixXd curve;
-    Eigen::VectorXi projection_indices;
+    std::vector<std::vector<int>> projection_indices;
     Eigen::VectorXd lambda;
 
     void initializeWithPCA();
@@ -66,9 +67,9 @@ private:
     
     void updateCurve();
 
-    void smoothCurve(int window_size = 3);
-
     void orderCurvePoints();
+
+    std::vector<double> solveCubic(double, double, double, double);
 };
 
 }  // namespace IRL

@@ -32,9 +32,8 @@ Cylinder cylinder_reconstruction::solve(
 Cylinder cylinder_reconstruction::solve(void) 
 {
     IRL::Cylinder cylinder;
-    Eigen::MatrixXd bary(27,3);
-    Eigen::VectorXd VFs(27);
-    int count = 0;
+    std::vector<IRL::Pt> bary_vector;
+    std::vector<double> VF_vector;
     int lim = 2;
     for (int ii = -lim; ii <= lim; ++ii) 
     {
@@ -42,94 +41,55 @@ Cylinder cylinder_reconstruction::solve(void)
         {
             for (int kk = -lim; kk <= lim; ++kk) 
             {
-                double VF1 = neighborhood_VF_m->getStoredMoments(ii,jj,kk).volume();
+                auto moments = neighborhood_VF_m->getStoredMoments(ii, jj, kk);
+                double VF1 = moments.volume();
                 if (VF1 > IRL::global_constants::VF_LOW && VF1 < IRL::global_constants::VF_HIGH)
                 {
-                    ++count;
+                    bary_vector.push_back(moments.centroid());
+                    VF_vector.push_back(VF1);
                 }
             }
         }
     }
-    bary.resize(count,3);
-    VFs.resize(count);
-
-    count = 0;
-    double VF = 0;
-    IRL::Pt datum = IRL::Pt(0,0,0);
-    for (int ii = -lim; ii <= lim; ++ii) 
+    Eigen::MatrixXd bary(bary_vector.size(), 3);
+    Eigen::VectorXd VFs(VF_vector.size());
+    for (size_t i = 0; i < bary_vector.size(); ++i) 
     {
-        for (int jj = -lim; jj <= lim; ++jj) 
-        {
-            for (int kk = -lim; kk <= lim; ++kk) 
-            {
-                double VF1 = neighborhood_VF_m->getStoredMoments(ii,jj,kk).volume();
-                if (VF1 > IRL::global_constants::VF_LOW && VF1 < IRL::global_constants::VF_HIGH)
-                {
-                    Pt a_liquid_centroid = neighborhood_VF_m->getStoredMoments(ii,jj,kk).centroid();
-                    bary(count,0) = a_liquid_centroid[0];
-                    bary(count,1) = a_liquid_centroid[1];
-                    bary(count,2) = a_liquid_centroid[2];
-                    VFs(count) = VF1;
-                    //std::cout << VF1 << std::endl;
-                    ++count;
-                    datum = datum + a_liquid_centroid * VF1;
-                    VF = VF + VF1;
-                }
-            }
-        }
-    }//std::cout << std::endl << std::endl;
-    //std::cout << bary << std::endl << std::endl;
-    datum = datum / VF;
-    IRL::Pt temp = datum;
+        bary.row(i) = Eigen::RowVector3d(bary_vector[i][0], bary_vector[i][1], bary_vector[i][2]);
+        VFs(i) = VF_vector[i];
+    }
 
     PrincipalCurve pc = PrincipalCurve(bary, VFs);
     pc.fit();
     Eigen::MatrixXd curve = pc.getCurve();
+
     IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
     IRL::Pt center = neighborhood_VF_m->getCell(0,0,0).calculateCentroid();
-    pc.fitSpline(&direction, &datum, IRL::Pt(center[0],center[1],center[2]));
-//datum = temp;
+    IRL::Pt datum = IRL::Pt(0,0,0);
+    pc.fitPoly(&direction, &datum, center);
+
     direction.normalize();
-    double n3 = 0;
-    double n2 = 0;
-    double n1 = 0;
-    IRL::Normal v1;
-    if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
+    IRL::Normal temp;
+    if (direction[2] <= 0.97) 
     {
-    n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-    n1 = (-n2*direction[1])/direction[0];
-    v1[0] = n1; v1[1] = n2; v1[2] = 0;
-    }
-    else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
-    {
-    n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-    n2 = (-n1*direction[0])/direction[1];
-    v1[0] = n1; v1[1] = n2; v1[2] = 0;
-    }
-    else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
-    {
-    n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
-    n3 = (-n2*direction[1])/direction[2];
-    v1[0] = 0; v1[1] = n2; v1[2] = n3;
+        temp = IRL::Normal(0, 0, 1);
     }
     else
     {
-    v1[0] = 0; v1[1] = 0; v1[2] = 0;
+        temp = IRL::Normal(0, 1, 0);
     }
-    IRL::Normal b = IRL::crossProduct(direction,v1);
+    IRL::Normal b = IRL::crossProduct(direction, temp);
     b.normalize();
-    IRL::Normal a = IRL::crossProduct(b,direction);
-    a.normalize();
+    IRL::Normal a = IRL::crossProduct(b, direction);
     IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
 
     cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
     
-    const IRL::Pt lower_cell_pt(neighborhood_VF_m->getCell(0,0,0).calculateCentroid()[0]-neighborhood_VF_m->getCell(0,0,0).calculateSideLength(0)/2,
-    neighborhood_VF_m->getCell(0,0,0).calculateCentroid()[1]-neighborhood_VF_m->getCell(0,0,0).calculateSideLength(1)/2, 
-    neighborhood_VF_m->getCell(0,0,0).calculateCentroid()[2]-neighborhood_VF_m->getCell(0,0,0).calculateSideLength(2)/2);
-    const IRL::Pt upper_cell_pt(neighborhood_VF_m->getCell(0,0,0).calculateCentroid()[0]+neighborhood_VF_m->getCell(0,0,0).calculateSideLength(0)/2,
-    neighborhood_VF_m->getCell(0,0,0).calculateCentroid()[1]+neighborhood_VF_m->getCell(0,0,0).calculateSideLength(1)/2, 
-    neighborhood_VF_m->getCell(0,0,0).calculateCentroid()[2]+neighborhood_VF_m->getCell(0,0,0).calculateSideLength(2)/2);
+    const auto& central_cell = neighborhood_VF_m->getCell(0, 0, 0);
+    const IRL::Pt cell_centroid = central_cell.calculateCentroid();
+    const IRL::Pt cell_side = IRL::Pt(central_cell.calculateSideLength(0)/2,central_cell.calculateSideLength(1)/2,central_cell.calculateSideLength(2)/2);
+    const IRL::Pt lower_cell_pt(cell_centroid[0]-cell_side[0],cell_centroid[1]-cell_side[1],cell_centroid[2]-cell_side[2]);
+    const IRL::Pt upper_cell_pt(cell_centroid[0]+cell_side[0],cell_centroid[1]+cell_side[1],cell_centroid[2]+cell_side[2]);
 
     auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt);
     IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
@@ -137,8 +97,6 @@ Cylinder cylinder_reconstruction::solve(void)
     cylinder);
 
     cylinder = solver_radius.getCylinder();
-    //std::cout << cylinder << std::endl << std::endl;
-    //std::cout << direction << std::endl << std::endl;
 
   return cylinder;
 }
@@ -163,14 +121,11 @@ void PrincipalCurve::fit(int max_iterations, double tolerance)
 
         projectDataOntoCurve();
         updateCurve();
-        //smoothCurve(3);
         orderCurvePoints();
 
         double change = (curve - old_curve).squaredNorm();
-        //std::cout << "Iteration " << i + 1 << ", Change: " << change << std::endl;
         if (change < tolerance) 
         {
-            //std::cout << "Converged!" << std::endl;
             flag = false;
         }
         ++i;
@@ -208,74 +163,50 @@ void PrincipalCurve::initializeWithPCA()
 void PrincipalCurve::projectDataOntoCurve() 
 {
     projection_indices.resize(data.rows());
-
     for (int i = 0; i < data.rows(); ++i) 
     {
-        double min_dist_sq = -1.0;
-        int best_idx = 0;
+        double min_dist_sq = 1000;
+        std::vector<int> best_idx;
 
         for (int j = 0; j < curve.rows(); ++j) 
         {
             double dist_sq = (data.row(i) - curve.row(j)).squaredNorm();
-            if (min_dist_sq < 0 || dist_sq < min_dist_sq) 
+            if (dist_sq < min_dist_sq-tol) 
             {
                 min_dist_sq = dist_sq;
-                best_idx = j;
+                best_idx.clear();
+                best_idx.push_back(j);
+            }
+            else if (dist_sq < min_dist_sq+tol)
+            {
+                best_idx.push_back(j);
             }
         }
-        projection_indices(i) = best_idx;
+        projection_indices[i] = best_idx;
     }
 }
 
 void PrincipalCurve::updateCurve() 
 {
     Eigen::MatrixXd new_curve = Eigen::MatrixXd::Zero(curve.rows(), curve.cols());
-    Eigen::VectorXi counts = Eigen::VectorXi::Zero(curve.rows());
     Eigen::VectorXd VF_total = Eigen::VectorXd::Zero(curve.rows());
     for (int i = 0; i < data.rows(); ++i) 
     {
-        int idx = projection_indices(i);
-        new_curve.row(idx) += data.row(i)*VF(i)*VF(i);
-        counts(idx)++;
-        VF_total(idx) +=  VF(i)*VF(i);
+        std::vector<int> idx = projection_indices[i];
+        double weight = 1.0/idx.size();
+        for (int j = 0; j < idx.size(); ++j)
+        {
+            new_curve.row(idx[j]) += data.row(i)*VF(i)*weight;
+            VF_total(idx[j]) +=  VF(i)*weight;
+        }
     }
 
     for (int i = 0; i < curve.rows(); ++i) 
     {
-        if (counts(i) > 0) 
+        if (VF_total(i) > IRL::global_constants::VF_LOW) 
         {
-            //curve.row(i) = new_curve.row(i) / counts(i);
             curve.row(i) = new_curve.row(i) / VF_total(i);
         }
-    }
-}
-
-void PrincipalCurve::smoothCurve(int window_size) 
-{
-    if (window_size >= 2) 
-    {
-      Eigen::MatrixXd smoothed_curve = curve;
-      int half_window = window_size / 2;
-
-      for (int i = 0; i < curve.rows(); ++i) 
-      {
-          Eigen::RowVectorXd sum = Eigen::RowVectorXd::Zero(curve.cols());
-          int count = 0;
-          for (int j = -half_window; j <= half_window; ++j) 
-          {
-              int idx = i + j;
-              if (idx >= 0 && idx < curve.rows()) 
-              {
-                  sum += curve.row(idx);
-                  count++;
-              }
-          }
-          if (count > 0) 
-          {
-              smoothed_curve.row(i) = sum / count;
-          }
-      }
-      curve = smoothed_curve;
     }
 }
 
@@ -305,7 +236,7 @@ void PrincipalCurve::orderCurvePoints()
     lambda = sorted_lambda;
 }
 
-void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target)
+void PrincipalCurve::fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target)
 {
     Eigen::MatrixXd points = curve; 
     Eigen::VectorXd t(curve.rows());
@@ -313,32 +244,99 @@ void PrincipalCurve::fitSpline(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt targ
     {
       t(i) = lambda(i) / lambda(curve.rows()-1);
     }
-    IRL::Pt origin;
     double par = 0;
     double mag = 100;
-    for (int i = 0; i < 100; ++i) 
-    {
-      double par2 = i/99.0;
-      origin[0] = points(0,0)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-      origin[1] = points(0,1)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-      origin[2] = points(0,2)*(((par2-t(1))*(par2-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par2-t(0))*(par2-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par2-t(0))*(par2-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-      double mag2 = pow(origin[0]-target[0],2.0)+pow(origin[1]-target[1],2.0)+pow(origin[2]-target[2],2.0);
-      //double mag2 = pow(origin[0]-curve(1,0),2.0)+pow(origin[1]-curve(1,1),2.0)+pow(origin[2]-curve(1,2),2.0);
-      if (mag2 < mag)
-      {
-        mag = mag2;
-        par = par2;
-      }
-    }
-    //par=0.5;
-    pt[0][0] = points(0,0)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-    pt[0][1] = points(0,1)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
-    pt[0][2] = points(0,2)*(((par-t(1))*(par-t(2)))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*(((par-t(0))*(par-t(2)))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*(((par-t(0))*(par-t(1)))/((t(2)-t(0))*(t(2)-t(1))));
 
-    points = curve.rowwise() - curve.colwise().mean(); 
-    direction[0][0] = points(0,0)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,0)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,0)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
-    direction[0][1] = points(0,1)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,1)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,1)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
-    direction[0][2] = points(0,2)*((2*par-t(1)-t(2))/((t(0)-t(1))*(t(0)-t(2))))+points(1,2)*((2*par-t(0)-t(2))/((t(1)-t(0))*(t(1)-t(2))))+points(2,2)*((2*par-t(0)-t(1))/((t(2)-t(0))*(t(2)-t(1))));
+    const double d0 = (t(0) - t(1)) * (t(0) - t(2));
+    const double d1 = (t(1) - t(0)) * (t(1) - t(2));
+    const double d2 = (t(2) - t(0)) * (t(2) - t(1));
+    const Eigen::Vector3d A = points.row(0) / d0 + points.row(1) / d1 + points.row(2) / d2;
+    const Eigen::Vector3d B = -points.row(0) * (t(1) + t(2)) / d0 - points.row(1) * (t(0) + t(2)) / d1 - points.row(2) * (t(0) + t(1)) / d2;
+    const Eigen::Vector3d C = points.row(0) * (t(1) * t(2)) / d0 + points.row(1) * (t(0) * t(2)) / d1 + points.row(2) * (t(0) * t(1)) / d2;
+    const Eigen::Vector3d T(target[0], target[1], target[2]);
+    const double a = 2.0 * A.dot(A);
+    const double b = 3.0 * A.dot(B);
+    const double c = 2.0 * A.dot(C-T) + B.dot(B);
+    const double d = B.dot(C-T);
+    std::vector<double> candidates = solveCubic(a, b, c, d);
+    candidates.push_back(t(0));
+    candidates.push_back(t(2));
+
+    for (int i = 0; i < candidates.size(); ++i)
+    {
+        double t_cand = candidates[i];
+        if (t_cand < t(0) || t_cand > t(2)) 
+        {
+            continue;
+        }
+        Eigen::Vector3d P_cand = A * t_cand * t_cand + B * t_cand + C;
+        double mag2 = (P_cand - T).squaredNorm();
+        if (mag2 < mag)
+        {
+            mag = mag2;
+            par = t_cand;
+        }
+    }
+    Eigen::Vector3d P = A * par * par + B * par + C;
+    pt[0][0] = P(0);
+    pt[0][1] = P(1);
+    pt[0][2] = P(2);
+
+    Eigen::Vector3d D = 2 * A * par + B;
+    direction[0][0] = D(0);
+    direction[0][1] = D(1);
+    direction[0][2] = D(2);
+}
+
+std::vector<double> PrincipalCurve::solveCubic(double a, double b, double c, double d) 
+{
+    constexpr double ep = 1e-12;
+
+    if (std::abs(a) < ep) 
+    {
+        if (std::abs(b) < ep) 
+        {
+            if (std::abs(c) < ep) return {};
+            return {-d / c};
+        }
+        double delta = c * c - 4.0 * b * d;
+        if (delta > -ep)
+        {
+            double sqrt_delta = std::sqrt(std::max(delta,0.0));
+            return {(-c + sqrt_delta) / (2.0 * b), (-c - sqrt_delta) / (2.0 * b)};
+        }
+        return {};
+    }
+    const double p = (3.0 * a * c - b * b) / (3.0 * a * a);
+    const double q = (2.0 * b * b * b - 9.0 * a * b * c + 27.0 * a * a * d) / (27.0 * a * a * a);
+    const double offset = -b / (3.0 * a);
+    double discriminant = std::pow(q / 2.0, 2) + std::pow(p / 3.0, 3);
+    std::vector<double> roots;
+
+    if (discriminant > ep) 
+    {
+        const double sqrt_d = std::sqrt(discriminant);
+        const double u = std::cbrt(-q / 2.0 + sqrt_d);
+        const double v = (std::abs(u) > ep) ? -p / (3.0 * u) : 0.0;
+        roots.push_back(u + v);
+
+    } 
+    else 
+    {
+        const double m = 2.0 * std::sqrt(-p / 3.0);
+        const double phi = std::acos(std::max(-1.0, std::min(1.0, -q / (2.0 * std::sqrt(-std::pow(p / 3.0, 3))))));
+        roots.push_back(m * std::cos(phi / 3.0));
+        roots.push_back(m * std::cos((phi + 2.0 * M_PI) / 3.0));
+        roots.push_back(m * std::cos((phi + 4.0 * M_PI) / 3.0));
+    }
+    
+    for (double& root : roots) 
+    {
+        root += offset;
+    }
+    std::sort(roots.begin(), roots.end());
+    roots.erase(std::unique(roots.begin(), roots.end()), roots.end());
+    return roots;
 }
 
 }  // namespace IRL

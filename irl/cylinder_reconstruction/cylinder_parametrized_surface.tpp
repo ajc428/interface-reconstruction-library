@@ -26,6 +26,16 @@
 
 namespace IRL {
 
+inline const std::vector<int> CylinderParametrizedSurfaceOutput::get_indexes_of_flip(void) const
+{
+  return indexes_of_flip_m;
+}
+
+inline const std::vector<Cylinder> CylinderParametrizedSurfaceOutput::getCylinder(
+    void) const {
+  return cylinder_m;
+}
+
 inline Normal computeNormalizedTangentAtPoint(
     const AlignedCylinder& a_cylinder, const Normal& a_plane_normal,
     const Pt& a_pt) {
