@@ -106,8 +106,8 @@ void Deformation3D::initialize(Data<double>* a_U, Data<double>* a_V,
         IRL::Normal a = IRL::crossProduct(b,normal);
         a.normalize();
         IRL::ReferenceFrame frame = IRL::ReferenceFrame(normal, a, b);
-        IRL::Pt datum = IRL::Pt(mesh.xm(9), mesh.ym(9), mesh.zm(9));
-        IRL::Cylinder p = IRL::Cylinder(datum,frame,1,0.000125);
+        IRL::Pt datum = IRL::Pt(mesh.x(10), mesh.y(10), mesh.z(10));
+        IRL::Cylinder p = IRL::Cylinder(datum,frame,1,0.00015625);
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
           IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
           IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
@@ -176,7 +176,7 @@ void Deformation3D::setVelocity2(const double a_time, Data<double>* a_U,
         //                   sin(2.0 * M_PI * mesh.ym(j)) *
         //                   cos(M_PI * (a_time) / 3.0);
         (*a_U)(i, j, k) = 0.0;
-        (*a_V)(i, j, k) = 2*sin(2 * M_PI * mesh.xm(i));
+        (*a_V)(i, j, k) = 2*sin(8 * M_PI * mesh.xm(i));
         (*a_W)(i, j, k) = 0.0;
       }
     }

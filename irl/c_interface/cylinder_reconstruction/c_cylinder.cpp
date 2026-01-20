@@ -58,7 +58,17 @@ void c_Cylinder_setAlignedCylinder(c_Cylinder* a_self,
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
   a_self->obj_ptr->setAlignedCylinder(
-      IRL::AlignedCylinder({(*a_coeff_a), (*a_coeff_b)}));
+      IRL::AlignedCylinder(std::array<double, 2>{(*a_coeff_a), (*a_coeff_b)}));
+}
+
+void c_Cylinder_setAlignedCylinderFlip(c_Cylinder* a_self,
+                                       const double* a_coeff_a,
+                                       const double* a_coeff_b,
+                                       const double* a_coeff_f) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  a_self->obj_ptr->setAlignedCylinder(
+      IRL::AlignedCylinder(std::array<double, 3>{(*a_coeff_a), (*a_coeff_b), (*a_coeff_f)}));
 }
 
 void c_Cylinder_copy(c_Cylinder* a_self,
@@ -98,6 +108,7 @@ void c_Cylinder_getAlignedCylinder(c_Cylinder* a_self,
   assert(a_self->obj_ptr != nullptr);
   a_aligned_cylinder[0] = (*a_self->obj_ptr).getAlignedCylinder().r();
   a_aligned_cylinder[1] = (*a_self->obj_ptr).getAlignedCylinder().b();
+  a_aligned_cylinder[2] = (*a_self->obj_ptr).getAlignedCylinder().f();
 }
 
 double c_Cylinder_getCurvature(c_Cylinder* a_self, c_RectCub* a_cell) {

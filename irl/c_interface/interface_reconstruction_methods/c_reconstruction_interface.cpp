@@ -13,14 +13,15 @@
 
 extern "C" {
 
-void c_reconstructCylinder3D_Variant(const c_cylinderNeigh* a_cylinder_neighborhood,
+void c_reconstructCylinder3D_Variant(const c_cylinderNeigh* a_cylinder_neighborhood, const int* flip,
                                    c_SeparatorVariant* a_separator) {
   assert(a_cylinder_neighborhood != nullptr);
   assert(a_cylinder_neighborhood->obj_ptr != nullptr);
   assert(a_separator != nullptr);
   assert(a_separator->obj_ptr != nullptr);
+  a_separator->obj_ptr->setToCylinder();
   *a_separator->obj_ptr =
-      reconstructionWithCylinder3D(*a_cylinder_neighborhood->obj_ptr);
+      reconstructionWithCylinder3D(*a_cylinder_neighborhood->obj_ptr, *flip);
 }
 
 void c_reconstructJibben3D_Parab(const c_JibbenNeigh* a_jibben_neighborhood,

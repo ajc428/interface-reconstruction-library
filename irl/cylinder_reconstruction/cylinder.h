@@ -48,6 +48,10 @@ class CylinderBase {
                  const ReferenceFrameBase<ScalarType>& a_reference_frame,
                  const ScalarType a_coef_b, const ScalarType a_coef_r);
 
+  CylinderBase(const PtBase<ScalarType>& a_datum,
+                 const ReferenceFrameBase<ScalarType>& a_reference_frame,
+                 const ScalarType a_coef_b, const ScalarType a_coef_r, const ScalarType a_coef_f);
+
   static CylinderBase createAlwaysAbove(void);
 
   static CylinderBase createAlwaysBelow(void);

@@ -175,12 +175,13 @@ module f_ReconstructionInterface
   end interface
 
   interface
-  subroutine F_reconstructCylinder3D_Variant(a_cylinderNeigh, a_separator) &
+  subroutine F_reconstructCylinder3D_Variant(a_cylinderNeigh, a_flip, a_separator) &
   bind(C, name="c_reconstructCylinder3D_Variant")
     use, intrinsic :: iso_c_binding
     import
     implicit none
     type(c_cylinderNeigh) :: a_cylinderNeigh ! Pointer to a cylinderNeigh object
+    integer(c_INT) :: a_flip
     type(c_SeparatorVariant) :: a_separator ! Pointer for PlanarSep to set
   end subroutine F_reconstructCylinder3D_Variant
 end interface
@@ -565,13 +566,14 @@ end interface
 
   end subroutine reconstructJibben3D_Variant
 
-  subroutine reconstructCylinder3D_Variant(a_cylinder_neighborhood, a_separator)
+  subroutine reconstructCylinder3D_Variant(a_cylinder_neighborhood, a_flip, a_separator)
     use, intrinsic :: iso_c_binding
     implicit none
       type(cylinderNeigh_type), intent(in) :: a_cylinder_neighborhood
+      integer(c_INT), intent(in) :: a_flip
       type(SeparatorVariant_type), intent(inout) :: a_separator
 
-      call F_reconstructCylinder3D_Variant(a_cylinder_neighborhood%c_object, a_separator%c_object)
+      call F_reconstructCylinder3D_Variant(a_cylinder_neighborhood%c_object, a_flip, a_separator%c_object)
 
   end subroutine reconstructCylinder3D_Variant
 

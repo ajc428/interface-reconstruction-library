@@ -599,6 +599,17 @@ intersectPolyhedronWithCylinder(SegmentedHalfEdgePolyhedronType* a_polytope,
         inv_volume_scale, surf, datum, ref_frame);
   }
 
+  if (cylinder.getAlignedCylinder().f() < 0) {
+    if constexpr (has_cylinder_surface<ReturnType>::value) {
+      auto total_moments =
+          ReturnType::moment_type::calculateMoments(a_polytope);
+      moments.getMoments() = total_moments - moments.getMoments();
+    } else {
+      auto total_moments = ReturnType::calculateMoments(a_polytope);
+      moments = total_moments - moments;
+    }
+  }
+
   // Un-normalized moments
   if constexpr (has_cylinder_surface<ReturnType>::value) {
     if constexpr (!is_moments_volume<typename ReturnType::moment_type>::value) {
@@ -2417,7 +2428,7 @@ formCylinderIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     splitHalfEdgePolytope(&p2, &p4, &a_complete_polytope_copy,
                           Plane(Normal(0.0, -b1, -1.0 / vector_norm), 0.0));
     AlignedCylinder rotatedCylinder(
-        {1.0 / a_aligned_cylinder.b(),
+        std::array<ScalarType, 2>{1.0 / a_aligned_cylinder.b(),
          a_aligned_cylinder.r() / a_aligned_cylinder.b()});
     cylinder_list = {a_aligned_cylinder, rotatedCylinder, a_aligned_cylinder,
                      rotatedCylinder};

@@ -23,9 +23,10 @@
 namespace IRL {
 
 Cylinder cylinder_reconstruction::solve(
-    const cylinderNeighborhood* a_neighborhood_pointer) {
+    const cylinderNeighborhood* a_neighborhood_pointer, const int f) {
   assert(a_neighborhood_pointer != nullptr);
   neighborhood_VF_m = a_neighborhood_pointer;
+  flip = f;
   return this->solve();
 }
 
@@ -59,7 +60,13 @@ Cylinder cylinder_reconstruction::solve(void)
         VFs(i) = VF_vector[i];
     }
 
-    PrincipalCurve pc = PrincipalCurve(bary, VFs);
+    const auto& central_cell = neighborhood_VF_m->getCell(0, 0, 0);
+    const IRL::Pt cell_centroid = central_cell.calculateCentroid();
+    const IRL::Pt cell_side = IRL::Pt(central_cell.calculateSideLength(0)/2,central_cell.calculateSideLength(1)/2,central_cell.calculateSideLength(2)/2);
+    const IRL::Pt lower_cell_pt(cell_centroid[0]-cell_side[0],cell_centroid[1]-cell_side[1],cell_centroid[2]-cell_side[2]);
+    const IRL::Pt upper_cell_pt(cell_centroid[0]+cell_side[0],cell_centroid[1]+cell_side[1],cell_centroid[2]+cell_side[2]);
+
+    PrincipalCurve pc = PrincipalCurve(bary, VFs, central_cell.calculateSideLength(0));
     pc.fit();
     Eigen::MatrixXd curve = pc.getCurve();
 
@@ -83,17 +90,17 @@ Cylinder cylinder_reconstruction::solve(void)
     IRL::Normal a = IRL::crossProduct(b, direction);
     IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
 
-    cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
-    
-    const auto& central_cell = neighborhood_VF_m->getCell(0, 0, 0);
-    const IRL::Pt cell_centroid = central_cell.calculateCentroid();
-    const IRL::Pt cell_side = IRL::Pt(central_cell.calculateSideLength(0)/2,central_cell.calculateSideLength(1)/2,central_cell.calculateSideLength(2)/2);
-    const IRL::Pt lower_cell_pt(cell_centroid[0]-cell_side[0],cell_centroid[1]-cell_side[1],cell_centroid[2]-cell_side[2]);
-    const IRL::Pt upper_cell_pt(cell_centroid[0]+cell_side[0],cell_centroid[1]+cell_side[1],cell_centroid[2]+cell_side[2]);
+    cylinder = IRL::Cylinder(datum, frame, 1, 0.00025, flip);
 
     auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt);
+    double vf_target = neighborhood_VF_m->getStoredMoments(0,0,0).volume();
+    if (flip < 0)
+    {
+        vf_target = 1.0 - vf_target;
+    }
+
     IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
-    solver_radius(cell, neighborhood_VF_m->getStoredMoments(0,0,0).volume(), 1.0e-14,
+    solver_radius(cell, vf_target, 1.0e-14,
     cylinder);
 
     cylinder = solver_radius.getCylinder();
@@ -103,10 +110,11 @@ Cylinder cylinder_reconstruction::solve(void)
 
 
 
-PrincipalCurve::PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs)
+PrincipalCurve::PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs, const double d_x)
 {
   data = d;
   VF = VFs;
+  dx = d_x;
 }
 
 void PrincipalCurve::fit(int max_iterations, double tolerance) 
@@ -121,15 +129,15 @@ void PrincipalCurve::fit(int max_iterations, double tolerance)
 
         projectDataOntoCurve();
         updateCurve();
-        orderCurvePoints();
 
-        double change = (curve - old_curve).squaredNorm();
+        double change = (curve - old_curve).rowwise().squaredNorm().maxCoeff() / (dx*dx);
         if (change < tolerance) 
         {
             flag = false;
         }
         ++i;
     }
+    orderCurvePoints();
 }
 
 const Eigen::MatrixXd& PrincipalCurve::getCurve() const 
@@ -165,7 +173,7 @@ void PrincipalCurve::projectDataOntoCurve()
     projection_indices.resize(data.rows());
     for (int i = 0; i < data.rows(); ++i) 
     {
-        double min_dist_sq = 1000;
+        double min_dist_sq = std::numeric_limits<double>::max();
         std::vector<int> best_idx;
 
         for (int j = 0; j < curve.rows(); ++j) 
@@ -250,42 +258,55 @@ void PrincipalCurve::fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target
     const double d0 = (t(0) - t(1)) * (t(0) - t(2));
     const double d1 = (t(1) - t(0)) * (t(1) - t(2));
     const double d2 = (t(2) - t(0)) * (t(2) - t(1));
-    const Eigen::Vector3d A = points.row(0) / d0 + points.row(1) / d1 + points.row(2) / d2;
-    const Eigen::Vector3d B = -points.row(0) * (t(1) + t(2)) / d0 - points.row(1) * (t(0) + t(2)) / d1 - points.row(2) * (t(0) + t(1)) / d2;
-    const Eigen::Vector3d C = points.row(0) * (t(1) * t(2)) / d0 + points.row(1) * (t(0) * t(2)) / d1 + points.row(2) * (t(0) * t(1)) / d2;
-    const Eigen::Vector3d T(target[0], target[1], target[2]);
-    const double a = 2.0 * A.dot(A);
-    const double b = 3.0 * A.dot(B);
-    const double c = 2.0 * A.dot(C-T) + B.dot(B);
-    const double d = B.dot(C-T);
-    std::vector<double> candidates = solveCubic(a, b, c, d);
-    candidates.push_back(t(0));
-    candidates.push_back(t(2));
-
-    for (int i = 0; i < candidates.size(); ++i)
+    if (d0 > IRL::global_constants::VF_LOW)
     {
-        double t_cand = candidates[i];
-        if (t_cand < t(0) || t_cand > t(2)) 
-        {
-            continue;
-        }
-        Eigen::Vector3d P_cand = A * t_cand * t_cand + B * t_cand + C;
-        double mag2 = (P_cand - T).squaredNorm();
-        if (mag2 < mag)
-        {
-            mag = mag2;
-            par = t_cand;
-        }
-    }
-    Eigen::Vector3d P = A * par * par + B * par + C;
-    pt[0][0] = P(0);
-    pt[0][1] = P(1);
-    pt[0][2] = P(2);
+        const Eigen::Vector3d A = points.row(0) / d0 + points.row(1) / d1 + points.row(2) / d2;
+        const Eigen::Vector3d B = -points.row(0) * (t(1) + t(2)) / d0 - points.row(1) * (t(0) + t(2)) / d1 - points.row(2) * (t(0) + t(1)) / d2;
+        const Eigen::Vector3d C = points.row(0) * (t(1) * t(2)) / d0 + points.row(1) * (t(0) * t(2)) / d1 + points.row(2) * (t(0) * t(1)) / d2;
+        const Eigen::Vector3d T(target[0], target[1], target[2]);
+        const double a = 2.0 * A.dot(A);
+        const double b = 3.0 * A.dot(B);
+        const double c = 2.0 * A.dot(C-T) + B.dot(B);
+        const double d = B.dot(C-T);
+        std::vector<double> candidates = solveCubic(a, b, c, d);
+        candidates.push_back(t(0));
+        candidates.push_back(t(2));
 
-    Eigen::Vector3d D = 2 * A * par + B;
-    direction[0][0] = D(0);
-    direction[0][1] = D(1);
-    direction[0][2] = D(2);
+        for (int i = 0; i < candidates.size(); ++i)
+        {
+            double t_cand = candidates[i];
+            if (t_cand < t(0) || t_cand > t(2)) 
+            {
+                continue;
+            }
+            Eigen::Vector3d P_cand = A * t_cand * t_cand + B * t_cand + C;
+            double mag2 = (P_cand - T).squaredNorm();
+            if (mag2 < mag)
+            {
+                mag = mag2;
+                par = t_cand;
+            }
+        }
+        Eigen::Vector3d P = A * par * par + B * par + C;
+        pt[0][0] = P(0);
+        pt[0][1] = P(1);
+        pt[0][2] = P(2);
+
+        Eigen::Vector3d D = 2 * A * par + B;
+        direction[0][0] = D(0);
+        direction[0][1] = D(1);
+        direction[0][2] = D(2);
+    }
+    else
+    {
+        pt[0][0] = curve.row(0)[0];
+        pt[0][1] = curve.row(0)[1];
+        pt[0][2] = curve.row(0)[2];
+
+        direction[0][0] = 1.0;
+        direction[0][1] = 0.0;
+        direction[0][2] = 0.0;
+    }
 }
 
 std::vector<double> PrincipalCurve::solveCubic(double a, double b, double c, double d) 

@@ -21,8 +21,16 @@ IRLAddExample_cpp(
   "deformation_3d.cpp"
   "translation_3d.cpp"
   "vtk.cpp"
+  "trainer.h"
+  "trainer.cpp"
+  "neural_network.h"
   OUTPUT_DIR
   "${IRL_EXAMPLES_OUTPUT_DIR}/cylinder_advector"
   COLLECTION
   "examples_cylinder_advector"
 )
+
+find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+target_link_libraries(cylinder_advector PRIVATE "${TORCH_LIBRARIES}")
+set_property(TARGET cylinder_advector PROPERTY CXX_STANDARD 17)

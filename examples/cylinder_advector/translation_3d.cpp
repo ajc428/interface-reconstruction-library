@@ -175,7 +175,7 @@ void Translation3D::initialize(Data<double>* a_U, Data<double>* a_V,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        IRL::Normal normal = IRL::Normal(1.0,0.0,0.0);
+        IRL::Normal normal = IRL::Normal(1.0,1.0,1.0);
         normal.normalize();
         double n3 = 0;
         double n2 = 0;
@@ -210,8 +210,8 @@ void Translation3D::initialize(Data<double>* a_U, Data<double>* a_V,
         a.normalize();
         IRL::ReferenceFrame frame = IRL::ReferenceFrame(normal, a, b);
         IRL::Pt datum = IRL::Pt(mesh.xm(9), mesh.ym(9), mesh.zm(9));
-        //IRL::Cylinder p = IRL::Cylinder(datum,frame,1,0.00015625);
-        IRL::Cylinder p = IRL::Cylinder(datum,frame,1,0.005);
+        IRL::Cylinder p = IRL::Cylinder(datum,frame,1,0.00015625);
+        //IRL::Cylinder p = IRL::Cylinder(datum,frame,1,0.0006249999);
         auto cell = IRL::RectangularCuboid::fromBoundingPts(
           IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
           IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
@@ -258,12 +258,12 @@ void Translation3D::setVelocity2(const double a_time, Data<double>* a_U,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        // (*a_U)(i, j, k) = 1.0;
-        // (*a_V)(i, j, k) = 1.0 / 1.5;
-        // (*a_W)(i, j, k) = 1.0 / 3.0;
-        (*a_U)(i, j, k) = 0.0;
-        (*a_V)(i, j, k) = 0.0;
-        (*a_W)(i, j, k) = 0.0;
+        (*a_U)(i, j, k) = 1.0;
+        (*a_V)(i, j, k) = 1.0 / 1.5;
+        (*a_W)(i, j, k) = 1.0 / 3.0;
+        // (*a_U)(i, j, k) = 0.0;
+        // (*a_V)(i, j, k) = 0.0;
+        // (*a_W)(i, j, k) = 0.0;
       }
     }
   }

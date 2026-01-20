@@ -42,6 +42,11 @@ void c_Cylinder_setAlignedCylinder(c_Cylinder* a_self,
                                        const double* a_coeff_a,
                                        const double* a_coeff_b);
 
+void c_Cylinder_setAlignedCylinderFlip(c_Cylinder* a_self,
+                                       const double* a_coeff_a,
+                                       const double* a_coeff_b,
+                                       const double* a_coeff_f);                                       
+
 void c_Cylinder_copy(c_Cylinder* a_self,
                        const c_Cylinder* a_other_planar_separator);
 

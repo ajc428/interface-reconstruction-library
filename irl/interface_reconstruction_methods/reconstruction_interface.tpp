@@ -13,9 +13,9 @@
 namespace IRL {
 
 Cylinder reconstructionWithCylinder3D(
-    const cylinderNeighborhood& a_neighborhood_geometry) {
+    const cylinderNeighborhood& a_neighborhood_geometry, const int flip) {
   cylinder_reconstruction cylinder_solver;
-  return cylinder_solver.solve(&a_neighborhood_geometry);
+  return cylinder_solver.solve(&a_neighborhood_geometry, flip);
 }
 
 Paraboloid reconstructionWithJibben3D(

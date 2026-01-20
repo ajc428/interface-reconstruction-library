@@ -39,7 +39,15 @@ void getReconstruction(const std::string& a_reconstruction_method,
                            a_localized_cylinder_link,
                        const double a_dt, const Data<double>& a_U,
                        const Data<double>& a_V, const Data<double>& a_W,
-                       Data<IRL::Cylinder>* a_interface);                       
+                       Data<IRL::Cylinder>* a_interface);    
+
+struct PLIC_NET {
+  static void getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::PlanarSeparator>* a_interface);
+};                   
 
 struct PLIC {
   static void getReconstruction(const Data<double>& a_liquid_volume_fraction,
@@ -93,6 +101,10 @@ void correctInterfacePlaneBorders(Data<IRL::Paraboloid>* a_interface);
 
 void correctInterfacePlaneBorders(Data<IRL::Cylinder>* a_interface);
 
+void correctInterfacePlaneBorders(Data<IRL::PlanarSeparator>* a_interface);
+
+void load();
+
 namespace details {
 inline IRL::Paraboloid fromSphere(const IRL::Pt& a_center,
                                   const double a_radius,
@@ -121,15 +133,16 @@ inline IRL::Paraboloid fromSphere(const IRL::Pt& a_center,
 
 class PrincipalCurve {
 public:
-    PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs);
+    PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs, const double d_x);
 
-    void fit(int max_iterations = 100, double tolerance = 1e-5);
+    void fit(int max_iterations = 10, double tolerance = 1e-5);
     void fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target);
 
     const Eigen::MatrixXd& getCurve() const;
 
 private:
     int res = 3;
+    double dx = 0;
     Eigen::MatrixXd data;
     Eigen::VectorXd VF;
     Eigen::MatrixXd curve;

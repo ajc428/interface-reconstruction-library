@@ -440,8 +440,7 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
               cell, a_liquid_gas_interface(i, j, k));
           if (volume_and_surface.getMoments() > -DBL_MAX) {
             auto surface = volume_and_surface.getSurface();
-            double length_scale = std::min(
-                std::pow(cell.calculateVolume(), 1.0 / 3.0) / 3.0, 1.0e-2);
+            double length_scale = 1.0e-3;//std::min(std::pow(cell.calculateVolume(), 1.0 / 3.0) / 3.0, 1.0e-2);
             surface.setLengthScale(length_scale);
             if (surface.getSurfaceArea() >
                 1.0e-6 * length_scale * length_scale) {
@@ -467,6 +466,130 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
   l2_mean_curv_error = std::sqrt(l2_mean_curv_error);
   avg_mean_curv /= total_surface;
   total_surface = std::sqrt(total_surface);
+  //a_output->writeParametrizedInterface(a_time, surfaces);
+  a_output->writeVTKInterface(a_time, surfaces, false);
+}
+
+void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
+                          const Data<IRL::PlanarSeparator>& a_liquid_gas_interface,
+                          const double a_time, VTKOutput* a_output) {
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+
+  std::vector<IRL::ParaboloidParametrizedSurfaceOutput> surfaces;
+
+  int rank, size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  int split_proc = static_cast<int>(std::cbrt(static_cast<double>(size)));
+  int imin = 0, nx = mesh.getNx(), jmin = 0, ny = mesh.getNy(), kmin = 0,
+      nz = mesh.getNz();
+
+  if (size > 1) {
+    if (size == split_proc * split_proc * split_proc) {
+      for (int i = 0; i < split_proc; i++) {
+        for (int j = 0; j < split_proc; j++) {
+          for (int k = 0; k < split_proc; k++) {
+            if (i + split_proc * j + split_proc * split_proc * k == rank) {
+              imin = i * (mesh.getNx() / split_proc);
+              nx = std::min((i + 1) * (mesh.getNx() / split_proc),
+                            mesh.getNx()) -
+                   imin;
+              jmin = j * (mesh.getNy() / split_proc);
+              ny = std::min((j + 1) * (mesh.getNy() / split_proc),
+                            mesh.getNy()) -
+                   jmin;
+              kmin = k * (mesh.getNz() / split_proc);
+              nz = std::min((k + 1) * (mesh.getNz() / split_proc),
+                            mesh.getNz()) -
+                   kmin;
+            }
+          }
+        }
+      }
+    } else {
+      imin = rank * (mesh.getNx() / size);
+      nx = std::min((rank + 1) * (mesh.getNx() / size), mesh.getNx()) - imin;
+      jmin = 0;
+      ny = mesh.getNy();
+      kmin = 0;
+      nz = mesh.getNz();
+    }
+  }
+
+  for (int i = imin; i < imin + nx; ++i) {
+    for (int j = jmin; j < jmin + ny; ++j) {
+      for (int k = kmin; k < kmin + nz; ++k) {
+        if (a_liquid_volume_fraction(i, j, k) >=
+                IRL::global_constants::VF_LOW &&
+            a_liquid_volume_fraction(i, j, k) <=
+                IRL::global_constants::VF_HIGH) {
+          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+                                      mesh.z(k + 1));
+          const auto cell = IRL::RectangularCuboid::fromBoundingPts(
+              lower_cell_pt, upper_cell_pt);
+
+
+
+    IRL::Paraboloid parab = IRL::Paraboloid();
+    parab.markAsRealReconstruction();
+    IRL::Plane plane = a_liquid_gas_interface(i,j,k)[0];
+    IRL::Normal normal_plane = plane.normal();
+    double distance_plane = plane.distance();
+    if (IRL::squaredMagnitude(normal_plane) < DBL_MIN) {
+      if (distance_plane < 0.0) {
+        parab.markAsAlwaysBelow();
+      } else {
+        parab.markAsAlwaysAbove();
+      }
+    } else {
+      IRL::ReferenceFrame frame;
+      IRL::UnsignedIndex_t largest_dir = 0;
+      if (std::fabs(normal_plane[largest_dir]) < std::fabs(normal_plane[1]))
+        largest_dir = 1;
+      if (std::fabs(normal_plane[largest_dir]) < std::fabs(normal_plane[2]))
+        largest_dir = 2;
+      if (largest_dir == 0)
+        frame[0] = crossProduct(normal_plane, IRL::Normal(0.0, 1.0, 0.0));
+      else if (largest_dir == 1)
+        frame[0] = crossProduct(normal_plane, IRL::Normal(0.0, 0.0, 1.0));
+      else
+        frame[0] = crossProduct(normal_plane, IRL::Normal(1.0, 0.0, 0.0));
+      frame[0].normalize();
+      frame[1] = crossProduct(normal_plane, frame[0]);
+      frame[2] = normal_plane;
+      IRL::Pt datum = distance_plane * normal_plane;
+
+      parab.setDatum(datum);
+      parab.setReferenceFrame(frame);
+      parab.setAlignedParaboloid(
+          IRL::AlignedParaboloid({1.0e-12, -1.0e-12}));
+    }
+
+
+
+
+
+
+          auto volume_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<
+              IRL::Volume, IRL::ParaboloidParametrizedSurfaceOutput>>(
+              cell, parab);
+          if (volume_and_surface.getMoments() > -DBL_MAX) {
+            auto surface = volume_and_surface.getSurface();
+            double length_scale = std::min(
+                std::pow(cell.calculateVolume(), 1.0 / 3.0) / 3.0, 1.0e-2);
+            surface.setLengthScale(length_scale);
+            if (surface.getSurfaceArea() >
+                1.0e-6 * length_scale * length_scale) {
+              surfaces.push_back(surface);
+            }
+          }
+        }
+      }
+    }
+  }
+
   //a_output->writeParametrizedInterface(a_time, surfaces);
   a_output->writeVTKInterface(a_time, surfaces, false);
 }

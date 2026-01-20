@@ -45,7 +45,7 @@ extern "C" {
 /// the individual needs of each reconstruction method,
 /// it is best to constult its specific documentation.
 
-void c_reconstructCylinder3D_Variant(const c_cylinderNeigh* a_cylinder_neighborhood,
+void c_reconstructCylinder3D_Variant(const c_cylinderNeigh* a_cylinder_neighborhood, const int* flip,
                                    c_SeparatorVariant* a_separator);
 
 void c_reconstructJibben3D_Parab(const c_JibbenNeigh* a_jibben_neighborhood,

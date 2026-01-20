@@ -91,6 +91,10 @@ void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
                           const Data<IRL::Cylinder>& a_liquid_gas_interface,
                           const double a_time, VTKOutput* a_output);
 
+void writeInterfaceToFile(const Data<double>& a_liquid_volume_fraction,
+                          const Data<IRL::PlanarSeparator>& a_liquid_gas_interface,
+                          const double a_time, VTKOutput* a_output);
+
 //******************************************************************* //
 //     Template function definitions placed below this.
 //******************************************************************* //

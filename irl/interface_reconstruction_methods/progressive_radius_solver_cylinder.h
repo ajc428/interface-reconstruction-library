@@ -101,6 +101,7 @@ class ProgressiveRadiusSolverCylinder {
   double r_m;
   /// \brief Stretching that satisfy tolerance.
   double b_m;
+  double f_m;
 };
 
 }  // namespace IRL

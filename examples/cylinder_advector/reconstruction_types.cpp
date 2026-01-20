@@ -32,6 +32,15 @@
 #include "examples/cylinder_advector/vof_advection.h"
 //#include "irl/machine_learning_reconstruction/trainer.h"
 
+#include "examples/cylinder_advector/trainer.h"
+
+auto t = trainer();
+
+void load()
+{
+  t.load_model("/home/andrew/Repositories/interface-reconstruction-library/examples/cylinder_advector/model.pt");
+};
+
 void getReconstruction(const std::string& a_reconstruction_method,
                        const Data<double>& a_liquid_volume_fraction,
                        const Data<IRL::Pt>& a_liquid_centroid,
@@ -1085,6 +1094,17 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
     }
   }
 
+  std::ofstream outfile("principal_curve_output.txt");
+  std::ofstream input_file("principal_curve_input.txt");
+  if (outfile.is_open()) {
+      // Write the header row
+      outfile << "cell_i,cell_j,cell_k,control_point_x,control_point_y,control_point_z,tangent_x,tangent_y,tangent_z,point_on_curve_x,point_on_curve_y,point_on_curve_z\n";
+  }
+  if (input_file.is_open()) {
+    // Write the header row for the input file
+    input_file << "cell_i,cell_j,cell_k,cell_ii,cell_jj,cell_kk,barycenter_x,barycenter_y,barycenter_z,volume_fraction\n";
+  }
+
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) 
   {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) 
@@ -1102,131 +1122,1346 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
         } 
         else 
         {
-          // Eigen::MatrixXd bary(27,3);
-          // Eigen::VectorXd VFs(27);
-          // int count = 0;
-          // bool stop = false;
+          Eigen::MatrixXd bary(27,3);
+          Eigen::VectorXd VFs(27);
+          int count = 0;
+          bool stop = false;
           int lim = 2;
-          IRL::cylinderNeighborhood* a_neighborhood = new IRL::cylinderNeighborhood();
-          IRL::cylinder_reconstruction solver;
+          // IRL::cylinderNeighborhood* a_neighborhood = new IRL::cylinderNeighborhood();
+          // IRL::cylinder_reconstruction solver;
 
-          a_neighborhood->resize(125);
+          // a_neighborhood->resize(125);
+          // std::vector<IRL::RectangularCuboid> cell_storage((2*lim+1)*(2*lim+1)*(2*lim+1));
+          // std::vector<IRL::VolumeMoments> moments_storage((2*lim+1)*(2*lim+1)*(2*lim+1));
+          // int member_idx = 0;
+          // for (int ii = i-lim; ii <= i+lim; ++ii) 
+          // {
+          //   for (int jj = j-lim; jj <= j+lim; ++jj) 
+          //   {
+          //     for (int kk = k-lim; kk <= k+lim; ++kk) 
+          //     {
+          //       const IRL::Pt lower_cell_pt(mesh.x(ii), mesh.y(jj), mesh.z(kk));
+          //       const IRL::Pt upper_cell_pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1));
+          //       cell_storage[member_idx] = (IRL::RectangularCuboid(IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt)));
+          //       moments_storage[member_idx] = (IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk),a_liquid_centroid(ii,jj,kk)));
+          //       a_neighborhood->setMember(&cell_storage[member_idx], &moments_storage[member_idx],ii-i,jj-j,kk-k);
+          //       member_idx++;
+          //     }
+          //   }
+          // }
+          // IRL::Cylinder cylinder = solver.solve(a_neighborhood);
+          // delete a_neighborhood;
+          // cell_storage.clear();
+          // moments_storage.clear();
+          // std::cout << cylinder.getAlignedCylinder().r() - 0.0025 << "," << (abs(cylinder.getReferenceFrame()[0][0]) - 1)*(abs(cylinder.getReferenceFrame()[0][0]) - 1) + (abs(cylinder.getReferenceFrame()[0][1]) - 0)*(abs(cylinder.getReferenceFrame()[0][1]) - 0)  + (abs(cylinder.getReferenceFrame()[0][2]) - 0)*(abs(cylinder.getReferenceFrame()[0][2]) - 0) << "," << (cylinder.getDatum()[1] - mesh.ym(9))*(cylinder.getDatum()[1] - mesh.ym(9))  + (cylinder.getDatum()[2] - mesh.zm(9))*(cylinder.getDatum()[2] - mesh.zm(9)) << std::endl;
+          // std::cout << (cylinder.getReferenceFrame()[0][0] - 1)*(cylinder.getReferenceFrame()[0][0] - 1) + (cylinder.getReferenceFrame()[0][1] - 0)*(cylinder.getReferenceFrame()[0][1] - 0)  + (cylinder.getReferenceFrame()[0][2] - 0)*(cylinder.getReferenceFrame()[0][2] - 0) << std::endl;
+          // std::cout << (cylinder.getDatum()[1] - mesh.ym(9))*(cylinder.getDatum()[1] - mesh.ym(9))  + (cylinder.getDatum()[2] - mesh.zm(9))*(cylinder.getDatum()[2] - mesh.zm(9)) << std::endl << std::endl;
           for (int ii = i-lim; ii <= i+lim; ++ii) 
           {
             for (int jj = j-lim; jj <= j+lim; ++jj) 
             {
               for (int kk = k-lim; kk <= k+lim; ++kk) 
               {
-                const IRL::Pt lower_cell_pt(mesh.x(ii), mesh.y(jj), mesh.z(kk));
-                const IRL::Pt upper_cell_pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1));
-                IRL::RectangularCuboid* cell = new IRL::RectangularCuboid(IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt));
-                const IRL::VolumeMoments* a_volume_moments = new IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk),a_liquid_centroid(ii,jj,kk));
-                a_neighborhood->setMember(cell, a_volume_moments,ii-i,jj-j,kk-k);
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  ++count;
+                }
               }
             }
           }
-          IRL::Cylinder cylinder = solver.solve(a_neighborhood);
-          delete a_neighborhood;
-          // for (int ii = i-lim; ii <= i+lim; ++ii) 
-          // {
-          //   for (int jj = j-lim; jj <= j+lim; ++jj) 
-          //   {
-          //     for (int kk = k-lim; kk <= k+lim; ++kk) 
-          //     {
-          //       if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
-          //       {
-          //         ++count;
-          //       }
-          //     }
-          //   }
-          // }
-          // bary.resize(count,3);
-          // VFs.resize(count);
+          bary.resize(count,3);
+          VFs.resize(count);
 
-          // count = 0;
-          // double VF = 0;
-          // IRL::Pt datum = IRL::Pt(0,0,0);
-          // for (int ii = i-lim; ii <= i+lim; ++ii) 
-          // {
-          //   for (int jj = j-lim; jj <= j+lim; ++jj) 
-          //   {
-          //     for (int kk = k-lim; kk <= k+lim; ++kk) 
-          //     {
-          //       if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
-          //       {
-          //         bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
-          //         bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
-          //         bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
-          //         VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
-          //         ++count;
-          //         datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
-          //         VF = VF + a_liquid_volume_fraction(ii,jj,kk);
-          //       }
-          //     }
-          //   }
-          // }
-          // datum = datum / VF;
+          count = 0;
+          double VF = 0;
+          IRL::Pt datum = IRL::Pt(0,0,0);
+          for (int ii = i-lim; ii <= i+lim; ++ii) 
+          {
+            for (int jj = j-lim; jj <= j+lim; ++jj) 
+            {
+              for (int kk = k-lim; kk <= k+lim; ++kk) 
+              {
+                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+                {
+                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
+                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
+                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
+                  VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
 
-          // PrincipalCurve pc = PrincipalCurve(bary, VFs);
-          // pc.fit();
-          // Eigen::MatrixXd curve = pc.getCurve();
-          // IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
-          // pc.fitPoly(&direction, &datum, IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k)));//a_liquid_centroid(i,j,k));//
+                  if (input_file.is_open()) {
+                      input_file << i << "," << j << "," << k << "," << ii << "," << jj << "," << kk << ","
+                                 << bary(count, 0) << "," << bary(count, 1) << "," << bary(count, 2) << ","
+                                 << VFs(count) << "\n";
+                  }
 
-          // direction.normalize();
-          // double n3 = 0;
-          // double n2 = 0;
-          // double n1 = 0;
-          // IRL::Normal v1;
-          // if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
-          // {
-          //   double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-          //   double n1 = (-n2*direction[1])/direction[0];
-          //   v1[0] = n1; v1[1] = n2; v1[2] = 0;
-          // }
-          // else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
-          // {
-          //   double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-          //   double n2 = (-n1*direction[0])/direction[1];
-          //   v1[0] = n1; v1[1] = n2; v1[2] = 0;
-          // }
-          // else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
-          // {
-          //   double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
-          //   double n3 = (-n2*direction[1])/direction[2];
-          //   v1[0] = 0; v1[1] = n2; v1[2] = n3;
-          // }
-          // else
-          // {
-          //   v1[0] = 0; v1[1] = 0; v1[2] = 0;
-          // }
-          // IRL::Normal b = IRL::crossProduct(direction,v1);
-          // b.normalize();
-          // IRL::Normal a = IRL::crossProduct(b,direction);
-          // a.normalize();
-          // IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+                  ++count;
+                  datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
+                  VF = VF + a_liquid_volume_fraction(ii,jj,kk);
+                }
+              }
+            }
+          }
+          datum = datum / VF;
 
-          // cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
+          PrincipalCurve pc = PrincipalCurve(bary, VFs, mesh.dx());
+          pc.fit();
+          Eigen::MatrixXd curve = pc.getCurve();
+          IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
+          pc.fitPoly(&direction, &datum, IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k)));//a_liquid_centroid(i,j,k));//
 
-          // const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
-          // const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
-          //         mesh.z(k + 1));
+          direction.normalize();
 
-          // auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
-          //                                 upper_cell_pt);
-          // IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
-          // solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
-          // cylinder);
+          if (outfile.is_open()) {
+                  const Eigen::MatrixXd& curve = pc.getCurve();
+                  // Write one row for each control point
+                  for (int row_idx = 0; row_idx < curve.rows(); ++row_idx) {
+                      outfile << i << "," << j << "," << k << ","
+                              << curve(row_idx, 0) << "," << curve(row_idx, 1) << "," << curve(row_idx, 2) << ","
+                              << direction[0] << "," << direction[1] << "," << direction[2] << ","
+                              << datum[0] << "," << datum[1] << "," << datum[2] << "\n";
+                  }
+              }
 
-          // cylinder = solver_radius.getCylinder();
+          double n3 = 0;
+          double n2 = 0;
+          double n1 = 0;
+          IRL::Normal v1;
+          if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
+          {
+            double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n1 = (-n2*direction[1])/direction[0];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
+          {
+            double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+            double n2 = (-n1*direction[0])/direction[1];
+            v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          }
+          else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
+          {
+            double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
+            double n3 = (-n2*direction[1])/direction[2];
+            v1[0] = 0; v1[1] = n2; v1[2] = n3;
+          }
+          else
+          {
+            v1[0] = 0; v1[1] = 0; v1[2] = 0;
+          }
+          IRL::Normal b = IRL::crossProduct(direction,v1);
+          b.normalize();
+          IRL::Normal a = IRL::crossProduct(b,direction);
+          a.normalize();
+          IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+
+          cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
+
+          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+                  mesh.z(k + 1));
+
+          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
+                                          upper_cell_pt);
+          IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
+          solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
+          cylinder);
+
+          cylinder = solver_radius.getCylinder();
           (*a_interface)(i, j, k) = cylinder;
         }
       }
     }
   }
-
+  if (outfile.is_open()) {
+      outfile.close();
+  }
+  if (input_file.is_open()) {
+      input_file.close();
+  }
   // Update border with simple ghost-cell fill and correct datum for
   // assumed periodic boundary
+  a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+}
+
+std::vector<double> get_mass_centers_all(std::vector<double>* fractions)
+{
+    double m000 = 0;
+    double m100 = 0;
+    double m010 = 0;
+    double m001 = 0;
+    for(int i = 0; i < 3; ++i)
+    {
+        for(int j = 0; j < 3; ++j)
+        {
+            for(int k = 0; k < 3; ++k)
+            {
+                m000 = m000 + fractions[0][7*(i*9+j*3+k)+0];
+                m100 = m100 + (fractions[0][7*(i*9+j*3+k)+1]+(i-1))*fractions[0][7*(i*9+j*3+k)+0];
+                m010 = m010 + (fractions[0][7*(i*9+j*3+k)+2]+(j-1))*fractions[0][7*(i*9+j*3+k)+0];
+                m001 = m001 + (fractions[0][7*(i*9+j*3+k)+3]+(k-1))*fractions[0][7*(i*9+j*3+k)+0];
+            }
+        }
+    }
+    double xc = m100 / m000;
+    double yc = m010 / m000;
+    double zc = m001 / m000;
+    std::vector<double> centers;
+    centers.push_back(xc);
+    centers.push_back(yc);
+    centers.push_back(zc);
+    return centers;
+}
+
+void PLIC_NET::getReconstruction(const Data<double>& a_liquid_volume_fraction,const Data<IRL::Pt>& a_liquid_centroid,const Data<IRL::Pt>& a_gas_centroid,
+                                const double a_dt, const Data<double>& a_U,
+                                const Data<double>& a_V,
+                                const Data<double>& a_W,
+                                Data<IRL::PlanarSeparator>* a_interface) 
+{
+  const BasicMesh& mesh = a_U.getMesh();
+    // Loop over cells in domain. Skip if cell is not mixed phase.
+  int count = 0;
+  std::vector<double> fractions;
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        if (a_liquid_volume_fraction(i, j, k) < IRL::global_constants::VF_LOW ||
+            a_liquid_volume_fraction(i, j, k) > IRL::global_constants::VF_HIGH) {
+          const double distance =
+              std::copysign(IRL::global_constants::ARBITRARILY_LARGE_DISTANCE,
+                            a_liquid_volume_fraction(i, j, k) - 0.5);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+              IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
+        }
+        else
+        {
+          // Build surrounding stencil information.
+          auto n = IRL::Normal();
+          fractions.clear();
+
+          bool flip = false;
+          if (a_liquid_volume_fraction(i,j,k) > 0.5)
+          {
+            flip = true;
+          }
+
+          if (!flip)
+          {
+            for (int ii = i - 1; ii < i + 2; ++ii) {
+              for (int jj = j - 1; jj < j + 2; ++jj) {
+                for (int kk = k - 1; kk < k + 2; ++kk) {
+                  if (ii > mesh.imax() && jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj < mesh.jmin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj < mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                  }
+
+
+                  else if (ii > mesh.imax() && jj > mesh.jmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), jj, mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  
+
+                  else if (ii > mesh.imax() && jj < mesh.jmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), jj, mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else if (ii < mesh.imin() && jj < mesh.jmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), jj, mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else if (ii < mesh.imin() && jj > mesh.jmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), jj, mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  
+                  
+                  else if (ii > mesh.imax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imin(), jj, kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmin(), kk));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (kk > mesh.kmax())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, jj, mesh.kmin()));
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(mesh.imax(), jj, kk));
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, mesh.jmax(), kk));
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (kk < mesh.kmin())
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, jj, mesh.kmax()));
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else
+                  {
+                    fractions.push_back(a_liquid_volume_fraction(ii, jj, kk));
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                }
+              }
+            }
+          }
+          else
+          {
+            for (int ii = i - 1; ii < i + 2; ++ii) {
+              for (int jj = j - 1; jj < j + 2; ++jj) {
+                for (int kk = k - 1; kk < k + 2; ++kk) {
+                  if (ii > mesh.imax() && jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj < mesh.jmin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && jj < mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz()); 
+                  }
+
+
+                  else if (ii > mesh.imax() && jj > mesh.jmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), mesh.jmin(), kk));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), jj, mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, mesh.jmin(), mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  
+
+                  else if (ii > mesh.imax() && jj < mesh.jmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), mesh.jmax(), kk));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii > mesh.imax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), jj, mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, mesh.jmin(), mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else if (ii < mesh.imin() && jj < mesh.jmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), mesh.jmax(), kk));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), jj, mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin() && kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, mesh.jmax(), mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else if (ii < mesh.imin() && jj > mesh.jmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), mesh.jmin(), kk));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), jj, mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin() && kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, mesh.jmax(), mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  
+                  
+                  else if (ii > mesh.imax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imin(), jj, kk));
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[0] - mesh.xm(mesh.imin()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imin(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (jj > mesh.jmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, mesh.jmin(), kk));
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[1] - mesh.ym(mesh.jmin()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmin(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (kk > mesh.kmax())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, jj, mesh.kmin()));
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmin())[2] - mesh.zm(mesh.kmin()))/mesh.dz());
+                  }
+                  else if (ii < mesh.imin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(mesh.imax(), jj, kk));
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[0] - mesh.xm(mesh.imax()))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(mesh.imax(), jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (jj < mesh.jmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, mesh.jmax(), kk));
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[1] - mesh.ym(mesh.jmax()))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, mesh.jmax(), kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                  else if (kk < mesh.kmin())
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, jj, mesh.kmax()));
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, mesh.kmax())[2] - mesh.zm(mesh.kmax()))/mesh.dz());
+                  }
+
+
+                  else
+                  {
+                    fractions.push_back(1 - a_liquid_volume_fraction(ii, jj, kk));
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_gas_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[0] - mesh.xm(ii))/mesh.dx());
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[1] - mesh.ym(jj))/mesh.dy());
+                    fractions.push_back((a_liquid_centroid(ii, jj, kk)[2] - mesh.zm(kk))/mesh.dz());
+                  }
+                }
+              }
+            }
+          }
+
+          std::vector<double> center = get_mass_centers_all(&fractions);
+          int direction = 0;
+            if (center[0] < 0 && center[1] >= 0 && center[2] >= 0)
+            {
+                direction = 1;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 2;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 3;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] >= 0)
+            {
+                direction = 4;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] >= 0 && center[2] < 0)
+            {
+                direction = 5;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] >= 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 6;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+            else if (center[0] < 0 && center[1] < 0 && center[2] < 0)
+            {
+                direction = 7;
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (i == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(2*9+j*3+k)+0];
+                        fractions[7*(2*9+j*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(2*9+j*3+k)+1];
+                        fractions[7*(2*9+j*3+k)+1] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(2*9+j*3+k)+2];
+                        fractions[7*(2*9+j*3+k)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(2*9+j*3+k)+3];
+                        fractions[7*(2*9+j*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(2*9+j*3+k)+4];
+                        fractions[7*(2*9+j*3+k)+4] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(2*9+j*3+k)+5];
+                        fractions[7*(2*9+j*3+k)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(2*9+j*3+k)+6];
+                        fractions[7*(2*9+j*3+k)+6] = temp;
+                    }
+                    else if (i == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+1] = -fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+4] = -fractions[7*(i*9+j*3+k)+4];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (j == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+2*3+k)+0];
+                        fractions[7*(i*9+2*3+k)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+2*3+k)+1];
+                        fractions[7*(i*9+2*3+k)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+2*3+k)+2];
+                        fractions[7*(i*9+2*3+k)+2] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = fractions[7*(i*9+2*3+k)+3];
+                        fractions[7*(i*9+2*3+k)+3] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+2*3+k)+4];
+                        fractions[7*(i*9+2*3+k)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+2*3+k)+5];
+                        fractions[7*(i*9+2*3+k)+5] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = fractions[7*(i*9+2*3+k)+6];
+                        fractions[7*(i*9+2*3+k)+6] = temp;
+                    }
+                    else if (j == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+2] = -fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+5] = -fractions[7*(i*9+j*3+k)+5];
+                    }
+                    }
+                }
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                for (int j = 0; j < 3; ++j)
+                {
+                    for (int k = 0; k < 3; ++k)
+                    {
+                    if (k == 0)
+                    {
+                        double temp = fractions[7*(i*9+j*3+k)+0];
+                        fractions[7*(i*9+j*3+k)+0] = fractions[7*(i*9+j*3+2)+0];
+                        fractions[7*(i*9+j*3+2)+0] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+1];
+                        fractions[7*(i*9+j*3+k)+1] = fractions[7*(i*9+j*3+2)+1];
+                        fractions[7*(i*9+j*3+2)+1] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+2];
+                        fractions[7*(i*9+j*3+k)+2] = fractions[7*(i*9+j*3+2)+2];
+                        fractions[7*(i*9+j*3+2)+2] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+2)+3];
+                        fractions[7*(i*9+j*3+2)+3] = -temp;
+                        temp = fractions[7*(i*9+j*3+k)+4];
+                        fractions[7*(i*9+j*3+k)+4] = fractions[7*(i*9+j*3+2)+4];
+                        fractions[7*(i*9+j*3+2)+4] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+5];
+                        fractions[7*(i*9+j*3+k)+5] = fractions[7*(i*9+j*3+2)+5];
+                        fractions[7*(i*9+j*3+2)+5] = temp;
+                        temp = fractions[7*(i*9+j*3+k)+6];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+2)+6];
+                        fractions[7*(i*9+j*3+2)+6] = -temp;
+                    }
+                    else if (k == 1)
+                    {
+                        fractions[7*(i*9+j*3+k)+3] = -fractions[7*(i*9+j*3+k)+3];
+                        fractions[7*(i*9+j*3+k)+6] = -fractions[7*(i*9+j*3+k)+6];
+                    }
+                    }
+                }
+                }
+            }
+          n = t.get_normal(&fractions);
+          switch (direction)
+          {
+            case 1:
+              n[0] = -n[0];
+              break;
+            case 2:
+              n[1] = -n[1];
+              break;
+            case 3:
+              n[2] = -n[2];
+              break;
+            case 4:
+              n[0] = -n[0];
+              n[1] = -n[1];
+              break;
+            case 5:
+              n[0] = -n[0];
+              n[2] = -n[2];
+              break;
+            case 6:
+              n[1] = -n[1];
+              n[2] = -n[2];
+              break;
+            case 7:
+              n[0] = -n[0];
+              n[1] = -n[1];
+              n[2] = -n[2];
+              break;
+          }
+
+          if (!flip)
+          {
+            n[0] = -n[0];
+            n[1] = -n[1];
+            n[2] = -n[2];
+          }
+
+          const IRL::Normal& n1 = n;
+          const double d = a_liquid_volume_fraction(i,j,k);
+          const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+          double distance = IRL::findDistanceOnePlane(cube, d, n1);
+          (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(n, distance));
+      }
+      }
+    }
+  }
   a_interface->updateBorder();
   correctInterfacePlaneBorders(a_interface);
 }
@@ -1373,11 +2608,83 @@ void correctInterfacePlaneBorders(Data<IRL::Cylinder>* a_interface) {
   }
 }
 
+void correctInterfacePlaneBorders(Data<IRL::PlanarSeparator>* a_interface) {
+  const BasicMesh& mesh = (*a_interface).getMesh();
+  // Fix distance to recreate volume fraction
 
-PrincipalCurve::PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs)
+  // x- boundary
+  for (int i = mesh.imino(); i < mesh.imin(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        for (auto& plane : (*a_interface)(i, j, k)) {
+          plane.distance() = plane.distance() - plane.normal()[0] * mesh.lx();
+        }
+      }
+    }
+  }
+
+  // x+ boundary
+  for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        for (auto& plane : (*a_interface)(i, j, k)) {
+          plane.distance() = plane.distance() + plane.normal()[0] * mesh.lx();
+        }
+      }
+    }
+  }
+
+  // y- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        for (auto& plane : (*a_interface)(i, j, k)) {
+          plane.distance() = plane.distance() - plane.normal()[1] * mesh.ly();
+        }
+      }
+    }
+  }
+
+  // y+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+        for (auto& plane : (*a_interface)(i, j, k)) {
+          plane.distance() = plane.distance() + plane.normal()[1] * mesh.ly();
+        }
+      }
+    }
+  }
+
+  // z- boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
+        for (auto& plane : (*a_interface)(i, j, k)) {
+          plane.distance() = plane.distance() - plane.normal()[2] * mesh.lz();
+        }
+      }
+    }
+  }
+
+  // z+ boundary
+  for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
+    for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
+      for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
+        for (auto& plane : (*a_interface)(i, j, k)) {
+          plane.distance() = plane.distance() - plane.normal()[2] * mesh.lz();
+        }
+      }
+    }
+  }
+}
+
+
+PrincipalCurve::PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs, const double d_x)
 {
   data = d;
   VF = VFs;
+  dx = d_x;
 }
 
 void PrincipalCurve::fit(int max_iterations, double tolerance) 
@@ -1393,9 +2700,8 @@ void PrincipalCurve::fit(int max_iterations, double tolerance)
         projectDataOntoCurve();
         updateCurve();
         //smoothCurve(3);
-        orderCurvePoints();
 
-        double change = (curve - old_curve).squaredNorm();
+        double change = (curve - old_curve).rowwise().squaredNorm().maxCoeff() / (dx*dx);
         //std::cout << "Iteration " << i + 1 << ", Change: " << change << std::endl;
         if (change < tolerance) 
         {
@@ -1404,6 +2710,7 @@ void PrincipalCurve::fit(int max_iterations, double tolerance)
         }
         ++i;
     }
+    orderCurvePoints();
 }
 
 const Eigen::MatrixXd& PrincipalCurve::getCurve() const 

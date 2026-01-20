@@ -28,26 +28,26 @@ class cylinder_reconstruction {
   /// \brief Default constructor.
   cylinder_reconstruction(void) = default;
 
-  /// \brief Solve the system for the reconstruction, restarting
-  /// the neighboring geoemtry
-  Cylinder solve(const cylinderNeighborhood* a_neighborhood_pointer);
+  /// \brief Solve the for the reconstruction
+  Cylinder solve(const cylinderNeighborhood* a_neighborhood_pointer, const int f);
 
   /// \brief Default destructor.
   ~cylinder_reconstruction(void) = default;
 
  private:
-  /// \brief Solve the system for the reconstruction.
+  /// \brief Solve the for the reconstruction.
   Cylinder solve(void);
 
   /// \brief Storage of the stencil information
   const cylinderNeighborhood* neighborhood_VF_m;
+  int flip = 1;
 };
 
 class PrincipalCurve {
 public:
-    PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs);
+    PrincipalCurve(const Eigen::MatrixXd& d, const Eigen::VectorXd& VFs, const double d_x);
 
-    void fit(int max_iterations = 100, double tolerance = 1e-5);
+    void fit(int max_iterations = 10, double tolerance = 1e-5);
     void fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target);
 
     const Eigen::MatrixXd& getCurve() const;
@@ -55,6 +55,7 @@ public:
 private:
     int res = 3;
     double tol = 1e-8;
+    double dx = 0;
     Eigen::MatrixXd data;
     Eigen::VectorXd VF;
     Eigen::MatrixXd curve;

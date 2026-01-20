@@ -28,7 +28,7 @@ namespace IRL {
 
 /// \brief Perform Cylinder reconstruction for a 3D problem.
 inline Cylinder reconstructionWithCylinder3D(
-    const cylinderNeighborhood& a_neighborhood_geometry);
+    const cylinderNeighborhood& a_neighborhood_geometry, const int flip);
 
 /// \brief Perform Jibben reconstruction for a 3D problem.
 inline Paraboloid reconstructionWithJibben3D(
