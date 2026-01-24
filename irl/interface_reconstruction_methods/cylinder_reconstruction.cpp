@@ -52,60 +52,68 @@ Cylinder cylinder_reconstruction::solve(void)
             }
         }
     }
-    Eigen::MatrixXd bary(bary_vector.size(), 3);
-    Eigen::VectorXd VFs(VF_vector.size());
-    for (size_t i = 0; i < bary_vector.size(); ++i) 
+
+    if (VF_vector.size() < 3)
     {
-        bary.row(i) = Eigen::RowVector3d(bary_vector[i][0], bary_vector[i][1], bary_vector[i][2]);
-        VFs(i) = VF_vector[i];
-    }
-
-    const auto& central_cell = neighborhood_VF_m->getCell(0, 0, 0);
-    const IRL::Pt cell_centroid = central_cell.calculateCentroid();
-    const IRL::Pt cell_side = IRL::Pt(central_cell.calculateSideLength(0)/2,central_cell.calculateSideLength(1)/2,central_cell.calculateSideLength(2)/2);
-    const IRL::Pt lower_cell_pt(cell_centroid[0]-cell_side[0],cell_centroid[1]-cell_side[1],cell_centroid[2]-cell_side[2]);
-    const IRL::Pt upper_cell_pt(cell_centroid[0]+cell_side[0],cell_centroid[1]+cell_side[1],cell_centroid[2]+cell_side[2]);
-
-    PrincipalCurve pc = PrincipalCurve(bary, VFs, central_cell.calculateSideLength(0));
-    pc.fit();
-    Eigen::MatrixXd curve = pc.getCurve();
-
-    IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
-    IRL::Pt center = neighborhood_VF_m->getCell(0,0,0).calculateCentroid();
-    IRL::Pt datum = IRL::Pt(0,0,0);
-    pc.fitPoly(&direction, &datum, center);
-
-    direction.normalize();
-    IRL::Normal temp;
-    if (direction[2] <= 0.97) 
-    {
-        temp = IRL::Normal(0, 0, 1);
+        cylinder = IRL::Cylinder(bary_vector[0], IRL::ReferenceFrame(IRL::Normal(1.0,0.0,0.0),IRL::Normal(0.0,1.0,0.0),IRL::Normal(0.0,0.0,1.0)), 1, 0.0, flip);
     }
     else
     {
-        temp = IRL::Normal(0, 1, 0);
+        Eigen::MatrixXd bary(bary_vector.size(), 3);
+        Eigen::VectorXd VFs(VF_vector.size());
+        for (size_t i = 0; i < bary_vector.size(); ++i) 
+        {
+            bary.row(i) = Eigen::RowVector3d(bary_vector[i][0], bary_vector[i][1], bary_vector[i][2]);
+            VFs(i) = VF_vector[i];
+        }
+
+        const auto& central_cell = neighborhood_VF_m->getCell(0, 0, 0);
+        const IRL::Pt cell_centroid = central_cell.calculateCentroid();
+        const IRL::Pt cell_side = IRL::Pt(central_cell.calculateSideLength(0)/2,central_cell.calculateSideLength(1)/2,central_cell.calculateSideLength(2)/2);
+        const IRL::Pt lower_cell_pt(cell_centroid[0]-cell_side[0],cell_centroid[1]-cell_side[1],cell_centroid[2]-cell_side[2]);
+        const IRL::Pt upper_cell_pt(cell_centroid[0]+cell_side[0],cell_centroid[1]+cell_side[1],cell_centroid[2]+cell_side[2]);
+
+        PrincipalCurve pc = PrincipalCurve(bary, VFs, central_cell.calculateSideLength(0));
+        pc.fit();
+        Eigen::MatrixXd curve = pc.getCurve();
+
+        IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
+        IRL::Pt center = neighborhood_VF_m->getCell(0,0,0).calculateCentroid();
+        IRL::Pt datum = IRL::Pt(0,0,0);
+        pc.fitPoly(&direction, &datum, center);
+
+        direction.normalize();
+        IRL::Normal temp;
+        if (direction[2] <= 0.97) 
+        {
+            temp = IRL::Normal(0, 0, 1);
+        }
+        else
+        {
+            temp = IRL::Normal(0, 1, 0);
+        }
+        IRL::Normal b = IRL::crossProduct(direction, temp);
+        b.normalize();
+        IRL::Normal a = IRL::crossProduct(b, direction);
+        IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+
+        cylinder = IRL::Cylinder(datum, frame, 1, 0.00025, flip);
+
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt);
+        double vf_target = neighborhood_VF_m->getStoredMoments(0,0,0).volume();
+        if (flip < 0)
+        {
+            vf_target = 1.0 - vf_target;
+        }
+
+        IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
+        solver_radius(cell, vf_target, 1.0e-14,
+        cylinder);
+
+        cylinder = solver_radius.getCylinder();
     }
-    IRL::Normal b = IRL::crossProduct(direction, temp);
-    b.normalize();
-    IRL::Normal a = IRL::crossProduct(b, direction);
-    IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
 
-    cylinder = IRL::Cylinder(datum, frame, 1, 0.00025, flip);
-
-    auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt);
-    double vf_target = neighborhood_VF_m->getStoredMoments(0,0,0).volume();
-    if (flip < 0)
-    {
-        vf_target = 1.0 - vf_target;
-    }
-
-    IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
-    solver_radius(cell, vf_target, 1.0e-14,
-    cylinder);
-
-    cylinder = solver_radius.getCylinder();
-
-  return cylinder;
+    return cylinder;
 }
 
 
@@ -258,7 +266,7 @@ void PrincipalCurve::fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target
     const double d0 = (t(0) - t(1)) * (t(0) - t(2));
     const double d1 = (t(1) - t(0)) * (t(1) - t(2));
     const double d2 = (t(2) - t(0)) * (t(2) - t(1));
-    if (d0 > IRL::global_constants::VF_LOW)
+    if (std::abs(d0) > IRL::global_constants::VF_LOW)
     {
         const Eigen::Vector3d A = points.row(0) / d0 + points.row(1) / d1 + points.row(2) / d2;
         const Eigen::Vector3d B = -points.row(0) * (t(1) + t(2)) / d0 - points.row(1) * (t(0) + t(2)) / d1 - points.row(2) * (t(0) + t(1)) / d2;
