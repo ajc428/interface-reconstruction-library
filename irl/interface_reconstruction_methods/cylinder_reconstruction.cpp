@@ -145,7 +145,6 @@ void PrincipalCurve::fit(int max_iterations, double tolerance)
         }
         ++i;
     }
-    orderCurvePoints();
 }
 
 const Eigen::MatrixXd& PrincipalCurve::getCurve() const 
@@ -173,7 +172,6 @@ void PrincipalCurve::initializeWithPCA()
         double p = min_proj + (max_proj - min_proj) * i / (res-1);
         curve.row(i) = data.colwise().mean() + p * dir.transpose();
     }
-    orderCurvePoints();
 }
 
 void PrincipalCurve::projectDataOntoCurve() 
@@ -187,13 +185,13 @@ void PrincipalCurve::projectDataOntoCurve()
         for (int j = 0; j < curve.rows(); ++j) 
         {
             double dist_sq = (data.row(i) - curve.row(j)).squaredNorm();
-            if (dist_sq < min_dist_sq-tol) 
+            if (dist_sq < min_dist_sq-tol*dx) 
             {
                 min_dist_sq = dist_sq;
                 best_idx.clear();
                 best_idx.push_back(j);
             }
-            else if (dist_sq < min_dist_sq+tol)
+            else if (dist_sq < min_dist_sq+tol*dx)
             {
                 best_idx.push_back(j);
             }
@@ -226,36 +224,16 @@ void PrincipalCurve::updateCurve()
     }
 }
 
-void PrincipalCurve::orderCurvePoints() 
+void PrincipalCurve::fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target)
 {
+    Eigen::MatrixXd points = curve; 
+    Eigen::VectorXd t(curve.rows());
     lambda.resize(curve.rows());
     lambda(0) = 0.0;
     for (int i = 1; i < curve.rows(); ++i) 
     {
         lambda(i) = lambda(i - 1) + (curve.row(i) - curve.row(i - 1)).norm();
     }
-
-    std::vector<int> indices(curve.rows());
-    std::iota(indices.begin(), indices.end(), 0);
-
-    std::sort(indices.begin(), indices.end(),
-              [&](int a, int b) { return lambda(a) < lambda(b); });
-
-    Eigen::MatrixXd sorted_curve(curve.rows(), curve.cols());
-    Eigen::VectorXd sorted_lambda(lambda.size());
-    for (int i = 0; i < curve.rows(); ++i) 
-    {
-        sorted_curve.row(i) = curve.row(indices[i]);
-        sorted_lambda(i) = lambda(indices[i]);
-    }
-    curve = sorted_curve;
-    lambda = sorted_lambda;
-}
-
-void PrincipalCurve::fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target)
-{
-    Eigen::MatrixXd points = curve; 
-    Eigen::VectorXd t(curve.rows());
     for (int i = 0; i < curve.rows(); ++i)
     {
       t(i) = lambda(i) / lambda(curve.rows()-1);
@@ -266,7 +244,7 @@ void PrincipalCurve::fitPoly(IRL::Normal *direction, IRL::Pt *pt, IRL::Pt target
     const double d0 = (t(0) - t(1)) * (t(0) - t(2));
     const double d1 = (t(1) - t(0)) * (t(1) - t(2));
     const double d2 = (t(2) - t(0)) * (t(2) - t(1));
-    if (std::abs(d0) > IRL::global_constants::VF_LOW)
+    if (std::abs(d0) > IRL::global_constants::VF_LOW && std::abs(d1) > IRL::global_constants::VF_LOW)
     {
         const Eigen::Vector3d A = points.row(0) / d0 + points.row(1) / d1 + points.row(2) / d2;
         const Eigen::Vector3d B = -points.row(0) * (t(1) + t(2)) / d0 - points.row(1) * (t(0) + t(2)) / d1 - points.row(2) * (t(0) + t(1)) / d2;

@@ -68,8 +68,6 @@ private:
     
     void updateCurve();
 
-    void orderCurvePoints();
-
     std::vector<double> solveCubic(double, double, double, double);
 };
 
