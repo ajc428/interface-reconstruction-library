@@ -169,7 +169,12 @@ void PrincipalCurve::initializeWithPCA()
     curve = Eigen::MatrixXd(res, data.cols());
     for (int i = 0; i < res; ++i) 
     {
-        double p = min_proj + (max_proj - min_proj) * i / (res-1);
+        double p = (max_proj - min_proj) * i;
+        if (res-1 > 0)
+        {
+            p = p / (res-1);
+        }
+        p = p + min_proj;
         curve.row(i) = data.colwise().mean() + p * dir.transpose();
     }
 }

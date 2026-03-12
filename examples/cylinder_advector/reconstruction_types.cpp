@@ -1127,146 +1127,147 @@ void Cylinder_Curve_Global::getReconstruction(const Data<double>& b_liquid_volum
           int count = 0;
           bool stop = false;
           int lim = 2;
-          // IRL::cylinderNeighborhood* a_neighborhood = new IRL::cylinderNeighborhood();
-          // IRL::cylinder_reconstruction solver;
+          IRL::cylinderNeighborhood* a_neighborhood = new IRL::cylinderNeighborhood();
+          IRL::cylinder_reconstruction solver;
 
-          // a_neighborhood->resize(125);
-          // std::vector<IRL::RectangularCuboid> cell_storage((2*lim+1)*(2*lim+1)*(2*lim+1));
-          // std::vector<IRL::VolumeMoments> moments_storage((2*lim+1)*(2*lim+1)*(2*lim+1));
-          // int member_idx = 0;
+          a_neighborhood->resize(125);
+          std::vector<IRL::RectangularCuboid> cell_storage((2*lim+1)*(2*lim+1)*(2*lim+1));
+          std::vector<IRL::VolumeMoments> moments_storage((2*lim+1)*(2*lim+1)*(2*lim+1));
+          int member_idx = 0;
+          for (int ii = i-lim; ii <= i+lim; ++ii) 
+          {
+            for (int jj = j-lim; jj <= j+lim; ++jj) 
+            {
+              for (int kk = k-lim; kk <= k+lim; ++kk) 
+              {
+                const IRL::Pt lower_cell_pt(mesh.x(ii), mesh.y(jj), mesh.z(kk));
+                const IRL::Pt upper_cell_pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1));
+                cell_storage[member_idx] = (IRL::RectangularCuboid(IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt)));
+                moments_storage[member_idx] = (IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk),a_liquid_centroid(ii,jj,kk)));
+                a_neighborhood->setMember(&cell_storage[member_idx], &moments_storage[member_idx],ii-i,jj-j,kk-k);
+                member_idx++;
+              }
+            }
+          }
+          IRL::Cylinder cylinder = solver.solve(a_neighborhood, 1);
+          delete a_neighborhood;
+          cell_storage.clear();
+          moments_storage.clear();
+          // std::cout << cylinder.getAlignedCylinder().r() - 0.0025 << "," << (abs(cylinder.getReferenceFrame()[0][0]) - 1)*(abs(cylinder.getReferenceFrame()[0][0]) - 1) + (abs(cylinder.getReferenceFrame()[0][1]) - 0)*(abs(cylinder.getReferenceFrame()[0][1]) - 0)  + (abs(cylinder.getReferenceFrame()[0][2]) - 0)*(abs(cylinder.getReferenceFrame()[0][2]) - 0) << "," << (cylinder.getDatum()[1] - mesh.ym(9))*(cylinder.getDatum()[1] - mesh.ym(9))  + (cylinder.getDatum()[2] - mesh.zm(9))*(cylinder.getDatum()[2] - mesh.zm(9)) << std::endl;
+          // std::cout << (cylinder.getReferenceFrame()[0][0] - 1)*(cylinder.getReferenceFrame()[0][0] - 1) + (cylinder.getReferenceFrame()[0][1] - 0)*(cylinder.getReferenceFrame()[0][1] - 0)  + (cylinder.getReferenceFrame()[0][2] - 0)*(cylinder.getReferenceFrame()[0][2] - 0) << std::endl;
+          // std::cout << (cylinder.getDatum()[1] - mesh.ym(9))*(cylinder.getDatum()[1] - mesh.ym(9))  + (cylinder.getDatum()[2] - mesh.zm(9))*(cylinder.getDatum()[2] - mesh.zm(9)) << std::endl << std::endl;
+          
           // for (int ii = i-lim; ii <= i+lim; ++ii) 
           // {
           //   for (int jj = j-lim; jj <= j+lim; ++jj) 
           //   {
           //     for (int kk = k-lim; kk <= k+lim; ++kk) 
           //     {
-          //       const IRL::Pt lower_cell_pt(mesh.x(ii), mesh.y(jj), mesh.z(kk));
-          //       const IRL::Pt upper_cell_pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1));
-          //       cell_storage[member_idx] = (IRL::RectangularCuboid(IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt, upper_cell_pt)));
-          //       moments_storage[member_idx] = (IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk),a_liquid_centroid(ii,jj,kk)));
-          //       a_neighborhood->setMember(&cell_storage[member_idx], &moments_storage[member_idx],ii-i,jj-j,kk-k);
-          //       member_idx++;
+          //       if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+          //       {
+          //         ++count;
+          //       }
           //     }
           //   }
           // }
-          // IRL::Cylinder cylinder = solver.solve(a_neighborhood);
-          // delete a_neighborhood;
-          // cell_storage.clear();
-          // moments_storage.clear();
-          // std::cout << cylinder.getAlignedCylinder().r() - 0.0025 << "," << (abs(cylinder.getReferenceFrame()[0][0]) - 1)*(abs(cylinder.getReferenceFrame()[0][0]) - 1) + (abs(cylinder.getReferenceFrame()[0][1]) - 0)*(abs(cylinder.getReferenceFrame()[0][1]) - 0)  + (abs(cylinder.getReferenceFrame()[0][2]) - 0)*(abs(cylinder.getReferenceFrame()[0][2]) - 0) << "," << (cylinder.getDatum()[1] - mesh.ym(9))*(cylinder.getDatum()[1] - mesh.ym(9))  + (cylinder.getDatum()[2] - mesh.zm(9))*(cylinder.getDatum()[2] - mesh.zm(9)) << std::endl;
-          // std::cout << (cylinder.getReferenceFrame()[0][0] - 1)*(cylinder.getReferenceFrame()[0][0] - 1) + (cylinder.getReferenceFrame()[0][1] - 0)*(cylinder.getReferenceFrame()[0][1] - 0)  + (cylinder.getReferenceFrame()[0][2] - 0)*(cylinder.getReferenceFrame()[0][2] - 0) << std::endl;
-          // std::cout << (cylinder.getDatum()[1] - mesh.ym(9))*(cylinder.getDatum()[1] - mesh.ym(9))  + (cylinder.getDatum()[2] - mesh.zm(9))*(cylinder.getDatum()[2] - mesh.zm(9)) << std::endl << std::endl;
-          for (int ii = i-lim; ii <= i+lim; ++ii) 
-          {
-            for (int jj = j-lim; jj <= j+lim; ++jj) 
-            {
-              for (int kk = k-lim; kk <= k+lim; ++kk) 
-              {
-                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
-                {
-                  ++count;
-                }
-              }
-            }
-          }
-          bary.resize(count,3);
-          VFs.resize(count);
+          // bary.resize(count,3);
+          // VFs.resize(count);
 
-          count = 0;
-          double VF = 0;
-          IRL::Pt datum = IRL::Pt(0,0,0);
-          for (int ii = i-lim; ii <= i+lim; ++ii) 
-          {
-            for (int jj = j-lim; jj <= j+lim; ++jj) 
-            {
-              for (int kk = k-lim; kk <= k+lim; ++kk) 
-              {
-                if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
-                {
-                  bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
-                  bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
-                  bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
-                  VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
+          // count = 0;
+          // double VF = 0;
+          // IRL::Pt datum = IRL::Pt(0,0,0);
+          // for (int ii = i-lim; ii <= i+lim; ++ii) 
+          // {
+          //   for (int jj = j-lim; jj <= j+lim; ++jj) 
+          //   {
+          //     for (int kk = k-lim; kk <= k+lim; ++kk) 
+          //     {
+          //       if (a_liquid_volume_fraction(ii, jj, kk) > IRL::global_constants::VF_LOW && a_liquid_volume_fraction(ii, jj, kk) < IRL::global_constants::VF_HIGH)
+          //       {
+          //         bary(count,0) = a_liquid_centroid(ii,jj,kk)[0];
+          //         bary(count,1) = a_liquid_centroid(ii,jj,kk)[1];
+          //         bary(count,2) = a_liquid_centroid(ii,jj,kk)[2];
+          //         VFs(count) = a_liquid_volume_fraction(ii,jj,kk);
 
-                  if (input_file.is_open()) {
-                      input_file << i << "," << j << "," << k << "," << ii << "," << jj << "," << kk << ","
-                                 << bary(count, 0) << "," << bary(count, 1) << "," << bary(count, 2) << ","
-                                 << VFs(count) << "\n";
-                  }
+          //         if (input_file.is_open()) {
+          //             input_file << i << "," << j << "," << k << "," << ii << "," << jj << "," << kk << ","
+          //                        << bary(count, 0) << "," << bary(count, 1) << "," << bary(count, 2) << ","
+          //                        << VFs(count) << "\n";
+          //         }
 
-                  ++count;
-                  datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
-                  VF = VF + a_liquid_volume_fraction(ii,jj,kk);
-                }
-              }
-            }
-          }
-          datum = datum / VF;
+          //         ++count;
+          //         datum = datum + a_liquid_centroid(ii,jj,kk) * a_liquid_volume_fraction(ii,jj,kk);
+          //         VF = VF + a_liquid_volume_fraction(ii,jj,kk);
+          //       }
+          //     }
+          //   }
+          // }
+          // datum = datum / VF;
 
-          PrincipalCurve pc = PrincipalCurve(bary, VFs, mesh.dx());
-          pc.fit();
-          Eigen::MatrixXd curve = pc.getCurve();
-          IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
-          pc.fitPoly(&direction, &datum, IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k)));//a_liquid_centroid(i,j,k));//
+          // PrincipalCurve pc = PrincipalCurve(bary, VFs, mesh.dx());
+          // pc.fit();
+          // Eigen::MatrixXd curve = pc.getCurve();
+          // IRL::Normal direction = IRL::Normal(1.0,0.0,0.0);
+          // pc.fitPoly(&direction, &datum, IRL::Pt(mesh.xm(i),mesh.ym(j),mesh.zm(k)));//a_liquid_centroid(i,j,k));//
 
-          direction.normalize();
+          // direction.normalize();
 
-          if (outfile.is_open()) {
-                  const Eigen::MatrixXd& curve = pc.getCurve();
-                  // Write one row for each control point
-                  for (int row_idx = 0; row_idx < curve.rows(); ++row_idx) {
-                      outfile << i << "," << j << "," << k << ","
-                              << curve(row_idx, 0) << "," << curve(row_idx, 1) << "," << curve(row_idx, 2) << ","
-                              << direction[0] << "," << direction[1] << "," << direction[2] << ","
-                              << datum[0] << "," << datum[1] << "," << datum[2] << "\n";
-                  }
-              }
+          // if (outfile.is_open()) {
+          //         const Eigen::MatrixXd& curve = pc.getCurve();
+          //         // Write one row for each control point
+          //         for (int row_idx = 0; row_idx < curve.rows(); ++row_idx) {
+          //             outfile << i << "," << j << "," << k << ","
+          //                     << curve(row_idx, 0) << "," << curve(row_idx, 1) << "," << curve(row_idx, 2) << ","
+          //                     << direction[0] << "," << direction[1] << "," << direction[2] << ","
+          //                     << datum[0] << "," << datum[1] << "," << datum[2] << "\n";
+          //         }
+          //     }
 
-          double n3 = 0;
-          double n2 = 0;
-          double n1 = 0;
-          IRL::Normal v1;
-          if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
-          {
-            double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-            double n1 = (-n2*direction[1])/direction[0];
-            v1[0] = n1; v1[1] = n2; v1[2] = 0;
-          }
-          else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
-          {
-            double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
-            double n2 = (-n1*direction[0])/direction[1];
-            v1[0] = n1; v1[1] = n2; v1[2] = 0;
-          }
-          else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
-          {
-            double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
-            double n3 = (-n2*direction[1])/direction[2];
-            v1[0] = 0; v1[1] = n2; v1[2] = n3;
-          }
-          else
-          {
-            v1[0] = 0; v1[1] = 0; v1[2] = 0;
-          }
-          IRL::Normal b = IRL::crossProduct(direction,v1);
-          b.normalize();
-          IRL::Normal a = IRL::crossProduct(b,direction);
-          a.normalize();
-          IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
+          // double n3 = 0;
+          // double n2 = 0;
+          // double n1 = 0;
+          // IRL::Normal v1;
+          // if (abs(direction[0]) >= abs(direction[1]) && abs(direction[0]) >= abs(direction[2]))
+          // {
+          //   double n2 = direction[0]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+          //   double n1 = (-n2*direction[1])/direction[0];
+          //   v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          // }
+          // else if (abs(direction[1]) >= abs(direction[0]) && abs(direction[1]) >= abs(direction[2]))
+          // {
+          //   double n1 = direction[1]/(sqrt(direction[1]*direction[1]+direction[0]*direction[0]));
+          //   double n2 = (-n1*direction[0])/direction[1];
+          //   v1[0] = n1; v1[1] = n2; v1[2] = 0;
+          // }
+          // else if (abs(direction[2]) >= abs(direction[0]) && abs(direction[2]) >= abs(direction[1]))
+          // {
+          //   double n2 = direction[2]/(sqrt(direction[1]*direction[1]+direction[2]*direction[2]));
+          //   double n3 = (-n2*direction[1])/direction[2];
+          //   v1[0] = 0; v1[1] = n2; v1[2] = n3;
+          // }
+          // else
+          // {
+          //   v1[0] = 0; v1[1] = 0; v1[2] = 0;
+          // }
+          // IRL::Normal b = IRL::crossProduct(direction,v1);
+          // b.normalize();
+          // IRL::Normal a = IRL::crossProduct(b,direction);
+          // a.normalize();
+          // IRL::ReferenceFrame frame = IRL::ReferenceFrame(direction, a, b);
 
-          cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
+          // cylinder = IRL::Cylinder(datum, frame, 1, 0.00025);
 
-          const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
-          const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
-                  mesh.z(k + 1));
+          // const IRL::Pt lower_cell_pt(mesh.x(i), mesh.y(j), mesh.z(k));
+          // const IRL::Pt upper_cell_pt(mesh.x(i + 1), mesh.y(j + 1),
+          //         mesh.z(k + 1));
 
-          auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
-                                          upper_cell_pt);
-          IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
-          solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
-          cylinder);
+          // auto cell = IRL::RectangularCuboid::fromBoundingPts(lower_cell_pt,
+          //                                 upper_cell_pt);
+          // IRL::ProgressiveRadiusSolverCylinder<IRL::RectangularCuboid>
+          // solver_radius(cell, a_liquid_volume_fraction(i, j, k), 1.0e-14,
+          // cylinder);
 
-          cylinder = solver_radius.getCylinder();
+          // cylinder = solver_radius.getCylinder();
           (*a_interface)(i, j, k) = cylinder;
         }
       }

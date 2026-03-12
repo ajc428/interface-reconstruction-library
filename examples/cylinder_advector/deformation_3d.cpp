@@ -176,7 +176,7 @@ void Deformation3D::setVelocity2(const double a_time, Data<double>* a_U,
         //                   sin(2.0 * M_PI * mesh.ym(j)) *
         //                   cos(M_PI * (a_time) / 3.0);
         (*a_U)(i, j, k) = 0.0;
-        (*a_V)(i, j, k) = 2*sin(8 * M_PI * mesh.xm(i));
+        (*a_V)(i, j, k) = 2*sin(2 * M_PI * mesh.xm(i));
         (*a_W)(i, j, k) = 0.0;
       }
     }

@@ -232,14 +232,17 @@ ReturnType computeType3ContributionWithSplit(
       const ScalarType alpha =
           copysign(ONE, b) * copysign(ONE, ny) * copysign(ONE, nz);
 
-      const ScalarType y =
-          sqrt(r / (b * ny * ny + b * b * nz * nz)) * copysign(ny, alpha);
-      const ScalarType z = sqrt(r - b * y * y);
+      const ScalarType y = 
+          sqrt(std::max(r / (b * ny * ny + b * b * nz * nz),ScalarType(0.0))) * copysign(ny, alpha);
+      const ScalarType z = sqrt(std::max(r - b * y * y,ScalarType(0.0)));
       const ScalarType x =
           pt_0[0] + ((pt_0[1] - y) * ny + (pt_0[2] - z) * nz) / nx;
 
-      const ScalarType f = (y - pt_0[1]) / (pt_1[1] - pt_0[1]);
-      const ScalarType g = (x - pt_0[0]) / (pt_1[0] - pt_0[0]);
+      const ScalarType dy = pt_1[1] - pt_0[1];
+      const ScalarType dx = pt_1[0] - pt_0[0];
+      const ScalarType epsilon = ScalarType(1e-14); 
+      const ScalarType f = (std::abs(dy) > epsilon) ? (y - pt_0[1]) / dy : ScalarType(0.0);
+      const ScalarType g = (std::abs(dx) > epsilon) ? (x - pt_0[0]) / dx : ScalarType(0.0);
 #ifdef DEBUG_CYL_IRL
       std::cout << "value verification\n\n" << std::endl;
       std::cout << "b : " << static_cast<double>(b) << std::endl;
