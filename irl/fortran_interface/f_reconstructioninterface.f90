@@ -27,6 +27,7 @@ module f_ReconstructionInterface
   use f_Tet_class
   use f_PlanarSep_class
   use f_SeparatorVariant_class
+  use f_cylinderNeigh_class
   use f_JibbenNeigh_class
   use f_ELVIRANeigh_class
   use f_ListVM_VMAN_class
@@ -37,6 +38,10 @@ module f_ReconstructionInterface
   use f_OptimizationBehavior_class
   use f_R2PWeighting_class
   implicit none
+
+  interface reconstructCylinder3D
+    module procedure reconstructCylinder3D_Variant
+  end interface reconstructCylinder3D
 
   interface reconstructJibben3D
     module procedure reconstructJibben3D_Variant
@@ -168,6 +173,18 @@ module f_ReconstructionInterface
       type(c_SeparatorVariant) :: a_separator ! Pointer for PlanarSep to set
     end subroutine F_reconstructJibben3D_Variant
   end interface
+
+  interface
+  subroutine F_reconstructCylinder3D_Variant(a_cylinderNeigh, a_flip, a_separator) &
+  bind(C, name="c_reconstructCylinder3D_Variant")
+    use, intrinsic :: iso_c_binding
+    import
+    implicit none
+    type(c_cylinderNeigh) :: a_cylinderNeigh ! Pointer to a cylinderNeigh object
+    integer(c_INT) :: a_flip
+    type(c_SeparatorVariant) :: a_separator ! Pointer for PlanarSep to set
+  end subroutine F_reconstructCylinder3D_Variant
+end interface
 
 
   interface
@@ -548,6 +565,17 @@ module f_ReconstructionInterface
       call F_reconstructJibben3D_Variant(a_jibben_neighborhood%c_object, a_separator%c_object)
 
   end subroutine reconstructJibben3D_Variant
+
+  subroutine reconstructCylinder3D_Variant(a_cylinder_neighborhood, a_flip, a_separator)
+    use, intrinsic :: iso_c_binding
+    implicit none
+      type(cylinderNeigh_type), intent(in) :: a_cylinder_neighborhood
+      integer(c_INT), intent(in) :: a_flip
+      type(SeparatorVariant_type), intent(inout) :: a_separator
+
+      call F_reconstructCylinder3D_Variant(a_cylinder_neighborhood%c_object, a_flip, a_separator%c_object)
+
+  end subroutine reconstructCylinder3D_Variant
 
   subroutine reconstructELVIRA3D_Variant(a_elvira_neighborhood, a_variant)
     use, intrinsic :: iso_c_binding

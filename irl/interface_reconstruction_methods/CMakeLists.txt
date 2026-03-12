@@ -32,3 +32,7 @@ target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/ji
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/jibben_neighborhood.cpp)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/jibben.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/jibben.cpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/cylinder_neighborhood.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/cylinder_neighborhood.cpp)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/cylinder_reconstruction.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/interface_reconstruction_methods/cylinder_reconstruction.cpp)

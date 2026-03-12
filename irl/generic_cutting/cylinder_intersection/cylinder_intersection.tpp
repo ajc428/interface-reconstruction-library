@@ -232,14 +232,17 @@ ReturnType computeType3ContributionWithSplit(
       const ScalarType alpha =
           copysign(ONE, b) * copysign(ONE, ny) * copysign(ONE, nz);
 
-      const ScalarType y =
-          sqrt(r / (b * ny * ny + b * b * nz * nz)) * copysign(ny, alpha);
-      const ScalarType z = sqrt(r - b * y * y);
+      const ScalarType y = 
+          sqrt(std::max(r / (b * ny * ny + b * b * nz * nz),ScalarType(0.0))) * copysign(ny, alpha);
+      const ScalarType z = sqrt(std::max(r - b * y * y,ScalarType(0.0)));
       const ScalarType x =
           pt_0[0] + ((pt_0[1] - y) * ny + (pt_0[2] - z) * nz) / nx;
 
-      const ScalarType f = (y - pt_0[1]) / (pt_1[1] - pt_0[1]);
-      const ScalarType g = (x - pt_0[0]) / (pt_1[0] - pt_0[0]);
+      const ScalarType dy = pt_1[1] - pt_0[1];
+      const ScalarType dx = pt_1[0] - pt_0[0];
+      const ScalarType epsilon = ScalarType(1e-14); 
+      const ScalarType f = (std::abs(dy) > epsilon) ? (y - pt_0[1]) / dy : ScalarType(0.0);
+      const ScalarType g = (std::abs(dx) > epsilon) ? (x - pt_0[0]) / dx : ScalarType(0.0);
 #ifdef DEBUG_CYL_IRL
       std::cout << "value verification\n\n" << std::endl;
       std::cout << "b : " << static_cast<double>(b) << std::endl;
@@ -597,6 +600,17 @@ intersectPolyhedronWithCylinder(SegmentedHalfEdgePolyhedronType* a_polytope,
     moments = intersectPolyhedronWithAlignedCylinder<ReturnType>(
         a_polytope, a_complete_polytope, scaled_aligned_cylinder,
         inv_volume_scale, surf, datum, ref_frame);
+  }
+
+  if (cylinder.getAlignedCylinder().f() < 0) {
+    if constexpr (has_cylinder_surface<ReturnType>::value) {
+      auto total_moments =
+          ReturnType::moment_type::calculateMoments(a_polytope);
+      moments.getMoments() = total_moments - moments.getMoments();
+    } else {
+      auto total_moments = ReturnType::calculateMoments(a_polytope);
+      moments = total_moments - moments;
+    }
   }
 
   // Un-normalized moments
@@ -2417,7 +2431,7 @@ formCylinderIntersectionBases(SegmentedHalfEdgePolyhedronType* a_polytope,
     splitHalfEdgePolytope(&p2, &p4, &a_complete_polytope_copy,
                           Plane(Normal(0.0, -b1, -1.0 / vector_norm), 0.0));
     AlignedCylinder rotatedCylinder(
-        {1.0 / a_aligned_cylinder.b(),
+        std::array<ScalarType, 2>{1.0 / a_aligned_cylinder.b(),
          a_aligned_cylinder.r() / a_aligned_cylinder.b()});
     cylinder_list = {a_aligned_cylinder, rotatedCylinder, a_aligned_cylinder,
                      rotatedCylinder};

@@ -15,6 +15,7 @@
 #include "irl/c_interface/geometry/polyhedrons/c_rectangular_cuboid.h"
 #include "irl/c_interface/geometry/polyhedrons/c_tet.h"
 #include "irl/c_interface/interface_reconstruction_methods/c_elvira_neighborhood.h"
+#include "irl/c_interface/interface_reconstruction_methods/c_cylinder_neighborhood.h"
 #include "irl/c_interface/interface_reconstruction_methods/c_jibben_neighborhood.h"
 #include "irl/c_interface/interface_reconstruction_methods/c_lvira_neighborhood_hexahedron.h"
 #include "irl/c_interface/interface_reconstruction_methods/c_lvira_neighborhood_rectangular_cuboid.h"
@@ -43,6 +44,9 @@ extern "C" {
 /// in geometries. These methods differ in what they require. For
 /// the individual needs of each reconstruction method,
 /// it is best to constult its specific documentation.
+
+void c_reconstructCylinder3D_Variant(const c_cylinderNeigh* a_cylinder_neighborhood, const int* flip,
+                                   c_SeparatorVariant* a_separator);
 
 void c_reconstructJibben3D_Parab(const c_JibbenNeigh* a_jibben_neighborhood,
                                  c_Paraboloid* a_separator);

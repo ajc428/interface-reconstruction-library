@@ -15,6 +15,7 @@
 #include "irl/geometry/general/normal.h"
 #include "irl/geometry/general/plane.h"
 #include "irl/geometry/polyhedrons/rectangular_cuboid.h"
+#include "irl/c_interface/geometry/polyhedrons/c_rectangular_cuboid.h"
 #include "irl/variant_reconstruction/separator_variant.h"
 
 extern "C" {
@@ -40,6 +41,22 @@ void c_SeparatorVariant_setPlane(c_SeparatorVariant* a_self,
                                  const double* a_normal,
                                  const double* a_distance);
 
+void c_SeparatorVariant_setAlignedCylinder(c_SeparatorVariant* a_self,
+                                 const double* b,
+                                 const double* r);
+
+void c_SeparatorVariant_setAlignedCylinder_flip(c_SeparatorVariant* a_self,
+                                 const double* b,
+                                 const double* r,
+                                 const double* f);
+
+void c_SeparatorVariant_setDatum(c_SeparatorVariant* a_self, const double* a_datum);
+
+void c_SeparatorVariant_setReferenceFrame(c_SeparatorVariant* a_self,
+                                    const double* a_normal1,
+                                    const double* a_normal2,
+                                    const double* a_normal3);                                 
+
 void c_SeparatorVariant_copy(
     c_SeparatorVariant* a_self,
     const c_SeparatorVariant* a_other_planar_separator);
@@ -48,6 +65,15 @@ int c_SeparatorVariant_getNumberOfPlanes(const c_SeparatorVariant* a_self);
 
 void c_SeparatorVariant_getPlane(c_SeparatorVariant* a_self, const int* a_index,
                                  double* a_plane_listed);
+
+void c_SeparatorVariant_getAlignedCylinder(c_SeparatorVariant* a_self,
+                                       double* a_aligned_cylinder);
+
+void c_SeparatorVariant_getDatum(c_SeparatorVariant* a_self, double* a_datum);
+
+void c_SeparatorVariant_getReferenceFrame(c_SeparatorVariant* a_self, double* a_frame);
+
+double c_SeparatorVariant_getSurfaceArea(c_SeparatorVariant* a_self, c_RectCub* a_cell);
 
 bool c_SeparatorVariant_isFlipped(const c_SeparatorVariant* a_self);
 

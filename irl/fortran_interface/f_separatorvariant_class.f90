@@ -19,6 +19,7 @@ module f_SeparatorVariant_class
   use, intrinsic :: iso_c_binding
   use f_DefinedTypes
   use f_ObjServer_SeparatorVariant_class
+  use f_RectCub_class
   implicit none
 
   type, public, bind(C) :: c_SeparatorVariant
@@ -42,6 +43,16 @@ module f_SeparatorVariant_class
   interface setPlane
     module procedure SeparatorVariant_class_setPlane
   end interface
+  interface setAlignedCylinder
+    module procedure SeparatorVariant_class_setAlignedCylinder
+    module procedure SeparatorVariant_class_setAlignedCylinder_flip
+  end interface
+  interface setDatum
+    module procedure SeparatorVariant_class_setDatum
+  end interface
+  interface setReferenceFrame
+    module procedure SeparatorVariant_class_setReferenceFrame
+  end interface
   interface copy
     module procedure SeparatorVariant_class_copy
   end interface
@@ -50,6 +61,18 @@ module f_SeparatorVariant_class
   end interface
   interface getPlane
     module procedure SeparatorVariant_class_getPlane
+  end interface
+  interface getAlignedCylinder
+  module procedure SeparatorVariant_class_getAlignedCylinder
+  end interface
+  interface getDatum
+    module procedure SeparatorVariant_class_getDatum
+  end interface
+  interface getReferenceFrame
+    module procedure SeparatorVariant_class_getReferenceFrame
+  end interface
+  interface getSurfaceArea
+    module procedure SeparatorVariant_class_getSurfaceArea
   end interface
   interface isFlipped
     module procedure SeparatorVariant_class_isFlipped
@@ -103,6 +126,43 @@ module f_SeparatorVariant_class
       real(C_DOUBLE), intent(in) :: a_distance ! scalar
     end subroutine F_SeparatorVariant_setPlane
 
+    subroutine F_SeparatorVariant_setAlignedCylinder(this, b, r) &
+      bind(C, name="c_SeparatorVariant_setAlignedCylinder")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      real(C_DOUBLE), intent(in) :: b
+      real(C_DOUBLE), intent(in) :: r
+    end subroutine F_SeparatorVariant_setAlignedCylinder
+
+    subroutine F_SeparatorVariant_setAlignedCylinder_flip(this, b, r, f) &
+      bind(C, name="c_SeparatorVariant_setAlignedCylinder_flip")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      real(C_DOUBLE), intent(in) :: b
+      real(C_DOUBLE), intent(in) :: r
+      real(C_DOUBLE), intent(in) :: f
+    end subroutine F_SeparatorVariant_setAlignedCylinder_flip
+
+    subroutine F_SeparatorVariant_setDatum(this, a_datum) &
+      bind(C, name="c_SeparatorVariant_setDatum")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      real(C_DOUBLE), dimension(*), intent(in) :: a_datum !  dimension(1:3)
+    end subroutine F_SeparatorVariant_setDatum
+
+    subroutine F_SeparatorVariant_setReferenceFrame(this, a_normal1, a_normal2, a_normal3) &
+      bind(C, name="c_SeparatorVariant_setReferenceFrame")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      real(C_DOUBLE), dimension(*), intent(in) :: a_normal1 !  dimension(1:3)
+      real(C_DOUBLE), dimension(*), intent(in) :: a_normal2 !  dimension(1:3)
+      real(C_DOUBLE), dimension(*), intent(in) :: a_normal3 !  dimension(1:3)
+    end subroutine F_SeparatorVariant_setReferenceFrame
+
     subroutine F_SeparatorVariant_copy(this, a_other_SeparatorVariant) &
       bind(C, name="c_SeparatorVariant_copy")
       import
@@ -127,6 +187,39 @@ module f_SeparatorVariant_class
       integer(C_INT) :: a_index
       real(C_DOUBLE), dimension(*), intent(out) :: a_plane_listed
     end subroutine F_SeparatorVariant_getPlane
+
+    subroutine F_SeparatorVariant_getAlignedCylinder(this, a_aligned_Cylinder) &
+      bind(C, name="c_SeparatorVariant_getAlignedCylinder")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      real(C_DOUBLE), dimension(*), intent(out) :: a_aligned_Cylinder
+    end subroutine F_SeparatorVariant_getAlignedCylinder
+
+    subroutine F_SeparatorVariant_getDatum(this, a_datum) &
+      bind(C, name="c_SeparatorVariant_getDatum")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      real(C_DOUBLE), dimension(*), intent(out) :: a_datum
+    end subroutine F_SeparatorVariant_getDatum
+
+    subroutine F_SeparatorVariant_getReferenceFrame(this, a_frame) &
+      bind(C, name="c_SeparatorVariant_getReferenceFrame")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      real(C_DOUBLE), dimension(*), intent(out) :: a_frame
+    end subroutine F_SeparatorVariant_getReferenceFrame
+
+    function F_SeparatorVariant_getSurfaceArea(this, a_cuboid) result(a_area) &
+      bind(C, name="c_SeparatorVariant_getSurfaceArea")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      type(c_RectCub), intent(in)  :: a_cuboid
+      real(C_DOUBLE) :: a_area
+    end function F_SeparatorVariant_getSurfaceArea
 
     function F_SeparatorVariant_isFlipped(this) result(a_flipped) &
       bind(C, name="c_SeparatorVariant_isFlipped")
@@ -190,6 +283,39 @@ module f_SeparatorVariant_class
       call F_SeparatorVariant_setPlane(this%c_object, a_plane_index_to_set, a_normal, a_distance)
     end subroutine SeparatorVariant_class_setPlane
 
+    subroutine SeparatorVariant_class_setAlignedCylinder(this, b, r)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      real(IRL_double), intent(in) :: b
+      real(IRL_double), intent(in) :: r
+      call F_SeparatorVariant_setAlignedCylinder(this%c_object, b, r)
+    end subroutine SeparatorVariant_class_setAlignedCylinder
+
+    subroutine SeparatorVariant_class_setAlignedCylinder_flip(this, b, r, f)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      real(IRL_double), intent(in) :: b
+      real(IRL_double), intent(in) :: r
+      real(IRL_double), intent(in) :: f
+      call F_SeparatorVariant_setAlignedCylinder_flip(this%c_object, b, r, f)
+    end subroutine SeparatorVariant_class_setAlignedCylinder_flip
+
+    subroutine SeparatorVariant_class_setDatum(this, a_datum)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      real(IRL_double), dimension(1:3), intent(in) :: a_datum
+      call F_SeparatorVariant_setDatum(this%c_object, a_datum)
+    end subroutine SeparatorVariant_class_setDatum
+
+    subroutine SeparatorVariant_class_setReferenceFrame(this, a_normal1, a_normal2, a_normal3)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      real(IRL_double), dimension(1:3), intent(in) :: a_normal1
+      real(IRL_double), dimension(1:3), intent(in) :: a_normal2
+      real(IRL_double), dimension(1:3), intent(in) :: a_normal3
+      call F_SeparatorVariant_setReferenceFrame(this%c_object, a_normal1, a_normal2, a_normal3)
+    end subroutine SeparatorVariant_class_setReferenceFrame
+
     subroutine SeparatorVariant_class_copy(this, a_other_SeparatorVariant)
       implicit none
       type(SeparatorVariant_type), intent(inout) :: this
@@ -211,6 +337,36 @@ module f_SeparatorVariant_class
       real(IRL_double), dimension(4) :: a_plane_listed
       call F_SeparatorVariant_getPlane(this%c_object, a_index, a_plane_listed)
     end function SeparatorVariant_class_getPlane
+
+    function SeparatorVariant_class_getAlignedCylinder(this) result(a_aligned_Cylinder)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      real(IRL_double), dimension(1:3) :: a_aligned_Cylinder
+      call F_SeparatorVariant_getAlignedCylinder(this%c_object, a_aligned_Cylinder)
+    end function SeparatorVariant_class_getAlignedCylinder
+
+    function SeparatorVariant_class_getDatum(this) result(a_datum)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      real(IRL_double), dimension(1:3) :: a_datum
+      call F_SeparatorVariant_getDatum(this%c_object, a_datum)
+    end function SeparatorVariant_class_getDatum
+
+    function SeparatorVariant_class_getReferenceFrame(this) result(a_frame)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      real(IRL_double), dimension(1:9) :: a_frame
+      call F_SeparatorVariant_getReferenceFrame(this%c_object, a_frame)
+    end function SeparatorVariant_class_getReferenceFrame
+
+    function SeparatorVariant_class_getSurfaceArea(this, a_cuboid) result(a_area)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      type(RectCub_type), intent(in) :: a_cuboid
+      real(IRL_double) :: a_area
+      a_area = F_SeparatorVariant_getSurfaceArea(this%c_object, a_cuboid%c_object)
+      return
+    end function SeparatorVariant_class_getSurfaceArea
 
     function SeparatorVariant_class_isFlipped(this) result(a_flipped)
       implicit none

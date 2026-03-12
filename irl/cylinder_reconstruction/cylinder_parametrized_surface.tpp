@@ -26,6 +26,16 @@
 
 namespace IRL {
 
+inline const std::vector<int> CylinderParametrizedSurfaceOutput::get_indexes_of_flip(void) const
+{
+  return indexes_of_flip_m;
+}
+
+inline const std::vector<Cylinder> CylinderParametrizedSurfaceOutput::getCylinder(
+    void) const {
+  return cylinder_m;
+}
+
 inline Normal computeNormalizedTangentAtPoint(
     const AlignedCylinder& a_cylinder, const Normal& a_plane_normal,
     const Pt& a_pt) {
@@ -1545,27 +1555,20 @@ inline void CylinderParametrizedSurfaceOutput::triangulate_fromPtr(
         }
 
         /* Remove duplicates */
-        UnsignedIndex_t id0 = 0;
-        do {
-          UnsignedIndex_t id1 = (id0 + 1) % points.size();
-          if ((points[id1].x() - points[id0].x()) *
-                      (points[id1].x() - points[id0].x()) +
-                  (points[id1].y() - points[id0].y()) *
-                      (points[id1].y() - points[id0].y()) <
-              1.0e12 * DBL_EPSILON * DBL_EPSILON) {
-            // myfile << std::setprecision(16) << std::scientific
-            //        << "Removing duplicate " << id1 << " at " <<
-            //        points[id1].x()
-            //        << ", " << points[id1].y() << " too close to " << id0
-            //        << " at "
-            //        << points[id0].x() << ", " << points[id0].y() <<
-            //        ".\n";
-            points.erase(points.begin() + id1);
-            continue;
-          } else {
-            id0 = id1;
-          }
-        } while (id0 != 0);
+        if (points.size() > 1) {
+            auto points_are_close = [](const Point& p1, const Point& p2) {
+                const double dx = p1.x() - p2.x();
+                const double dy = p1.y() - p2.y();
+                return (dx * dx + dy * dy) < 1.0e-14;
+            };
+
+            auto last = std::unique(points.begin(), points.end(), points_are_close);
+            points.erase(last, points.end());
+
+            if (points.size() > 1 && points_are_close(points.front(), points.back())) {
+                points.pop_back();
+            }
+        }
 
         /* Create constraints */
         if (points.size() >= 3 &&
@@ -2143,7 +2146,7 @@ inline std::ostream& operator<<(
   for (UnsignedIndex_t i = 0; i < a_parametrized_surface.size(); ++i) {
     out << a_parametrized_surface[i];
     if (i < a_parametrized_surface.size() - 1) out << std::endl;
-  }
+  }std::cout << "hi6" << std::endl;
   return out;
 }
 

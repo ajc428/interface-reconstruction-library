@@ -44,7 +44,7 @@ void ProgressiveRadiusSolverCylinder<CellType>::solve(
 
 template <class CellType>
 Cylinder ProgressiveRadiusSolverCylinder<CellType>::getCylinder(void) {
-  reconstruction_m.setAlignedCylinder(AlignedCylinder({b_m, r_m}));
+  reconstruction_m.setAlignedCylinder(AlignedCylinder(std::array<double, 3>{b_m, r_m, f_m}));
   return reconstruction_m;
 }
 
@@ -60,6 +60,7 @@ void ProgressiveRadiusSolverCylinder<CellType>::solveForRadius(
   // Move cell to local frame of reference of the paraboloid
   const double b = reconstruction_m.getAlignedCylinder().b();
   const double radius = reconstruction_m.getAlignedCylinder().r();
+  f_m = reconstruction_m.getAlignedCylinder().f();
 
   double interval_min = 0.0;
   double interval_max = radius;
@@ -67,13 +68,24 @@ void ProgressiveRadiusSolverCylinder<CellType>::solveForRadius(
   double vfrac_max =
       getVolumeMoments<Volume>(copy_cell, reconstruction_m) / cell_volume;
   UnsignedIndex_t iter = 0;
-  while (iter < 40 && vfrac_max < 1.0) {
-    interval_max *= 2.0;
-    reconstruction_m.setAlignedCylinder(AlignedCylinder(
-        {b < 0.0 ? b * interval_max / radius : b, interval_max}));
-    vfrac_max =
-        getVolumeMoments<Volume>(copy_cell, reconstruction_m) / cell_volume;
-    iter++;
+  if (f_m > 0) {
+    while (iter < 40 && vfrac_max < 1.0) {
+      interval_max *= 2.0;
+      reconstruction_m.setAlignedCylinder(AlignedCylinder(
+          std::array<double, 3>{b < 0.0 ? b * interval_max / radius : b, interval_max, f_m}));
+      vfrac_max =
+          getVolumeMoments<Volume>(copy_cell, reconstruction_m) / cell_volume;
+      iter++;
+    }
+  } else {
+    while (iter < 40 && vfrac_max > 0.0) {
+      interval_max *= 2.0;
+      reconstruction_m.setAlignedCylinder(AlignedCylinder(
+          std::array<double, 3>{b < 0.0 ? b * interval_max / radius : b, interval_max, f_m}));
+      vfrac_max =
+          getVolumeMoments<Volume>(copy_cell, reconstruction_m) / cell_volume;
+      iter++;
+    }
   }
 
   // Perform bisection since secant failed to find answer within tolerance.
@@ -83,18 +95,31 @@ void ProgressiveRadiusSolverCylinder<CellType>::solveForRadius(
   for (UnsignedIndex_t iter = 0; iter < max_bisection_iter; ++iter) {
     bounding_values[1] = 0.5 * (bounding_values[0] + bounding_values[2]);
     reconstruction_m.setAlignedCylinder(AlignedCylinder(
-        {b < 0.0 ? b * bounding_values[1] / radius : b, bounding_values[1]}));
+        std::array<double, 3>{b < 0.0 ? b * bounding_values[1] / radius : b, bounding_values[1], f_m}));
     const double vfrac_cut =
         getVolumeMoments<Volume>(copy_cell, reconstruction_m) / cell_volume;
-    if (vfrac_cut > target_volume_fraction_m + volume_fraction_tolerance_m) {
-      bounding_values[2] = bounding_values[1];
-    } else if (vfrac_cut <
-               target_volume_fraction_m - volume_fraction_tolerance_m) {
-      bounding_values[0] = bounding_values[1];
+    if (f_m > 0) {
+      if (vfrac_cut > target_volume_fraction_m + volume_fraction_tolerance_m) {
+        bounding_values[2] = bounding_values[1];
+      } else if (vfrac_cut <
+                target_volume_fraction_m - volume_fraction_tolerance_m) {
+        bounding_values[0] = bounding_values[1];
+      } else {
+        r_m = bounding_values[1];
+        b_m = b < 0.0 ? b * bounding_values[1] / radius : b;
+        return;
+      }
     } else {
-      r_m = bounding_values[1];
-      b_m = b < 0.0 ? b * bounding_values[1] / radius : b;
-      return;
+      if (vfrac_cut > target_volume_fraction_m + volume_fraction_tolerance_m) {
+        bounding_values[0] = bounding_values[1];
+      } else if (vfrac_cut <
+                target_volume_fraction_m - volume_fraction_tolerance_m) {
+        bounding_values[2] = bounding_values[1];
+      } else {
+        r_m = bounding_values[1];
+        b_m = b < 0.0 ? b * bounding_values[1] / radius : b;
+        return;
+      }
     }
   }
 

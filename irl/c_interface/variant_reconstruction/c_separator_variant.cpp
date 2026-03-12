@@ -70,6 +70,57 @@ void c_SeparatorVariant_setPlane(c_SeparatorVariant* a_self,
   }
 }
 
+void c_SeparatorVariant_setAlignedCylinder(c_SeparatorVariant* a_self,
+                                 const double* b,
+                                 const double* r) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  a_self->obj_ptr->setToCylinder();
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    separator->setAlignedCylinder(IRL::AlignedCylinder(std::array<double,2>{*b,*r}));
+  }
+}
+
+void c_SeparatorVariant_setAlignedCylinder_flip(c_SeparatorVariant* a_self,
+                                 const double* b,
+                                 const double* r,
+                                 const double* f) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  a_self->obj_ptr->setToCylinder();
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    separator->setAlignedCylinder(IRL::AlignedCylinder(std::array<double,3>{*b,*r,*f}));
+  }
+}
+
+void c_SeparatorVariant_setDatum(c_SeparatorVariant* a_self, const double* a_datum) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  a_self->obj_ptr->setToCylinder();
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    separator->setDatum(IRL::Pt::fromRawDoublePointer(a_datum));
+  }
+}
+
+void c_SeparatorVariant_setReferenceFrame(c_SeparatorVariant* a_self,
+                                    const double* a_normal1,
+                                    const double* a_normal2,
+                                    const double* a_normal3) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  a_self->obj_ptr->setToCylinder();
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    separator->setReferenceFrame(
+      IRL::ReferenceFrame(IRL::Normal::fromRawDoublePointer(a_normal1),
+                          IRL::Normal::fromRawDoublePointer(a_normal2),
+                          IRL::Normal::fromRawDoublePointer(a_normal3)));
+  }
+}
+
 void c_SeparatorVariant_copy(
     c_SeparatorVariant* a_self,
     const c_SeparatorVariant* a_other_planar_separator) {
@@ -96,10 +147,10 @@ void c_SeparatorVariant_getPlane(c_SeparatorVariant* a_self, const int* a_index,
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);
   assert(*a_index >= 0);
-  assert(static_cast<IRL::UnsignedIndex_t>(*a_index) <
-         a_self->obj_ptr->getNumberOfPlanes());
   if (IRL::PlanarSeparator* separator =
           std::get_if<IRL::PlanarSeparator>(a_self->obj_ptr)) {
+    assert(static_cast<IRL::UnsignedIndex_t>(*a_index) <
+         separator->getNumberOfPlanes());
     a_plane_listed[0] =
         (*separator)[static_cast<IRL::UnsignedIndex_t>(*a_index)].normal()[0];
     a_plane_listed[1] =
@@ -109,6 +160,63 @@ void c_SeparatorVariant_getPlane(c_SeparatorVariant* a_self, const int* a_index,
     a_plane_listed[3] =
         (*separator)[static_cast<IRL::UnsignedIndex_t>(*a_index)].distance();
   }
+}
+
+void c_SeparatorVariant_getAlignedCylinder(c_SeparatorVariant* a_self,
+                                       double* a_aligned_cylinder) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    a_aligned_cylinder[0] = separator->getAlignedCylinder().r();
+    a_aligned_cylinder[1] = separator->getAlignedCylinder().b();
+    a_aligned_cylinder[2] = separator->getAlignedCylinder().f();
+  }
+}
+
+void c_SeparatorVariant_getDatum(c_SeparatorVariant* a_self, double* a_datum) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    a_datum[0] = separator->getDatum()[0];
+    a_datum[1] = separator->getDatum()[1];
+    a_datum[2] = separator->getDatum()[2];
+  }
+}
+
+void c_SeparatorVariant_getReferenceFrame(c_SeparatorVariant* a_self, double* a_frame) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    a_frame[0] = separator->getReferenceFrame()[0][0];
+    a_frame[1] = separator->getReferenceFrame()[0][1];
+    a_frame[2] = separator->getReferenceFrame()[0][2];
+    a_frame[3] = separator->getReferenceFrame()[1][0];
+    a_frame[4] = separator->getReferenceFrame()[1][1];
+    a_frame[5] = separator->getReferenceFrame()[1][2];
+    a_frame[6] = separator->getReferenceFrame()[2][0];
+    a_frame[7] = separator->getReferenceFrame()[2][1];
+    a_frame[8] = separator->getReferenceFrame()[2][2];
+  }
+}
+
+double c_SeparatorVariant_getSurfaceArea(c_SeparatorVariant* a_self, c_RectCub* a_cell) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  assert(a_cell != nullptr);
+  assert(a_cell->obj_ptr != nullptr);
+  double area = 0.0;
+  if (IRL::Cylinder* separator =
+          std::get_if<IRL::Cylinder>(a_self->obj_ptr)) {
+    IRL::RectangularCuboid cube = (*a_cell->obj_ptr);
+    IRL::Cylinder cylinder = (*separator);
+    auto moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<
+        IRL::Volume, IRL::CylinderParametrizedSurfaceOutput>>(cube, cylinder);
+    area = moments.getSurface().getSurfaceArea();
+  }
+  return area;
 }
 
 bool c_SeparatorVariant_isFlipped(const c_SeparatorVariant* a_self) {
