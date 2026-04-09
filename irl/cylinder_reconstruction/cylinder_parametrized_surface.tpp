@@ -2146,7 +2146,7 @@ inline std::ostream& operator<<(
   for (UnsignedIndex_t i = 0; i < a_parametrized_surface.size(); ++i) {
     out << a_parametrized_surface[i];
     if (i < a_parametrized_surface.size() - 1) out << std::endl;
-  }std::cout << "hi6" << std::endl;
+  }
   return out;
 }
 
