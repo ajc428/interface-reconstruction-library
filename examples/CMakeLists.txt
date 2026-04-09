@@ -9,6 +9,7 @@ add_custom_target(examples_interface_reconstruction)
 add_custom_target(examples_plic_advector)
 add_custom_target(examples_cylinder_advector)
 add_custom_target(examples_vtk_output)
+add_custom_target(examples_new_advector)
 
 include(${PROJECT_SOURCE_DIR}/cmake/Utils/IRLAddExample.cmake)
 
@@ -23,3 +24,4 @@ add_subdirectory("./interface_reconstruction")
 add_subdirectory("./plic_advector")
 add_subdirectory("./cylinder_advector")
 add_subdirectory("./vtk_output")
+add_subdirectory("./new_advector")
