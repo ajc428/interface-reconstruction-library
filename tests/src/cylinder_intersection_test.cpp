@@ -135,7 +135,7 @@ TEST(CylinderIntersection, SISCPaperFig1) {
   const double normalization = 1.0 / (INVSQRTWO + 0.5);
 
   // Defining elliptic paraboloic
-  AlignedCylinder aligned_cylinder({1.0, 1.0});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{1.0, 1.0});
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -192,7 +192,7 @@ TEST(CylinderIntersection, SISCPaperFig1) {
 }
 
 TEST(CylinderIntersection, SISCPaperFig2) {
-  AlignedCylinder aligned_cylinder({1.0, 1.0});  // DO NOT CHANGE
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{1.0, 1.0});  // DO NOT CHANGE
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -298,7 +298,7 @@ TEST(CylinderIntersection, SISCPaperFig2) {
 }
 
 TEST(CylinderIntersection, SISCPaperFig2_M2) {
-  AlignedCylinder aligned_cylinder({1.0, 1.0});  // DO NOT CHANGE
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{1.0, 1.0});  // DO NOT CHANGE
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -417,7 +417,7 @@ TEST(CylinderIntersection, Debug1) {
       AddSurfaceOutput<VolumeMoments, CylinderParametrizedSurfaceOutput>;
 
   // Defining elliptic paraboloic
-  AlignedCylinder aligned_cylinder({2.0, 1.2});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{2.0, 1.2});
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -515,7 +515,7 @@ TEST(CylinderIntersection, Debug2) {
       AddSurfaceOutput<VolumeMoments, CylinderParametrizedSurfaceOutput>;
 
   // Defining elliptic paraboloic
-  AlignedCylinder aligned_cylinder({1.0, 1.0});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{1.0, 1.0});
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -583,7 +583,7 @@ TEST(CylinderIntersection, Debug2) {
 
 TEST(CylinderIntersection, DebugAMR) {
   // Defining elliptic paraboloic
-  AlignedCylinder aligned_cylinder({4.0, 1.0});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{4.0, 1.0});
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -632,7 +632,7 @@ TEST(HyperCylinderIntersection, SISCPaperFig1) {
       AddSurfaceOutput<VolumeMoments, CylinderParametrizedSurfaceOutput>;
 
   // Defining elliptic paraboloic
-  AlignedCylinder aligned_cylinder({-2.0, 0.1});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{-2.0, 0.1});
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -711,7 +711,7 @@ TEST(HyperCylinderIntersection, Debug) {
       AddSurfaceOutput<Volume, CylinderParametrizedSurfaceOutput>;
 
   // Defining elliptic paraboloic
-  AlignedCylinder aligned_cylinder({-1.0, 0.0});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{-1.0, 0.0});
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -770,7 +770,7 @@ TEST(HyperCylinderIntersection, Debug2) {
       AddSurfaceOutput<Volume, CylinderParametrizedSurfaceOutput>;
 
   // Defining elliptic paraboloic
-  AlignedCylinder aligned_cylinder({-2.0, 0.5});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{-2.0, 0.5});
   Pt datum(0, 0, 0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(), aligned_cylinder.r());
@@ -824,7 +824,7 @@ TEST(CylinderIntersection, VFracMatching) {
 
   // Defining random cylinder
   const AlignedCylinder aligned_cylinder(
-      {random_coeffs_b(eng), random_coeffs_r(eng)});
+      std::array<double, 2>{random_coeffs_b(eng), random_coeffs_r(eng)});
   const Pt datum(random_translation(eng), random_translation(eng),
                  random_translation(eng));
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
@@ -900,7 +900,7 @@ TEST(CylinderIntersection, SurfaceIntegrals) {
   std::uniform_real_distribution<double> random_radius(0.0, 1.0);
   const double radius = random_radius(eng);
   std::cout << "Radius = " << radius << std::endl;
-  const AlignedCylinder aligned_cylinder({1.0, radius * radius});
+  const AlignedCylinder aligned_cylinder(std::array<double, 2>{1.0, radius * radius});
   const Pt datum(0.0, 0.0, 0.0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   const Cylinder cylinder(datum, frame, aligned_cylinder.b(),
