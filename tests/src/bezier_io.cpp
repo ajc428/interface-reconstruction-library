@@ -95,7 +95,7 @@ TEST(BezierIO, CylinderInCube) {
   using VolumeMomentsAndSuface =
       AddSurfaceOutput<VolumeMoments, CylinderParametrizedSurfaceOutput>;
 
-  AlignedCylinder aligned_cylinder({1.0, 0.25});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{1.0, 0.25});
   Pt datum(0.0, 0.0, 0.0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(),
@@ -125,7 +125,7 @@ TEST(BezierIO, CylinderAndPlaneInCubes) {
   using VolumeMomentsAndSuface =
       AddSurfaceOutput<VolumeMoments, CylinderParametrizedSurfaceOutput>;
 
-  AlignedCylinder aligned_cylinder({1.0, 0.25});
+  AlignedCylinder aligned_cylinder(std::array<double, 2>{1.0, 0.25});
   Pt datum(0.0, 0.0, 0.0);
   ReferenceFrame frame(Normal(1, 0, 0), Normal(0, 1, 0), Normal(0, 0, 1));
   Cylinder cylinder(datum, frame, aligned_cylinder.b(),
