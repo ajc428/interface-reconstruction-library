@@ -10,33 +10,30 @@
 #ifndef IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_H_
 #define IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_H_
 
-#include <string>
-#include <iostream>
-#include <cstdlib>
 #include "irl/interface_reconstruction_methods/advected_plane_reconstruction.h"
 #include "irl/interface_reconstruction_methods/elvira.h"
+#include "irl/interface_reconstruction_methods/jibben.h"
+#include "irl/interface_reconstruction_methods/cylinder_reconstruction.h"
+#include "irl/interface_reconstruction_methods/jibben_neighborhood.h"
+#include "irl/interface_reconstruction_methods/cylinder_neighborhood.h"
 #include "irl/interface_reconstruction_methods/lvira_neighborhood.h"
 #include "irl/interface_reconstruction_methods/lvira_optimization.h"
 #include "irl/interface_reconstruction_methods/mof.h"
-#include "irl/interface_reconstruction_methods/r2p_optimization.h"
 #include "irl/interface_reconstruction_methods/optimization_behavior.h"
+#include "irl/interface_reconstruction_methods/r2p_optimization.h"
 #include "irl/interface_reconstruction_methods/reconstruction_cleaning.h"
 #include "irl/planar_reconstruction/planar_separator.h"
-//#include "irl/machine_learning_reconstruction/trainer.h"
-//s#include "irl/machine_learning_reconstruction/data_gen.h"
-//#include "irl/machine_learning_reconstruction/trainer_cuda.h"
 
 namespace IRL {
 
-// IRL::trainer t = IRL::trainer(4);
-// IRL::trainer t2 = IRL::trainer(5);
-//IRL::trainer t2 = IRL::trainer(4);
-//IRL::trainer b = IRL::trainer(6);
-/*IRL::trainer_cuda tc = IRL::trainer_cuda(4);
-IRL::trainer_cuda tc2 = IRL::trainer_cuda(4);
-IRL::trainer_cuda bc = IRL::trainer_cuda(6);*/
-//IRL::Normal previous = IRL::Normal();
-//double volume_loss = 0;
+/// \brief Perform Cylinder reconstruction for a 3D problem.
+inline Cylinder reconstructionWithCylinder3D(
+    const cylinderNeighborhood& a_neighborhood_geometry, const int flip);
+
+/// \brief Perform Jibben reconstruction for a 3D problem.
+inline Paraboloid reconstructionWithJibben3D(
+    const JibbenNeighborhood& a_neighborhood_geometry,
+    const double a_delta = -1.0);
 
 /// \brief Perform R2P reconstruction for a 2D problem in the x-y plane.
 template <class CellType>
@@ -50,7 +47,7 @@ inline PlanarSeparator reconstructionWithR2P3D(
     const R2PNeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction);
 
-/// \brief Perform R2P reconstruction with user-defined weights 
+/// \brief Perform R2P reconstruction with user-defined weights
 /// for a 3D problem.
 template <class CellType>
 inline PlanarSeparator reconstructionWithR2P3D(
@@ -58,7 +55,7 @@ inline PlanarSeparator reconstructionWithR2P3D(
     PlanarSeparator a_initial_reconstruction,
     const R2PWeighting& a_r2p_weighting);
 
-/// \brief Perform R2P reconstruction with user-defined optimization 
+/// \brief Perform R2P reconstruction with user-defined optimization
 /// parameters and weights for a 3D problem.
 template <class CellType>
 inline PlanarSeparator reconstructionWithR2P3D(
@@ -75,25 +72,6 @@ inline PlanarSeparator reconstructionWithELVIRA2D(
 inline PlanarSeparator reconstructionWithELVIRA3D(
     const ELVIRANeighborhood& a_neighborhood_geometry);
 
-    /// \brief Perform ELVIRA Reconstruction for 3D.
-inline PlanarSeparator reconstructionWithELVIRA3D(
-    const ELVIRANeighborhood& a_neighborhood_geometry, double* weights);
-
-// /// \brief Perform ML Reconstruction for 3D.
-// template <class CellType>
-// inline PlanarSeparator reconstructionWithML3(
-//     /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const R2PNeighborhood<CellType>& r2pnh, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
-
-// /// \brief Perform ML Reconstruction for 3D.
-// template <class CellType>
-// inline PlanarSeparator reconstructionWithML2(
-//     /*const ELVIRANeighborhood& a_neighborhood_geometry, */const LVIRANeighborhood<CellType>& a_neighborhood_geometry, const double* a_liquid_centroids, const double* a_gas_centroids, PlanarSeparator p, int* flag);
-
-// inline PlanarSeparator reconstructionWithML(const double* normal, const double* vf_center, const double* cell_bound, PlanarSeparator p); 
-
-// void loadML(std::string name/*, std::string name1, std::string name2*/);
-// void loadML2(std::string name/*, std::string name1, std::string name2*/);
-
 /// \brief Perform LVIRA Reconstruction for 2D.
 template <class CellType>
 inline PlanarSeparator reconstructionWithLVIRA2D(
@@ -105,11 +83,6 @@ template <class CellType>
 inline PlanarSeparator reconstructionWithLVIRA3D(
     const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
     PlanarSeparator a_initial_reconstruction);
-
-template <class CellType>
-inline PlanarSeparator reconstructionWithLVIRA3D(
-    const LVIRANeighborhood<CellType>& a_neighborhood_geometry,
-    PlanarSeparator a_initial_reconstruction, double* weights);
 
 /// \brief Perform MOF Reconstruction for 2D with optional weights.
 /// Defaults to even weighting.
@@ -203,4 +176,4 @@ PlanarSeparator reconstructionWithAdvectedNormalsDebug(
 
 #include "irl/interface_reconstruction_methods/reconstruction_interface.tpp"
 
-#endif // IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_H_
+#endif  // IRL_INTERFACE_RECONSTRUCTION_METHODS_RECONSTRUCTION_INTERFACE_H_

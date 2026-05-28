@@ -666,7 +666,7 @@ intersectPolyhedronWithCylinderAMR(SegmentedHalfEdgePolyhedronType* a_polytope,
 
   if (elliptic) {
     const auto rotated_cylinder =
-        AlignedCylinder({1.0 / a_cylinder.b(), a_cylinder.r() / a_cylinder.b()});
+        AlignedCylinder(std::array<double, 2>{1.0 / a_cylinder.b(), a_cylinder.r() / a_cylinder.b()});
 
     double vector_norm = std::sqrt(1.0 + a_cylinder.b());
     const double b1 = sqrt(a_cylinder.b()) / vector_norm;

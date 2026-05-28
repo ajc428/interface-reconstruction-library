@@ -10,14 +10,72 @@
 #ifndef IRL_PARABOLOID_RECONSTRUCTION_PARABOLOID_PARAMETRIZED_SURFACE_TPP_
 #define IRL_PARABOLOID_RECONSTRUCTION_PARABOLOID_PARAMETRIZED_SURFACE_TPP_
 
+#include <Eigen/Dense>
 #include <fstream>
 #include <iomanip>
 
 #include "external/NumericalIntegration/NumericalIntegration.h"
+#include "irl/generic_cutting/generic_cutting.h"
+#include "irl/generic_cutting/paraboloid_intersection/paraboloid_intersection.h"
+#include "irl/generic_cutting/quadratic_intersection/quadratic_intersection.h"
 #include "irl/paraboloid_reconstruction/paraboloid_parametrized_surface.h"
 #include "irl/quadratic_reconstruction/parametrized_surface.h"
 
 namespace IRL {
+
+inline Normal computeNormalizedTangentAtPoint(
+    const AlignedParaboloid& a_paraboloid, const Normal& a_plane_normal,
+    const Pt& a_pt) {
+  Normal surface_normal = getParaboloidSurfaceNormal(a_paraboloid, a_pt);
+  surface_normal.approximatelyNormalize();
+  Normal tangent_at_pt = crossProduct(a_plane_normal, surface_normal);
+  if (squaredMagnitude(tangent_at_pt) < DBL_EPSILON * DBL_EPSILON) {
+    return Normal(0.0, 0.0, 0.0);
+  }
+  const double normal_correction = tangent_at_pt * a_plane_normal;
+  tangent_at_pt = tangent_at_pt - normal_correction * a_plane_normal;
+  tangent_at_pt.normalize();
+  return tangent_at_pt;
+}
+
+inline RationalBezierArc computeVerticalRationalBezierArc(
+    const AlignedParaboloid& a_paraboloid, const Pt& pt_0, const Pt& pt_1) {
+  const double DISTANCE_EPSILON = 1.0e2 * DBL_EPSILON;
+  const double ANGLE_EPSILON = 1.0e6 * DBL_EPSILON;
+
+  // Calculate edge vector and its normalized version
+  const Normal edge_vector = pt_1 - pt_0;
+  Normal edge_vector_normalized = edge_vector;
+  edge_vector_normalized.normalize();
+
+  const Normal plane_normal =
+      crossProduct(edge_vector_normalized, Normal(0.0, 0.0, 1.0));
+  Normal tangent_0 =
+      computeNormalizedTangentAtPoint(a_paraboloid, plane_normal, pt_0);
+  Normal tangent_1 =
+      computeNormalizedTangentAtPoint(a_paraboloid, plane_normal, pt_1);
+
+  // Compute dot product between normalized edge and end-point tangents
+  double tgt0_dot_edge = tangent_0 * edge_vector_normalized;
+  double tgt1_dot_edge = tangent_1 * edge_vector_normalized;
+  if (tgt0_dot_edge < 0.0) {
+    tgt0_dot_edge = -tgt0_dot_edge;
+    tangent_0 = -tangent_0;
+  }
+  if (tgt1_dot_edge > 0.0) {
+    tgt1_dot_edge = -tgt1_dot_edge;
+    tangent_1 = -tangent_1;
+  }
+
+  if (magnitude(tangent_0) < 0.9 || magnitude(tangent_0) < 0.9 ||
+      (magnitude(edge_vector) < DISTANCE_EPSILON &&
+       fabs(1.0 - tgt0_dot_edge) < ANGLE_EPSILON &&
+       fabs(1.0 + tgt1_dot_edge) < ANGLE_EPSILON)) {
+    return RationalBezierArc(pt_0, 0.5 * (pt_0 + pt_1), pt_1, 0.0);
+  }
+  return RationalBezierArc(pt_0, tangent_0, pt_1, tangent_1, plane_normal,
+                           a_paraboloid);
+}
 
 template <class VertexList>
 void projectOnSurface(VertexList& vertices, const AlignedParaboloid paraboloid,
@@ -317,23 +375,6 @@ class ArcContributionToParaboloidSurfaceArea_Functor {
                                     4. * (b * b) * (pt[1] * pt[1]))) /
                  std::fabs(a)) /
             4.;
-        if (std::isnan(primitive)) {
-          std::cout << "Pr = " << pt << std::endl;
-          std::cout << "Der = " << der << std::endl;
-          std::cout << "a = " << a << std::endl;
-          std::cout << "b = " << b << std::endl;
-          std::cout << "Arc: weight = " << arc_m.weight() << std::endl;
-          std::cout << "Arc: start = " << arc_m.start_point() << std::endl;
-          std::cout << "Arc: ctrl  = " << arc_m.control_point() << std::endl;
-          std::cout << "Arc: end   = " << arc_m.end_point() << std::endl;
-          std::cout << "Primitive is NaN" << std::endl;
-          exit(1);
-        }
-        if (std::isnan(der[1])) {
-          std::cout << "der[1] is NaN" << std::endl;
-          exit(1);
-        }
-
         return primitive * der[1];
       } else {
         const double primitive =
@@ -346,23 +387,6 @@ class ArcContributionToParaboloidSurfaceArea_Functor {
                                      4. * (b * b) * (pt[1] * pt[1]))) /
                   std::fabs(b)) /
             (4.);
-        if (std::isnan(primitive)) {
-          std::cout << "Pr = " << pt << std::endl;
-          std::cout << "Der = " << der << std::endl;
-          std::cout << "a = " << a << std::endl;
-          std::cout << "b = " << b << std::endl;
-          std::cout << "Arc: weight = " << arc_m.weight() << std::endl;
-          std::cout << "Arc: start = " << arc_m.start_point() << std::endl;
-          std::cout << "Arc: ctrl  = " << arc_m.control_point() << std::endl;
-          std::cout << "Arc: end   = " << arc_m.end_point() << std::endl;
-          std::cout << "Primitive is NaN" << std::endl;
-          exit(1);
-        }
-        if (std::isnan(der[0])) {
-          std::cout << "der[0] is NaN" << std::endl;
-          exit(1);
-        }
-
         return primitive * der[0];
       }
     }
@@ -840,6 +864,368 @@ ParaboloidParametrizedSurfaceOutput::getGaussianCurvatureNonAligned(
   return this->getGaussianCurvatureAligned(aligned_pt);
 }
 
+inline double ParaboloidParametrizedSurfaceOutput::getIntegrator(
+    const F a_F, const bool useAdaptive,
+    const Eigen::Integrator<double, 2>::QuadratureRule quadratureRule,
+    const int npts) {
+  double result = 0.0;
+
+  // paraboloid params
+  const auto& datum = this->getParaboloid().getDatum();
+  const auto& frame = this->getParaboloid().getReferenceFrame();
+  const auto& a = this->getParaboloid().getAlignedParaboloid().a();
+  const auto& b = this->getParaboloid().getAlignedParaboloid().b();
+
+  // reference point for pseduo-triangles
+  Pt x_ref(0., 0., 0.);
+  for (const auto& arc : arc_list_m) {
+    x_ref += arc.start_point();
+  }
+  x_ref /= static_cast<double>(arc_list_m.size());
+
+  // intgerating f(x) over clipped paraboloid
+  for (const auto& arc : arc_list_m) {
+    //  points for bezier quadrilaterals
+    Pt A = arc.start_point();
+    Pt B = arc.point(0.5);
+    Pt C = arc.end_point();
+    Pt E = x_ref;
+    Pt D = 0.5 * (E + C);
+    Pt F = 0.5 * (A + E);
+    Pt G = 1. / 3. * (A + C + E);
+
+    // arcs for bezier quadrilaterals
+    auto [arc_1, arc_2] = arc.split();
+    RationalBezierArc arc_3(C, 0.5 * (C + D), D, 1.0);
+    RationalBezierArc arc_4(D, 0.5 * (D + E), E, 1.0);
+    RationalBezierArc arc_5(E, 0.5 * (E + F), F, 1.0);
+    RationalBezierArc arc_6(F, 0.5 * (F + A), A, 1.0);
+    RationalBezierArc arc_7(B, 0.5 * (B + G), G, 1.0);
+    RationalBezierArc arc_8(D, 0.5 * (D + G), G, 1.0);
+    RationalBezierArc arc_9(F, 0.5 * (F + G), G, 1.0);
+
+    // bezier quadrilaterals
+    std::vector<RationalBezierArc> quad_1 = {arc_1, arc_7, arc_9, -arc_6};
+    std::vector<RationalBezierArc> quad_2 = {arc_2, arc_3, -arc_8, arc_7};
+    std::vector<RationalBezierArc> quad_3 = {arc_4, arc_5, -arc_9, arc_8};
+    std::vector<std::vector<RationalBezierArc>> quad_list = {quad_1, quad_2,
+                                                             quad_3};
+
+    for (const auto& quad : quad_list) {
+      const double a_bound = 0.0;
+      const double b_bound = 1.0;
+      auto functor = [=](const double u, const double v) {
+        CoonsPatch coons(quad[0], quad[1], quad[2], quad[3]);
+        Pt coons_val = coons.evaluate(u, v);
+        double det_J = coons.detJacobian(u, v);
+        double dS_factor =
+            std::sqrt(1. + 4. * a * a * coons_val[0] * coons_val[0] +
+                      4. * b * b * coons_val[1] * coons_val[1]);
+        return (a_F(coons_val) * dS_factor * det_J);
+      };
+      double integral = 0.0;
+      if (useAdaptive) {
+        const std::size_t max_nsubdivisions = 256;
+        const double epsabs = 10.0 * DBL_EPSILON;
+        const double epsrel = 10.0 * DBL_EPSILON;
+        for (std::size_t i = 1; i <= max_nsubdivisions; i *= 4) {
+          Eigen::Integrator<double, 2> integrator(i);
+          integral = integrator.quadratureAdaptive(
+              functor, a_bound, b_bound, epsabs, epsrel, quadratureRule);
+        }
+      } else {
+        GaussLegendreIntegrator<double, 2> integrator(npts);
+        integral =
+            integrator.integrate(functor, a_bound, a_bound, b_bound, b_bound);
+      }
+      result += integral;
+    }
+  }
+  return result;
+}
+
+template <std::size_t ORDER>
+inline GeneralMoments3D<ORDER>
+ParaboloidParametrizedSurfaceOutput::getSurfaceMoments() {
+  static_assert(ORDER >= 0 && ORDER <= 2,
+                "ONLY ORDER = 0, 1, or 2 supported for paraboloids");
+  GeneralMoments3D<ORDER> moments;
+
+  const auto& a = this->getParaboloid().getAlignedParaboloid().a();
+  const auto& b = this->getParaboloid().getAlignedParaboloid().b();
+  const auto& datum = this->getParaboloid().getDatum();
+  const auto& ref_frame = this->getParaboloid().getReferenceFrame();
+
+  const Eigen::Matrix<double, 3, 1> D{datum[0], datum[1], datum[2]};
+  const Eigen::Matrix<double, 3, 3> R{
+      {ref_frame[0][0], ref_frame[1][0], ref_frame[2][0]},
+      {ref_frame[0][1], ref_frame[1][1], ref_frame[2][1]},
+      {ref_frame[0][2], ref_frame[1][2], ref_frame[2][2]}};
+
+  auto z = [a, b](const Pt& p) { return -a * p[0] * p[0] - b * p[1] * p[1]; };
+
+  const double M0 = this->getIntegrator([](const Pt&) { return 1.0; });
+  moments[0] = M0;
+  if constexpr (ORDER == 0) return moments;
+
+  const double M1x = this->getIntegrator([](const Pt& p) { return p[0]; });
+  const double M1y = this->getIntegrator([](const Pt& p) { return p[1]; });
+  const double M1z = this->getIntegrator([&](const Pt& p) { return z(p); });
+
+  const Eigen::Matrix<double, 3, 1> M1prime{M1x, M1y, M1z};
+  const Eigen::Matrix<double, 3, 1> M1 = R * M1prime + M0 * D;
+
+  moments[1] = M1[0];
+  moments[2] = M1[1];
+  moments[3] = M1[2];
+  if constexpr (ORDER == 1) return moments;
+
+  const double Mxx =
+      this->getIntegrator([](const Pt& p) { return p[0] * p[0]; });
+  const double Mxy =
+      this->getIntegrator([](const Pt& p) { return p[0] * p[1]; });
+  const double Mxz =
+      this->getIntegrator([&](const Pt& p) { return p[0] * z(p); });
+  const double Myy =
+      this->getIntegrator([](const Pt& p) { return p[1] * p[1]; });
+  const double Myz =
+      this->getIntegrator([&](const Pt& p) { return p[1] * z(p); });
+  const double Mzz =
+      this->getIntegrator([&](const Pt& p) { return z(p) * z(p); });
+
+  const Eigen::Matrix<double, 3, 3> M2prime{
+      {Mxx, Mxy, Mxz}, {Mxy, Myy, Myz}, {Mxz, Myz, Mzz}};
+
+  const Eigen::Matrix<double, 3, 3> M2 =
+      R * M2prime * R.transpose() + R * (M1prime * D.transpose()) +
+      (D * M1prime.transpose()) * R.transpose() + M0 * (D * D.transpose());
+
+  moments[4] = M2(0, 0);
+  moments[5] = M2(0, 1);
+  moments[6] = M2(0, 2);
+  moments[7] = M2(1, 1);
+  moments[8] = M2(1, 2);
+  moments[9] = M2(2, 2);
+  return moments;
+}
+
+inline MixedPolygonBezierSurface
+ParaboloidParametrizedSurfaceOutput::getQuadraticBezierTriangleApprox(void) {
+  return std::move(this->getBezierTriangleApprox(2));
+}
+
+inline MixedPolygonBezierSurface
+ParaboloidParametrizedSurfaceOutput::getCubicBezierTriangleApprox(void) {
+  return std::move(this->getBezierTriangleApprox(3));
+}
+
+inline MixedPolygonBezierSurface
+ParaboloidParametrizedSurfaceOutput::getBezierTriangleApprox(
+    const UnsignedIndex_t a_order) {
+  // Initialize bezier surface
+  MixedPolygonBezierSurface bezier_surface;
+
+  // First, let's generate list of closed curves
+  const UnsignedIndex_t nArcs = arc_list_m.size();
+  std::vector<std::vector<UnsignedIndex_t>> list_of_closed_curves(0);
+  std::vector<bool> visited(nArcs, false);
+  bool valid_curves = true;
+  for (UnsignedIndex_t t = 0; t < nArcs; ++t) {
+    if (visited[t]) {
+      continue;
+    }
+    visited[t] = true;
+    // Start with next available arc
+    list_of_closed_curves.push_back(std::vector<UnsignedIndex_t>({t}));
+    const std::uintptr_t start_id = arc_list_m[t].start_point_id();
+    std::uintptr_t end_id = arc_list_m[t].end_point_id();
+    UnsignedIndex_t counter = 0;
+    while (end_id != start_id) {
+      for (UnsignedIndex_t e = t + 1; e < nArcs; ++e) {
+        if (arc_list_m[e].start_point_id() == end_id) {
+          visited[e] = true;
+          list_of_closed_curves.back().push_back(e);
+          end_id = arc_list_m[e].end_point_id();
+          break;
+        }
+      }
+      if (++counter > nArcs) {
+        valid_curves = false;
+        break;
+      }
+    }
+  }
+
+  // Only if we have found closed curves, then produce bezier triangle
+  // approximation
+  if (valid_curves) {
+    const UnsignedIndex_t nCurves = list_of_closed_curves.size();
+    std::vector<std::vector<std::array<double, 2>>> polygon(nCurves);
+
+    UnsignedIndex_t npoints = 0;
+    for (UnsignedIndex_t i = 0; i < nCurves; ++i) {
+      const int nLocalArcs = list_of_closed_curves[i].size();
+      for (UnsignedIndex_t j = 0; j < nLocalArcs; ++j) {
+        const UnsignedIndex_t arc_id = list_of_closed_curves[i][j];
+        const Pt& pt = arc_list_m[arc_id].start_point();
+        const UnsignedIndex_t next_id = npoints + (j + 1) % nLocalArcs;
+        polygon[i].push_back({pt[0], pt[1]});
+      }
+      npoints += nLocalArcs;
+    }
+
+    std::vector<Pt> points(npoints);
+    std::vector<double> weights(npoints);
+    std::vector<std::tuple<UnsignedIndex_t, UnsignedIndex_t, UnsignedIndex_t>>
+        info(npoints);
+    UnsignedIndex_t count = 0;
+    npoints = 0;
+    for (UnsignedIndex_t i = 0; i < nCurves; ++i) {
+      const int nLocalArcs = list_of_closed_curves[i].size();
+      for (UnsignedIndex_t j = 0; j < nLocalArcs; ++j) {
+        const UnsignedIndex_t arc_id = list_of_closed_curves[i][j];
+        points[count] = arc_list_m[arc_id].start_point();
+        weights[count] = 1.0;
+        info[count++] = std::make_tuple(npoints + (j + 1) % nLocalArcs, i, j);
+      }
+      npoints += nLocalArcs;
+    }
+
+    // Compute earcut triangulation of region constrained by closed curves
+    std::vector<UnsignedIndex_t> indices =
+        mapbox::earcut<UnsignedIndex_t>(polygon);
+
+    // Convert flat triangles into quadratic rational Bezier triangle
+    const UnsignedIndex_t ntriangles = indices.size() / 3;
+    if (a_order == 2) {
+      std::vector<std::array<UnsignedIndex_t, 6>> bezier_triangles(ntriangles);
+      std::vector<std::array<UnsignedIndex_t, 3>> boundaries(npoints);
+      const auto& aligned_p = paraboloid_m.getAlignedParaboloid();
+      for (UnsignedIndex_t i = 0; i < indices.size() / 3; ++i) {
+        for (int j = 0; j < 3; j++) {
+          bezier_triangles[i][j] = indices[3 * i + j];
+        }
+        for (int j = 0; j < 3; j++) {
+          const int v0 = indices[3 * i + j];
+          const int v1 = indices[3 * i + (j + 1) % 3];
+          if (v1 == std::get<0>(info[v0])) {
+            const int i_id = std::get<1>(info[v0]);
+            const int j_id = std::get<2>(info[v0]);
+            const UnsignedIndex_t arc_id = list_of_closed_curves[i_id][j_id];
+            bezier_triangles[i][3 + j] = points.size();
+            boundaries[v0][0] = v0;
+            boundaries[v0][1] = v1;
+            boundaries[v0][2] = points.size();
+            points.push_back(arc_list_m[arc_id].control_point());
+            weights.push_back(arc_list_m[arc_id].weight());
+          } else {
+            const Pt& pt_0 = points[v0];
+            const Pt& pt_1 = points[v1];
+            const auto arc =
+                computeVerticalRationalBezierArc(aligned_p, pt_0, pt_1);
+            bezier_triangles[i][3 + j] = points.size();
+            points.push_back(arc.control_point());
+            weights.push_back(arc.weight());
+          }
+        }
+      }
+
+      const auto& datum = paraboloid_m.getDatum();
+      const auto& frame = paraboloid_m.getReferenceFrame();
+      for (int i = 0; i < points.size(); i++) {
+        const Pt base_pt = points[i];
+        points[i] = Pt(0.0, 0.0, 0.0);
+        for (int d = 0; d < 3; ++d) {
+          for (int n = 0; n < 3; ++n) {
+            points[i][n] += frame[d][n] * base_pt[d];
+          }
+        }
+        points[i] += datum;
+      }
+
+      bezier_surface.addPoints(points, weights);
+      bezier_surface.addBezierTriangles(bezier_triangles);
+      bezier_surface.addBoundaries(boundaries);
+    } else if (a_order == 3) {
+      std::vector<std::array<UnsignedIndex_t, 10>> bezier_triangles(ntriangles);
+      const auto& aligned_p = paraboloid_m.getAlignedParaboloid();
+      for (UnsignedIndex_t i = 0; i < indices.size() / 3; ++i) {
+        auto V = Pt(0.0, 0.0, 0.0);
+        auto E = Pt(0.0, 0.0, 0.0);
+        for (int j = 0; j < 3; j++) {
+          bezier_triangles[i][j] = indices[3 * i + j];
+          const Pt& pt = points[indices[3 * i + j]];
+          V += pt;
+        }
+        V *= 1.0 / 3.0;
+        for (int j = 0; j < 3; j++) {
+          const int v0 = indices[3 * i + j];
+          const int v1 = indices[3 * i + (j + 1) % 3];
+          const Pt& pt_0 = points[v0];
+          const Pt& pt_2 = points[v1];
+          if (v1 == std::get<0>(info[v0])) {
+            const int i_id = std::get<1>(info[v0]);
+            const int j_id = std::get<2>(info[v0]);
+            const UnsignedIndex_t arc_id = list_of_closed_curves[i_id][j_id];
+            const Pt& pt_1 = arc_list_m[arc_id].control_point();
+            const double w = arc_list_m[arc_id].weight();
+            const double w1 = (1.0 + 2.0 * w) / 3.0;
+            const double w1_inv = 1.0 / (3.0 * w1);
+            const Pt pt_1_n = (pt_0 + w * 2.0 * pt_1) * w1_inv;
+            const Pt pt_2_n = (pt_2 + w * 2.0 * pt_1) * w1_inv;
+            bezier_triangles[i][3 + 2 * j] = points.size();
+            points.push_back(pt_1_n);
+            weights.push_back(w1);
+            bezier_triangles[i][3 + 2 * j + 1] = points.size();
+            points.push_back(pt_2_n);
+            weights.push_back(w1);
+            E += pt_1_n + pt_2_n;
+          } else {
+            const auto arc =
+                computeVerticalRationalBezierArc(aligned_p, pt_0, pt_2);
+            const Pt& pt_1 = arc.control_point();
+            const double w = arc.weight();
+            const double w1 = (1.0 + 2.0 * w) / 3.0;
+            const double w1_inv = 1.0 / (3.0 * w1);
+            const Pt pt_1_n = (pt_0 + w * 2.0 * pt_1) * w1_inv;
+            const Pt pt_2_n = (pt_2 + w * 2.0 * pt_1) * w1_inv;
+            bezier_triangles[i][3 + 2 * j] = points.size();
+            points.push_back(pt_1_n);
+            weights.push_back(w1);
+            bezier_triangles[i][3 + 2 * j + 1] = points.size();
+            points.push_back(pt_2_n);
+            weights.push_back(w1);
+            E += pt_1_n + pt_2_n;
+          }
+        }
+        E *= 1.0 / 6.0;
+        Pt pt_ctrl = E + 0.5 * (E - V);
+        bezier_triangles[i][9] = points.size();
+        points.push_back(pt_ctrl);
+        weights.push_back(1.0);
+      }
+
+      const auto& datum = paraboloid_m.getDatum();
+      const auto& frame = paraboloid_m.getReferenceFrame();
+      for (int i = 0; i < points.size(); i++) {
+        const Pt base_pt = points[i];
+        points[i] = Pt(0.0, 0.0, 0.0);
+        for (int d = 0; d < 3; ++d) {
+          for (int n = 0; n < 3; ++n) {
+            points[i][n] += frame[d][n] * base_pt[d];
+          }
+        }
+        points[i] += datum;
+      }
+
+      bezier_surface.addPoints(points, weights);
+      bezier_surface.addBezierTriangles(bezier_triangles);
+    }
+  }
+
+  return std::move(bezier_surface);
+}
+
 inline TriangulatedSurfaceOutput
 ParaboloidParametrizedSurfaceOutput::triangulate(
     const double a_length_scale, const UnsignedIndex_t a_nsplit) const {
@@ -1193,7 +1579,8 @@ inline void ParaboloidParametrizedSurfaceOutput::triangulate_fromPtr(
     // myfile << "Refining with length-scale " << length_scale << ".\n";
     // sleep(1.0e-4);
     CGAL::refine_Delaunay_mesh_2(cdt,
-                                 CGAL::parameters::criteria(Criteria(0.15, length_scale)));
+                                 CGAL::parameters::seeds(list_of_seeds)
+                                     .criteria(Criteria(0.15, length_scale)));
     // , CGAL::parameters::seeds_are_in_domain(false));
     // myfile << "Mesh has " << cdt.number_of_vertices() << " vertices.\n";
     // myfile << "Mesh has " << cdt.number_of_faces() << " faces.\n";

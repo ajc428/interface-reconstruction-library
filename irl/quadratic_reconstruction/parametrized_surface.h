@@ -12,10 +12,8 @@
 
 #include <vector>
 
-#if !defined(IRL_USE_EARCUT) && \
-    !defined(IRL_USE_TRIANGLE) && \
-    !defined(IRL_USE_CGAL) && \
-    !defined(IRL_USE_GEOGRAM)
+#if !defined(IRL_USE_EARCUT) && !defined(IRL_USE_TRIANGLE) && \
+    !defined(IRL_USE_CGAL) && !defined(IRL_USE_GEOGRAM)
 
 // #define IRL_USE_EARCUT
 // #define IRL_USE_TRIANGLE
@@ -24,9 +22,9 @@
 
 #endif
 
-#ifdef IRL_USE_EARCUT
+// #ifdef IRL_USE_EARCUT
 #include "external/earcut.hpp/include/mapbox/earcut.hpp"
-#elif defined IRL_USE_TRIANGLE
+#ifdef IRL_USE_TRIANGLE
 #include "external/triangle/triangle.h"
 #elif defined IRL_USE_CGAL
 #include <CGAL/Arr_segment_traits_2.h>

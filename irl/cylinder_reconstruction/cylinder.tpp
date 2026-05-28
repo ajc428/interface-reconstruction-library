@@ -34,6 +34,18 @@ inline CylinderBase<ScalarType>::CylinderBase(
 }
 
 template <class ScalarType>
+inline CylinderBase<ScalarType>::CylinderBase(
+    const PtBase<ScalarType>& a_datum,
+    const ReferenceFrameBase<ScalarType>& a_reference_frame,
+    const ScalarType a_coef_b, const ScalarType a_coef_r, const ScalarType a_coef_f)
+    : datum_m(a_datum),
+      frame_m(a_reference_frame),
+      cylinder_m(std::array<ScalarType, 3>({a_coef_b, a_coef_r, a_coef_f})),
+      place_infinite_shortcut_m({false, false}) {
+  // assert(frame_m.isOrthonormalBasis());
+}
+
+template <class ScalarType>
 inline CylinderBase<ScalarType> CylinderBase<ScalarType>::createAlwaysAbove(
     void) {
   CylinderBase<ScalarType> par;

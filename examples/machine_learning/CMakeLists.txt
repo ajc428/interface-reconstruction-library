@@ -4,8 +4,7 @@ IRLAddExample_cpp(
   SRCS
     "test.cpp"
   OUTPUT_DIR
-    # "${IRL_EXAMPLES_OUTPUT_DIR}/machine_learning"
-    "/home/andrew/Repositories/interface-reconstruction-library/examples/machine_learning"
+    "${IRL_EXAMPLES_OUTPUT_DIR}/machine_learning"
   COLLECTION
     "examples_machine_learning"
 )

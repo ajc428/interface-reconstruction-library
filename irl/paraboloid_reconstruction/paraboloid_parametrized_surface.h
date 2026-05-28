@@ -33,8 +33,11 @@
 #endif
 
 #include "irl/geometry/general/normal.h"
+#include "irl/moments/general_moments.h"
 #include "irl/paraboloid_reconstruction/paraboloid.h"
+#include "irl/quadratic_reconstruction/coons_patch.h"
 #include "irl/quadratic_reconstruction/ellipse.h"
+#include "irl/quadratic_reconstruction/gauss_legendre_integrator.h"
 #include "irl/quadratic_reconstruction/rational_bezier_arc.h"
 #include "irl/surface_mesher/triangulated_surface.h"
 
@@ -47,7 +50,8 @@ template <class C>
 struct has_paraboloid_surface<const C> : has_paraboloid_surface<C> {};
 
 template <class MomentType>
-struct has_paraboloid_surface<AddSurfaceOutput<MomentType, ParaboloidParametrizedSurfaceOutput>>
+struct has_paraboloid_surface<
+    AddSurfaceOutput<MomentType, ParaboloidParametrizedSurfaceOutput>>
     : std::true_type {};
 
 /// \brief Parametrized surface defined by coeffs A,B of paraboloid + list of
@@ -83,6 +87,20 @@ class ParaboloidParametrizedSurfaceOutput : public ParametrizedSurfaceOutput {
   inline double getGaussianCurvatureAligned(const Pt a_pt);
   inline double getGaussianCurvatureNonAligned(const Pt a_pt);
 
+  // general integrator
+  using F = std::function<double(Pt)>;
+  inline double getIntegrator(
+      const F a_F, const bool useAdaptive = true,
+      const Eigen::Integrator<double, 2>::QuadratureRule quadratureRule =
+          Eigen::Integrator<double, 2>::GaussKronrod15,
+      const int npts = 75);
+
+  template <std::size_t ORDER>
+  inline GeneralMoments3D<ORDER> getSurfaceMoments(void);
+
+  MixedPolygonBezierSurface getQuadraticBezierTriangleApprox(void);
+  MixedPolygonBezierSurface getCubicBezierTriangleApprox(void);
+
   void triangulate_fromPtr(
       const double a_length_scale = -1.0, const UnsignedIndex_t a_nsplit = 5,
       TriangulatedSurfaceOutput* a_surface = nullptr) const;
@@ -91,9 +109,9 @@ class ParaboloidParametrizedSurfaceOutput : public ParametrizedSurfaceOutput {
       const double a_length_scale = -1.0,
       const UnsignedIndex_t a_nsplit = 5) const;
 
-//  ~ParaboloidParametrizedSurfaceOutput(void);
-
  private:
+  MixedPolygonBezierSurface getBezierTriangleApprox(
+      const UnsignedIndex_t a_order);
   Paraboloid paraboloid_m;
 };
 

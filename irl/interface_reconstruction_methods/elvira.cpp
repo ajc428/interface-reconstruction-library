@@ -356,7 +356,7 @@ void ELVIRA_3D::tryNormal(Normal a_normal) {
             getVolumeFraction<ReconstructionDefaultCuttingMethod>(
                 neighborhood_VF_m->getCell(i, j, k), guess_reconstruction_m);
         error += std::pow(
-            (volume_fraction*weights[(i+1)*9+(j+1)*3+k+1] - neighborhood_VF_m->getStoredMoments(i, j, k)*weights[(i+1)*9+(j+1)*3+k+1]),
+            (volume_fraction - neighborhood_VF_m->getStoredMoments(i, j, k)),
             2);
       }
     }
@@ -365,11 +365,6 @@ void ELVIRA_3D::tryNormal(Normal a_normal) {
     best_reconstruction_m = guess_reconstruction_m;
     minimum_error_m = error;
   }
-}
-
-void ELVIRA_3D::setWeights(double* w)
-{
-  weights = {w[0],w[1],w[2],w[3],w[4],w[5],w[6],w[7],w[8],w[9],w[10],w[11],w[12],w[13],w[14],w[15],w[16],w[17],w[18],w[19],w[20],w[21],w[22],w[23],w[24],w[25],w[26]};
 }
 
 //******************************************************************* //

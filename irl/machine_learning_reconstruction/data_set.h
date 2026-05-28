@@ -16,22 +16,20 @@
 #include <iostream>
 #include <string>
 
-using namespace std;
-
 class MyDataset : public torch::data::Dataset<MyDataset>
 {
     private:
-        vector<torch::Tensor> data_in;
-        vector<torch::Tensor> data_out;
+        std::vector<torch::Tensor> data_in;
+        std::vector<torch::Tensor> data_out;
 
     public:
-        explicit MyDataset(string in_file, string out_file, int data_size, int m)
+        explicit MyDataset(std::string in_file, std::string out_file, int data_size)
         {
-            data_in = read_data(in_file, data_size, m);
-            data_out = read_data(out_file, data_size, 0);
+            data_in = read_data(in_file, data_size);
+            data_out = read_data(out_file, data_size);
         };
 
-        vector<torch::Tensor> read_data(string, int, int);
+        std::vector<torch::Tensor> read_data(std::string, int);
         torch::data::Example<> get(size_t index) override;
         torch::Tensor get_data();
         torch::Tensor get_target();
@@ -40,31 +38,5 @@ class MyDataset : public torch::data::Dataset<MyDataset>
             return data_out.size();
         };
 };
-
-class MyDataset_cnn : public torch::data::Dataset<MyDataset>
-{
-    private:
-        vector<torch::Tensor> data_in;
-        vector<torch::Tensor> data_out;
-
-    public:
-        explicit MyDataset_cnn(string in_file, string out_file, int data_size, int m)
-        {
-            data_in = read_data_in(in_file, data_size, m);
-            data_out = read_data_out(out_file, data_size, 0);
-        };
-
-        vector<torch::Tensor> read_data_in(string, int, int);
-        vector<torch::Tensor> read_data_out(string, int, int);
-        torch::data::Example<> get(size_t index) override;
-        torch::Tensor get_data();
-        torch::Tensor get_target();
-        torch::optional<size_t> size() const override 
-        {
-            return data_out.size();
-        };
-};
-
-#include "data_set.tpp"
 
 #endif

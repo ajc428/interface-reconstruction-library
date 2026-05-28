@@ -47,7 +47,7 @@ namespace IRL {
 template <class CellType>
 class ProgressiveRadiusSolverCylinder {
   /// \brief Max number of iterations for the secant Solver
-  static constexpr UnsignedIndex_t max_iter_m = {80};
+  static constexpr UnsignedIndex_t max_iter_m = {160};
   static constexpr UnsignedIndex_t max_bisection_iter = {160};
 
  public:
@@ -101,6 +101,7 @@ class ProgressiveRadiusSolverCylinder {
   double r_m;
   /// \brief Stretching that satisfy tolerance.
   double b_m;
+  double f_m;
 };
 
 }  // namespace IRL

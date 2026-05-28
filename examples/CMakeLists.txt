@@ -10,6 +10,7 @@ add_custom_target(examples_plic_advector)
 add_custom_target(examples_cylinder_advector)
 add_custom_target(examples_vtk_output)
 add_custom_target(examples_new_advector)
+add_custom_target(examples_variant_advector)
 
 include(${PROJECT_SOURCE_DIR}/cmake/Utils/IRLAddExample.cmake)
 
@@ -25,3 +26,4 @@ add_subdirectory("./plic_advector")
 add_subdirectory("./cylinder_advector")
 add_subdirectory("./vtk_output")
 add_subdirectory("./new_advector")
+add_subdirectory("./variant_advector")
