@@ -77,7 +77,7 @@ namespace IRL
         void load_test_data(std::string, std::string);
         void load_model(std::string);
         void train_model(bool, std::string, std::string);
-        void test_model();
+        void test_model(std::string, std::string);
     };
 }
 

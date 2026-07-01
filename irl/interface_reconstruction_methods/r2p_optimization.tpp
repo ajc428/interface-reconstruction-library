@@ -7,6 +7,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+#include <irl/interface_reconstruction_methods/r2p_optimization.h>
 #ifndef IRL_INTERFACE_RECONSTRUCTION_METHODS_R2P_OPTIMIZATION_TPP_
 #define IRL_INTERFACE_RECONSTRUCTION_METHODS_R2P_OPTIMIZATION_TPP_
 
@@ -364,7 +365,7 @@ void R2PCommon<CellType, kColumns>::fillGeometryAndWeightVectors(
   // Add surface area with weighting of 1.0.
   correct_values_m(guess_values_m.rows() - 1) =
       std::sqrt(a_neighborhood.getSurfaceArea());
-  weights_m(guess_values_m.rows() - 1) = 1.0;
+  weights_m(guess_values_m.rows() - 1) = 1.0;          /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 #pragma GCC diagnostic pop
 

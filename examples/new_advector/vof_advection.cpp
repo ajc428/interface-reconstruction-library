@@ -386,6 +386,19 @@ void SemiLagrangian::advectVOF(
       }
     }
   }
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        (*a_liquid_volume_fraction)(mesh.imin()-1, j, k) = (*a_liquid_volume_fraction)(mesh.imax(), j, k);
+        (*a_liquid_volume_fraction)(mesh.imax()+1, j, k) = (*a_liquid_volume_fraction)(mesh.imin(), j, k);
+        (*a_liquid_volume_fraction)(i, mesh.jmin()-1, k) = (*a_liquid_volume_fraction)(i, mesh.jmax(), k);
+        (*a_liquid_volume_fraction)(i, mesh.jmax()+1, k) = (*a_liquid_volume_fraction)(i, mesh.jmin(), k);
+        (*a_liquid_volume_fraction)(i, j, mesh.kmin()-1) = (*a_liquid_volume_fraction)(i, j, mesh.kmax());
+        (*a_liquid_volume_fraction)(i, j, mesh.kmax()+1) = (*a_liquid_volume_fraction)(i, j, mesh.kmin());
+      }
+    }
+  }
   a_liquid_volume_fraction->updateBorder();
   // Technically wrong below, need to move to new reference frame for periodic
   a_liquid_centroid->updateBorder();
@@ -581,9 +594,9 @@ void correctCentroidLocation(Data<IRL::Pt>* a_liquid_centroid,
   for (int i = mesh.imino(); i < mesh.imin(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_liquid_centroid)(i, j, k) =
+        (*a_liquid_centroid)(i, j, k)[0] =
             (*a_liquid_centroid)(i, j, k)[0] - mesh.lx();
-        (*a_gas_centroid)(i, j, k) = (*a_gas_centroid)(i, j, k)[0] - mesh.lx();
+        (*a_gas_centroid)(i, j, k)[0] = (*a_gas_centroid)(i, j, k)[0] - mesh.lx();
       }
     }
   }
@@ -592,9 +605,9 @@ void correctCentroidLocation(Data<IRL::Pt>* a_liquid_centroid,
   for (int i = mesh.imax() + 1; i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_liquid_centroid)(i, j, k) =
+        (*a_liquid_centroid)(i, j, k)[0] =
             (*a_liquid_centroid)(i, j, k)[0] + mesh.lx();
-        (*a_gas_centroid)(i, j, k) = (*a_gas_centroid)(i, j, k)[0] + mesh.lx();
+        (*a_gas_centroid)(i, j, k)[0] = (*a_gas_centroid)(i, j, k)[0] + mesh.lx();
       }
     }
   }
@@ -603,9 +616,9 @@ void correctCentroidLocation(Data<IRL::Pt>* a_liquid_centroid,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j < mesh.jmin(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_liquid_centroid)(i, j, k) =
+        (*a_liquid_centroid)(i, j, k)[1] =
             (*a_liquid_centroid)(i, j, k)[1] - mesh.ly();
-        (*a_gas_centroid)(i, j, k) = (*a_gas_centroid)(i, j, k)[1] - mesh.ly();
+        (*a_gas_centroid)(i, j, k)[1] = (*a_gas_centroid)(i, j, k)[1] - mesh.ly();
       }
     }
   }
@@ -614,9 +627,9 @@ void correctCentroidLocation(Data<IRL::Pt>* a_liquid_centroid,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmax() + 1; j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_liquid_centroid)(i, j, k) =
+        (*a_liquid_centroid)(i, j, k)[1] =
             (*a_liquid_centroid)(i, j, k)[1] + mesh.ly();
-        (*a_gas_centroid)(i, j, k) = (*a_gas_centroid)(i, j, k)[1] + mesh.ly();
+        (*a_gas_centroid)(i, j, k)[1] = (*a_gas_centroid)(i, j, k)[1] + mesh.ly();
       }
     }
   }
@@ -625,9 +638,9 @@ void correctCentroidLocation(Data<IRL::Pt>* a_liquid_centroid,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k < mesh.kmin(); ++k) {
-        (*a_liquid_centroid)(i, j, k) =
+        (*a_liquid_centroid)(i, j, k)[2] =
             (*a_liquid_centroid)(i, j, k)[2] - mesh.lz();
-        (*a_gas_centroid)(i, j, k) = (*a_gas_centroid)(i, j, k)[2] - mesh.lz();
+        (*a_gas_centroid)(i, j, k)[2] = (*a_gas_centroid)(i, j, k)[2] - mesh.lz();
       }
     }
   }
@@ -636,9 +649,9 @@ void correctCentroidLocation(Data<IRL::Pt>* a_liquid_centroid,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmax() + 1; k <= mesh.kmaxo(); ++k) {
-        (*a_liquid_centroid)(i, j, k) =
+        (*a_liquid_centroid)(i, j, k)[2] =
             (*a_liquid_centroid)(i, j, k)[2] + mesh.lz();
-        (*a_gas_centroid)(i, j, k) = (*a_gas_centroid)(i, j, k)[2] + mesh.lz();
+        (*a_gas_centroid)(i, j, k)[2] = (*a_gas_centroid)(i, j, k)[2] + mesh.lz();
       }
     }
   }

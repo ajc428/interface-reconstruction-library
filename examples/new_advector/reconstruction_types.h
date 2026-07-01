@@ -17,6 +17,9 @@
 
 #include "examples/new_advector/data.h"
 
+inline Data<int> recon_method;
+inline Data<int> num_planes;
+
 void getReconstruction(
     const std::string& a_reconstruction_method,
     const Data<double>& a_liquid_volume_fraction,
@@ -122,6 +125,26 @@ struct R2P2D {
 };
 
 struct R2P3D {
+  static void getReconstruction(
+      const Data<double>& a_liquid_volume_fraction,
+      const Data<IRL::Pt>& a_liquid_centroid,
+      const Data<IRL::Pt>& a_gas_centroid,
+      const Data<IRL::LocalizedSeparatorLink>& a_localized_separator_link,
+      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+      const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface);
+};
+
+struct R2P3D_Hybrid {
+  static void getReconstruction(
+      const Data<double>& a_liquid_volume_fraction,
+      const Data<IRL::Pt>& a_liquid_centroid,
+      const Data<IRL::Pt>& a_gas_centroid,
+      const Data<IRL::LocalizedSeparatorLink>& a_localized_separator_link,
+      const double a_dt, const Data<double>& a_U, const Data<double>& a_V,
+      const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface);
+};
+
+struct R2P3D_Net {
   static void getReconstruction(
       const Data<double>& a_liquid_volume_fraction,
       const Data<IRL::Pt>& a_liquid_centroid,

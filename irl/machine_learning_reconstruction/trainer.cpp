@@ -47,10 +47,12 @@ namespace IRL
         nn = std::make_shared<model>(189,3,nh,h,0);
         optimizer = std::make_unique<torch::optim::Adam>(nn->parameters(), learning_rate);
         critereon_MSE = torch::nn::MSELoss();
+        std::cout.precision(15);
     }
 
     void trainer::init()
     {
+        std::cout.precision(15);
         switch (type)
         {
             case 0:
@@ -59,12 +61,17 @@ namespace IRL
                 critereon_MSE = torch::nn::MSELoss();
             break;
             case 1:
+                nn = std::make_shared<model>(192,6,3,100,0);
+                optimizer = std::make_unique<torch::optim::Adam>(nn->parameters(), learning_rate);
+                critereon_MSE = torch::nn::MSELoss();
+            break;
+            case 2:
                 nn = std::make_shared<model>(189,1,3,100,1);
                 optimizer = std::make_unique<torch::optim::Adam>(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
                 critereon_BCE = torch::nn::BCELoss();
             break;
-            case 2:
+            case 3:
                 nn = std::make_shared<model>(189,3,5,100,2);
                 optimizer = std::make_unique<torch::optim::Adam>(nn->parameters(), learning_rate);
                 //optimizer = new torch::optim::Adam(nn->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(0.001));
@@ -156,12 +163,12 @@ namespace IRL
                         l1 = l1 + lambda1 * param.value().abs().sum();
                     }
                 }
-                if (type == 1)
+                if (type == 2)
                 {
                     loss = critereon_BCE(check, comp) + l2 + l1;
                     count += ((check > 0.5) == comp).sum().item<int>();
                 }
-                else if (type == 2)
+                else if (type == 3)
                 {
                     auto target_classes = torch::argmax(comp, 1);
                     loss = critereon_CE(check, target_classes) + l2 + l1;
@@ -220,11 +227,11 @@ namespace IRL
                         l1 = l1 + lambda1 * param.value().abs().sum();
                     }
                 }
-                if (type == 1)
+                if (type == 2)
                 {
                     loss = critereon_BCE(check, comp) + l2 + l1;
                 }
-                else if (type == 2)
+                else if (type == 3)
                 {
                     auto target_classes = torch::argmax(comp, 1);
                     loss = critereon_CE(check, target_classes) + l2 + l1;
@@ -249,7 +256,7 @@ namespace IRL
             total_epoch_loss_val = total_epoch_loss_val / data_val_size;
             if (rank == 0)
             {
-                if (type == 1 || type == 2)
+                if (type == 2 || type == 3)
                 {
                     std::cout << epoch << " " << count << "/" << batch_size << std::endl;
                 }
@@ -277,16 +284,16 @@ namespace IRL
         } 
     }
 
-    void trainer::test_model()
+    void trainer::test_model(std::string ex, std::string pr)
     {
         if (rank == 0)
         {
             auto data_test = MyDataset(test_in_file, test_out_file, data_size);
-            results_ex.open("result_ex.txt");
-            results_pr.open("result_pr.txt");
+            results_ex.open(ex);
+            results_pr.open(pr);
             int size = 0;
 
-            if (type == 1)
+            if (type == 2)
             {
                 nn->eval();
                 size = 1;
@@ -311,7 +318,7 @@ namespace IRL
                 }
                 std::cout << "Result: " << count << "/" << total << " (" << data_test.size().value() << ")" << std::endl;
             }
-            else if (type == 2)
+            else if (type == 3)
             {
                 nn->eval();
                 size = 3;

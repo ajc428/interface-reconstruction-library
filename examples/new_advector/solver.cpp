@@ -23,6 +23,9 @@
 #include "examples/new_advector/basic_mesh.h"
 #include "examples/new_advector/data.h"
 
+#include "irl/geometry/polygons/polygon.h"
+#include "irl/interface_reconstruction_methods/reconstruction_interface.h"
+
 // Convert and store the mesh cells into localizers.
 void initializeLocalizers(Data<IRL::PlanarLocalizer>* a_localizers) {
   // For each cell in the domain, construct the cell as a RectangularCuboid
@@ -349,5 +352,163 @@ void writeOutInterface(const int a_iteration,
             "\n</DataArray>\n</Cells>\n</Piece>\n</UnstructuredGrid>\n</"
             "VTKFile>\n");
   }
+  fclose(viz_file);
+}
+
+void writeOutInterface(const int a_iteration,
+                       const int a_visualization_frequency,
+                       const double a_simulation_time,
+                       const Data<IRL::PlanarSeparator>& a_interface,
+                       const Data<int>& a_recon_method,
+                       const Data<int>& a_num_planes) {
+
+  std::string output_folder = "viz";
+  mkdir(output_folder.c_str(), 0777);
+
+  const BasicMesh& mesh = a_interface.getMesh();
+
+  // Build zero-padded filename
+  int iteration_digits = 6;
+  std::string number = std::to_string(a_iteration / a_visualization_frequency);
+  std::string id_suffix =
+      std::string(iteration_digits - number.length(), '0') + number;
+  std::string file_name = "viz/interface_" + id_suffix + ".vtu";
+  FILE* viz_file = fopen(file_name.c_str(), "w");
+
+  // -----------------------------------------------------------------------
+  // Geometry buffers
+  // -----------------------------------------------------------------------
+  std::size_t n_vert  = 0;
+  std::size_t n_polys = 0;
+  std::size_t current_offset = 0;
+
+  std::string vert_loc;
+  std::string connectivity;
+  std::string offsets;
+
+  // -----------------------------------------------------------------------
+  // Per-polygon data buffers
+  //   recon_tag : 0 = PLICNET, 1 = R2P, 2 = two-plane R2P (second plane)
+  //   num_planes : number of planes per grid cell
+  //   plane_idx : which plane within the separator (0 or 1 for two-plane)
+  // -----------------------------------------------------------------------
+  std::string data_recon_tag;
+  std::string data_num_planes;
+  std::string data_plane_idx;
+
+  for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
+      for (int k = mesh.kmin(); k <= mesh.kmax(); ++k) {
+        const auto& recon = a_interface(i, j, k);
+        int n_planes = static_cast<int>(recon.getNumberOfPlanes());
+
+        // Skip full/empty cells (trivial separators have distance ±1 and
+        // zero normal, so their polygon will have 0 vertices — guard anyway)
+        if (a_recon_method(i, j, k) < 0) continue;
+
+        auto cell = IRL::RectangularCuboid::fromBoundingPts(
+            IRL::Pt(mesh.x(i),   mesh.y(j),   mesh.z(k)),
+            IRL::Pt(mesh.x(i+1), mesh.y(j+1), mesh.z(k+1)));
+
+        // Cell-level scalars (same for every plane in this cell)
+        int tag = a_recon_method(i, j, k);
+        int num = a_num_planes(i, j, k);
+
+        for (int p = 0; p < n_planes; ++p) {
+          IRL::Polygon poly =
+              IRL::getPlanePolygonFromReconstruction<IRL::Polygon>(
+                  cell, recon, recon[p]);
+
+          int n_verts = static_cast<int>(poly.getNumberOfVertices());
+          if (n_verts < 3) continue;  // degenerate / outside cell
+
+          // Vertices
+          for (int v = 0; v < n_verts; ++v) {
+            const auto& pt = poly[v];
+            vert_loc += std::to_string(pt[0]) + " " +
+                        std::to_string(pt[1]) + " " +
+                        std::to_string(pt[2]) + "\n";
+          }
+
+          // Connectivity: local indices starting at n_vert
+          for (int v = 0; v < n_verts; ++v)
+            connectivity += std::to_string(n_vert + v) + " ";
+          connectivity += "\n";
+
+          current_offset += static_cast<std::size_t>(n_verts);
+          offsets += std::to_string(current_offset) + " ";
+
+          // Per-polygon data
+          data_recon_tag += std::to_string(tag)  + "\n";
+          data_plane_idx += std::to_string(p)    + "\n";
+          data_num_planes += std::to_string(num) + "\n";
+
+          n_vert  += static_cast<std::size_t>(n_verts);
+          ++n_polys;
+        }
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Write VTU
+  // -----------------------------------------------------------------------
+  fprintf(viz_file, "<?xml version=\"1.0\"?>\n");
+  fprintf(viz_file,
+          "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" "
+          "byte_order=\"LittleEndian\">\n");
+  fprintf(viz_file, "<UnstructuredGrid>\n");
+  fprintf(viz_file,
+          "<Piece NumberOfPoints=\"%zu\" NumberOfCells=\"%zu\">\n",
+          n_vert, n_polys);
+
+  // Points
+  fprintf(viz_file, "<Points>\n");
+  fprintf(viz_file, "<DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", vert_loc.c_str());
+  fprintf(viz_file, "</DataArray>\n</Points>\n");
+
+  // Cells
+  fprintf(viz_file, "<Cells>\n");
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", connectivity.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", offsets.c_str());
+  fprintf(viz_file, "\n</DataArray>\n");
+
+  // VTK type 7 = general polygon
+  fprintf(viz_file,
+          "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n");
+  for (std::size_t n = 0; n < n_polys; ++n)
+    fprintf(viz_file, "7 ");
+  fprintf(viz_file, "\n</DataArray>\n</Cells>\n");
+
+  // Cell data
+  fprintf(viz_file, "<CellData>\n");
+
+  // recon_tag: 0=PLICNET, 1=R2P (first plane), 2=R2P (second plane)
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"recon_tag\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_recon_tag.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  // number of planes
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"num_planes\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_num_planes.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  // Which plane within the separator this polygon came from
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"plane_idx\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_plane_idx.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "</CellData>\n</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");
   fclose(viz_file);
 }

@@ -7,10 +7,13 @@ IRLAddExample_cpp(
     "data.h"
     "deformation_2d.h"
     "deformation_3d.h"
+    "film_3d.h"
+    "sheets.h"
     "reconstruction_types.h"
     "solver.h"
     "vof_advection.h"
     "plicnet.h"
+    "r2pnet.h"
   SRCS
     "main.cpp"
     "circle_rotation_2d.cpp"
@@ -20,6 +23,8 @@ IRLAddExample_cpp(
     "reconstruction_types.cpp"
     "deformation_2d.cpp"
     "deformation_3d.cpp"
+    "film_3d.cpp"
+    "sheets.cpp"
   OUTPUT_DIR
     "${IRL_EXAMPLES_OUTPUT_DIR}/new_advector"
   COLLECTION

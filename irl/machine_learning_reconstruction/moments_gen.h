@@ -41,7 +41,6 @@ namespace IRL
         ~moments_gen();
 
         IRL::Paraboloid new_paraboloid(double, double, double, double, double, double, double, double);
-        IRL::Paraboloid new_paraboloid(double, double, double, IRL::ReferenceFrame, double, double);
         IRL::Paraboloid new_random_paraboloid(double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double);
  
         std::vector<double> get_moments(IRL::Paraboloid, int, bool, bool&);

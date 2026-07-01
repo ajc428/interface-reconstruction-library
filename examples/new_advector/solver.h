@@ -19,6 +19,11 @@
 #include "irl/planar_reconstruction/planar_localizer.h"
 #include "irl/planar_reconstruction/planar_separator.h"
 
+#include "irl/geometry/general/pt.h"
+#include "irl/geometry/polygons/polygon.h"
+#include "irl/parameters/constants.h"
+#include "irl/planar_reconstruction/localizer_link_from_localized_separator_link.h"
+
 #include "examples/new_advector/basic_mesh.h"
 #include "examples/new_advector/data.h"
 #include "examples/new_advector/reconstruction_types.h"
@@ -74,6 +79,13 @@ void writeOutInterface(const int a_iteration,
                        const int a_visualization_frequency,
                        const double a_simulation_time,
                        const Data<IRL::PlanarSeparator>& a_interface);
+
+void writeOutInterface(const int a_iteration,
+                       const int a_visualization_frequency,
+                       const double a_simulation_time,
+                       const Data<IRL::PlanarSeparator>& a_interface,
+                       const Data<int>& a_recon_method,
+                       const Data<int>& a_num_planes);
 
 //******************************************************************* //
 //     Template function definitions placed below this.
@@ -159,8 +171,10 @@ int runSimulation(const std::string& a_advection_method,
         iteration % a_visualization_frequency == 0) {
       writeOutVisualization(iteration, a_visualization_frequency,
                             simulation_time, liquid_volume_fraction);
+      //writeOutInterface(iteration, a_visualization_frequency, simulation_time,
+      //                  interface);
       writeOutInterface(iteration, a_visualization_frequency, simulation_time,
-                        interface);
+                          interface, recon_method, num_planes);
     }
     ++iteration;
   }

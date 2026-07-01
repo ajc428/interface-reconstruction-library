@@ -46,12 +46,6 @@ namespace IRL
         return IRL::Paraboloid(datum, frame, alpha, beta);
     }
 
-    IRL::Paraboloid moments_gen::new_paraboloid(double x, double y, double z, IRL::ReferenceFrame frame, double alpha, double beta)
-    {
-        IRL::Pt datum = IRL::Pt(x,y,z);
-        return IRL::Paraboloid(datum, frame, alpha, beta);
-    }
-
     IRL::Paraboloid moments_gen::new_random_paraboloid(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
     {
         std::random_device rd;  
@@ -72,10 +66,10 @@ namespace IRL
         std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
         IRL::Paraboloid p;
 
-        // alpha = random_coeffsa(a_eng);
-        // beta = random_coeffsb(a_eng);
-        alpha = distribution1(generator);
-        beta = distribution2(generator);
+        alpha = random_coeffsa(a_eng);
+        beta = random_coeffsb(a_eng);
+        //alpha = distribution1(generator);
+        //beta = distribution2(generator);
         do
         {
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
@@ -114,7 +108,6 @@ namespace IRL
                     double volume = moments[0].volume();   
                     IRL::Pt centroid = moments[0].centroid();  
                     IRL::Pt centroid_gas = moments[1].centroid(); 
-                    flip = false;
                     if (sym && flip) 
                     {
                         volume = moments[1].volume(); 
