@@ -360,7 +360,9 @@ void writeOutInterface(const int a_iteration,
                        const double a_simulation_time,
                        const Data<IRL::PlanarSeparator>& a_interface,
                        const Data<int>& a_recon_method,
-                       const Data<int>& a_num_planes) {
+                       const Data<int>& a_num_planes,
+                       const Data<int>& a_class,
+                       const Data<int>& a_branch) {
 
   std::string output_folder = "viz";
   mkdir(output_folder.c_str(), 0777);
@@ -395,6 +397,8 @@ void writeOutInterface(const int a_iteration,
   std::string data_recon_tag;
   std::string data_num_planes;
   std::string data_plane_idx;
+  std::string data_class;
+  std::string data_branch;
 
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
@@ -413,6 +417,8 @@ void writeOutInterface(const int a_iteration,
         // Cell-level scalars (same for every plane in this cell)
         int tag = a_recon_method(i, j, k);
         int num = a_num_planes(i, j, k);
+        int ml_class = a_class(i,j,k);
+        int branch = a_branch(i,j,k);
 
         for (int p = 0; p < n_planes; ++p) {
           IRL::Polygon poly =
@@ -442,6 +448,8 @@ void writeOutInterface(const int a_iteration,
           data_recon_tag += std::to_string(tag)  + "\n";
           data_plane_idx += std::to_string(p)    + "\n";
           data_num_planes += std::to_string(num) + "\n";
+          data_class += std::to_string(ml_class) + "\n";
+          data_branch += std::to_string(branch) + "\n";
 
           n_vert  += static_cast<std::size_t>(n_verts);
           ++n_polys;
@@ -507,6 +515,17 @@ void writeOutInterface(const int a_iteration,
           "<DataArray type=\"Int32\" Name=\"plane_idx\" format=\"ascii\">\n");
   fprintf(viz_file, "%s", data_plane_idx.c_str());
   fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"class\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_class.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"branch\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_branch.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
 
   fprintf(viz_file,
           "</CellData>\n</Piece>\n</UnstructuredGrid>\n</VTKFile>\n");

@@ -10,7 +10,7 @@ torch.set_default_dtype(torch.float64)
 # Use a very large linewidth so NumPy formats the inner arrays naturally
 np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=1900)
-model = torch.jit.load('./model_r2p.pt')
+model = torch.jit.load('./model_r2p_BEST_FLAT.pt')
 
 def format_array_content(content, max_len=1900):
     content = content.strip()

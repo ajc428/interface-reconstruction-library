@@ -19,6 +19,8 @@
 
 inline Data<int> recon_method;
 inline Data<int> num_planes;
+inline Data<int> feature_class;
+inline Data<int> branch;
 
 void getReconstruction(
     const std::string& a_reconstruction_method,

@@ -122,6 +122,11 @@ namespace IRL
          assert(k<NZ);
          return IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(x[i], y[j], z[k]),IRL::Pt(x[i]+dx, y[j]+dy, z[k]+dz));
       };
+
+      IRL::RectangularCuboid getDomain()
+      {
+         return IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(x[0], y[0], z[0]),IRL::Pt(x[NX-1]+dx, y[NY-1]+dy, z[NZ-1]+dz));
+      };
    };
 }
 

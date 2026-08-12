@@ -48,38 +48,68 @@ namespace IRL
 
     IRL::Paraboloid moments_gen::new_random_paraboloid(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h)
     {
-        std::random_device rd;  
-        std::mt19937_64 a_eng(rd());
+        static thread_local std::random_device rd;  
+        static thread_local std::mt19937_64 a_eng(rd());
 
         IRL::Pt datum;
         IRL::ReferenceFrame frame;
         double alpha;
         double beta;
 
-        std::uniform_real_distribution<double> random_rotationa(rota_l, rota_h);
-        std::uniform_real_distribution<double> random_rotationb(rotb_l, rotb_h);
-        std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
         std::uniform_real_distribution<double> random_coeffsa(coa_l, coa_h);
         std::uniform_real_distribution<double> random_coeffsb(cob_l, cob_h);
+
         std::uniform_real_distribution<double> random_translationx(ox_l, ox_h);
         std::uniform_real_distribution<double> random_translationy(oy_l, oy_h);
         std::uniform_real_distribution<double> random_translationz(oz_l, oz_h);
+
+        // double cx = (ox_l + ox_h) / 2.0;
+        // double cy = (oy_l + oy_h) / 2.0;
+        // double cz = (oz_l + oz_h) / 2.0;
+        // double r_sphere = std::min({(ox_h - ox_l)/2.0, (oy_h - oy_l)/2.0, (oz_h - oz_l)/2.0});
+        // double r_sq = r_sphere * r_sphere;
+
+        std::uniform_real_distribution<double> random_rotationa(rota_l, rota_h);
+        double sin_b_min = std::sin(rotb_l);
+        double sin_b_max = std::sin(rotb_h);
+        if (sin_b_min > sin_b_max) std::swap(sin_b_min, sin_b_max);
+        std::uniform_real_distribution<double> random_sin_b(std::min(sin_b_min, sin_b_max), std::max(sin_b_min, sin_b_max));
+        //std::uniform_real_distribution<double> random_rotationb(rotb_l, rotb_h);
+        std::uniform_real_distribution<double> random_rotationc(rotc_l, rotc_h);
+
         IRL::Paraboloid p;
 
-        alpha = random_coeffsa(a_eng);
-        beta = random_coeffsb(a_eng);
-        //alpha = distribution1(generator);
-        //beta = distribution2(generator);
+        // alpha = random_coeffsa(a_eng);
+        // beta = random_coeffsb(a_eng);
+        alpha = distribution1(generator);
+        beta = distribution2(generator);
         do
         {
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));
-            datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
-            angles = {random_rotationa(a_eng), random_rotationb(a_eng), random_rotationc(a_eng)};
+            angles = {random_rotationa(a_eng), std::asin(random_sin_b(a_eng)), random_rotationc(a_eng)};
 
             IRL::UnitQuaternion x_rotation(angles[0], frame[0]);
             IRL::UnitQuaternion y_rotation(angles[1], frame[1]);
             IRL::UnitQuaternion z_rotation(angles[2], frame[2]);
             frame = x_rotation * y_rotation * z_rotation * frame;
+
+            datum = IRL::Pt(random_translationx(a_eng), random_translationy(a_eng), random_translationz(a_eng));
+            // do {
+            //     double x = random_translationx(a_eng);
+            //     double y = random_translationy(a_eng);
+            //     double z = random_translationz(a_eng);
+                
+            //     double dx = x - cx;
+            //     double dy = y - cy;
+            //     double dz = z - cz;
+                
+            //     // Accept only if the point falls inside the rotationally-invariant sphere
+            //     if (dx*dx + dy*dy + dz*dz <= r_sq) {
+            //         datum = IRL::Pt(x, y, z);
+            //         break;
+            //     }
+            // } while (true);
+
             p = IRL::Paraboloid(datum, frame, alpha, beta);
         } while (!(isParaboloidInCenterCell(p)));
 

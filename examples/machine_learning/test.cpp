@@ -21,17 +21,30 @@ void create_surface(string name, double x, double y, double z, double alpha, dou
     triangulated_surface.write(name);
 }
 
-void data_generate(int num, double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool disturb, std::string name)
+void data_generate(int num, double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool disturb, bool normalize, std::string name)
 {
     IRL::data_gen gen(num,3,3,3,1,1,1,-1.5,-1.5,-1.5);
-    gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, disturb, name);
+    gen.generate(rota_l, rota_h, rotb_l, rotb_h, rotc_l, rotc_h, coa_l, coa_h, cob_l, cob_h, ox_l, ox_h, oy_l, oy_h, oz_l, oz_h, disturb, normalize, name);
 }
 
-void data_generate_sheet(int num, double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, std::string name)
+void data_generate_sheet(int num, double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, bool normalize, std::string name)
 {
     IRL::data_gen gen(num,3,3,3,1,1,1,-1.5,-1.5,-1.5);
-    gen.generate_sheet(coa_l, coa_h, cob_l, cob_h, t_l, t_h, disturb, name);
+    gen.generate_sheet(coa_l, coa_h, cob_l, cob_h, t_l, t_h, disturb, normalize, name);
 }
+
+void data_generate_sheet_plic(int num, double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, bool normalize, std::string name)
+{
+    IRL::data_gen gen(num,3,3,3,1,1,1,-1.5,-1.5,-1.5);
+    gen.generate_sheet_plic(coa_l, coa_h, cob_l, cob_h, t_l, t_h, disturb, normalize, name);
+}
+
+void data_generate_sheet_both(int num, double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, bool normalize, std::string name)
+{
+    IRL::data_gen gen(num,3,3,3,1,1,1,-1.5,-1.5,-1.5);
+    gen.generate_sheet_both(coa_l, coa_h, cob_l, cob_h, t_l, t_h, disturb, normalize, name);
+}
+
 
 /***********************
 trainer(epochs, data size, learning rate, OPTION)
@@ -86,26 +99,26 @@ int main(int argc, char* argv[])
         }
         MPI_Bcast(&num, 1, MPI_INT, 0, MPI_COMM_WORLD);
         
-        data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.01,1,false,"_test");
-        data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.01,1,false,"_val");
-        data_generate_sheet(num*0.7,alpha,alpha1,beta,beta1,0.01,1,false,"");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,"_test");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,"_val");
-        // data_generate(num*14.0/3.0,0,2*M_PI,0,2*M_PI,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,"");
+        // data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.001,3,true,true,"_test");
+        // data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.001,3,true,true,"_val");
+        // data_generate_sheet(num*0.7,alpha,alpha1,beta,beta1,0.001,3,true,true,"");
+        data_generate(num*0.15,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"_test");
+        data_generate(num*0.15,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"_val");
+        data_generate(num*0.7,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"");
         
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,2,2,2,2,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_2");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,1,1,1,1,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_1");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.5,0.5,0.5,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_05");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.25,0.25,0.25,0.25,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_025");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.125,0.125,0.125,0.125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_0125");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0625,0.0625,0.0625,0.0625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_00625");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.03125,0.03125,0.03125,0.03125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_003125");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.015625,0.015625,0.015625,0.015625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_0015625");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0078125,0.0078125,0.0078125,0.0078125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_00078125");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.00390625,0.00390625,0.00390625,0.00390625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_000390625");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.001953125,0.001953125,0.001953125,0.001953125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_0001953125");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0009765625,0.0009765625,0.0009765625,0.0009765625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_00009765625");
-        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0,0,0,0,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,"_flat");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,2,2,2,2,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_2");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,1,1,1,1,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_1");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.5,0.5,0.5,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_05");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.25,0.25,0.25,0.25,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_025");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.125,0.125,0.125,0.125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_0125");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0625,0.0625,0.0625,0.0625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_00625");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.03125,0.03125,0.03125,0.03125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_003125");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.015625,0.015625,0.015625,0.015625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_0015625");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0078125,0.0078125,0.0078125,0.0078125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_00078125");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.00390625,0.00390625,0.00390625,0.00390625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_000390625");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.001953125,0.001953125,0.001953125,0.001953125,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_0001953125");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0.0009765625,0.0009765625,0.0009765625,0.0009765625,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_00009765625");
+        // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,0,0,0,0,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_flat");
     }
     else
     {

@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   std::string reconstruction_method = argv[3];
   int ncells = std::atoi(argv[4]);
   double time_step_size = std::stod(argv[5]);
-  int n_cycles = std::atoi(argv[6]);
+  double n_cycles = std::atoi(argv[6]);
   int viz_frequency = std::atoi(argv[7]);
 
   double time_duration;

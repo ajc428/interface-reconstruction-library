@@ -61,18 +61,18 @@ namespace IRL
                 critereon_MSE = torch::nn::MSELoss();
             break;
             case 1:
-                nn = std::make_shared<model>(192,6,3,100,0);
+                nn = std::make_shared<model>(192,6,3,100,1);
                 optimizer = std::make_unique<torch::optim::Adam>(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
             break;
             case 2:
-                nn = std::make_shared<model>(189,1,3,100,1);
+                nn = std::make_shared<model>(189,1,3,100,2);
                 optimizer = std::make_unique<torch::optim::Adam>(nn->parameters(), learning_rate);
                 critereon_MSE = torch::nn::MSELoss();
                 critereon_BCE = torch::nn::BCELoss();
             break;
             case 3:
-                nn = std::make_shared<model>(189,3,5,100,2);
+                nn = std::make_shared<model>(189,3,5,100,3);
                 optimizer = std::make_unique<torch::optim::Adam>(nn->parameters(), learning_rate);
                 //optimizer = new torch::optim::Adam(nn->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(0.001));
                 critereon_MSE = torch::nn::MSELoss();
@@ -163,7 +163,20 @@ namespace IRL
                         l1 = l1 + lambda1 * param.value().abs().sum();
                     }
                 }
-                if (type == 2)
+                if (type == 1)
+                {
+                    auto loss_i = torch::nn::functional::mse_loss(check, comp, torch::nn::functional::MSELossFuncOptions().reduction(torch::kNone));
+                    auto p1 = check.narrow(-1, 0, 3);
+                    auto p2 = check.narrow(-1, 3, 3);
+                    auto t1 = comp.narrow(-1, 0, 3);
+                    auto t2 = comp.narrow(-1, 3, 3);
+                    auto deadzone_v1 = (t1.norm(2, -1, true) < 0.1) & (p1.norm(2, -1, true) < 0.8);
+                    auto deadzone_v2 = (t2.norm(2, -1, true) < 0.1) & (p2.norm(2, -1, true) < 0.8);
+                    auto loss_v1 = loss_i.narrow(-1, 0, 3).masked_fill(deadzone_v1.expand_as(p1), 0.0);
+                    auto loss_v2 = loss_i.narrow(-1, 3, 3).masked_fill(deadzone_v2.expand_as(p2), 0.0);
+                    loss = torch::cat({loss_v1, loss_v2}, -1).mean();
+                }
+                else if (type == 2)
                 {
                     loss = critereon_BCE(check, comp) + l2 + l1;
                     count += ((check > 0.5) == comp).sum().item<int>();
@@ -227,7 +240,20 @@ namespace IRL
                         l1 = l1 + lambda1 * param.value().abs().sum();
                     }
                 }
-                if (type == 2)
+                if (type == 1)
+                {
+                    auto loss_i = torch::nn::functional::mse_loss(check, comp, torch::nn::functional::MSELossFuncOptions().reduction(torch::kNone));
+                    auto p1 = check.narrow(-1, 0, 3);
+                    auto p2 = check.narrow(-1, 3, 3);
+                    auto t1 = comp.narrow(-1, 0, 3);
+                    auto t2 = comp.narrow(-1, 3, 3);
+                    auto deadzone_v1 = (t1.norm(2, -1, true) < 0.1) & (p1.norm(2, -1, true) < 0.8);
+                    auto deadzone_v2 = (t2.norm(2, -1, true) < 0.1) & (p2.norm(2, -1, true) < 0.8);
+                    auto loss_v1 = loss_i.narrow(-1, 0, 3).masked_fill(deadzone_v1.expand_as(p1), 0.0);
+                    auto loss_v2 = loss_i.narrow(-1, 3, 3).masked_fill(deadzone_v2.expand_as(p2), 0.0);
+                    loss = torch::cat({loss_v1, loss_v2}, -1).mean();
+                }
+                else if (type == 2)
                 {
                     loss = critereon_BCE(check, comp) + l2 + l1;
                 }

@@ -85,7 +85,9 @@ void writeOutInterface(const int a_iteration,
                        const double a_simulation_time,
                        const Data<IRL::PlanarSeparator>& a_interface,
                        const Data<int>& a_recon_method,
-                       const Data<int>& a_num_planes);
+                       const Data<int>& a_num_planes,
+                       const Data<int>& a_class,
+                       const Data<int>& a_branch);
 
 //******************************************************************* //
 //     Template function definitions placed below this.
@@ -174,7 +176,7 @@ int runSimulation(const std::string& a_advection_method,
       //writeOutInterface(iteration, a_visualization_frequency, simulation_time,
       //                  interface);
       writeOutInterface(iteration, a_visualization_frequency, simulation_time,
-                          interface, recon_method, num_planes);
+                          interface, recon_method, num_planes, feature_class, branch);
     }
     ++iteration;
   }

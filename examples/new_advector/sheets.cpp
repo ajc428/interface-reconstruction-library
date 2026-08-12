@@ -90,10 +90,35 @@ void Sheets::initialize(Data<double>* a_U, Data<double>* a_V,
               double x_left  = x_center + mesh.dx()/4.0;
               double x_right = x_center + 3.0*mesh.dx()/4.0;
 
+              // 1. Get the 3D bounds of the current grid cell
               double cell_x_lo = mesh.x(i);
               double cell_x_hi = mesh.x(i+1);
+              double cell_y_lo = mesh.y(j);
+              double cell_y_hi = mesh.y(j+1);
+              double cell_z_lo = mesh.z(k);
+              double cell_z_hi = mesh.z(k+1);
+
+              // 2. Define your sheet's normal and boundary distances
+              double nx = 1.0, ny = 1.0, nz = 1.0;
+              double sheet_d_low = 0.92; // From Plane(-1, -1, -1, -0.92) -> x+y+z = 0.92
+              double sheet_d_high = 1.0; // From Plane( 1,  1,  1,  1.0)  -> x+y+z = 1.0
+
+              // 3. Calculate the minimum and maximum projection of this cell along the normal
+              double cell_proj_min = 0.0;
+              double cell_proj_max = 0.0;
+
+              cell_proj_min += (nx > 0) ? (nx * cell_x_lo) : (nx * cell_x_hi);
+              cell_proj_max += (nx > 0) ? (nx * cell_x_hi) : (nx * cell_x_lo);
+
+              cell_proj_min += (ny > 0) ? (ny * cell_y_lo) : (ny * cell_y_hi);
+              cell_proj_max += (ny > 0) ? (ny * cell_y_hi) : (ny * cell_y_lo);
+
+              cell_proj_min += (nz > 0) ? (nz * cell_z_lo) : (nz * cell_z_hi);
+              cell_proj_max += (nz > 0) ? (nz * cell_z_hi) : (nz * cell_z_lo);
+
 
               bool cell_fully_outside_film = (cell_x_hi <= x_left  || cell_x_lo >= x_right);
+              //bool cell_fully_outside_film = (cell_proj_max <= sheet_d_low || cell_proj_min >= sheet_d_high);
 
               if (cell_fully_outside_film) 
               {
@@ -101,7 +126,9 @@ void Sheets::initialize(Data<double>* a_U, Data<double>* a_V,
                      IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), -1));
                   // (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
                   //     IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), 1));
-
+                  // Cell is outside: initialize with a blank/dummy separator
+                  // (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(
+                  //     IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), -1));
               } 
               else 
               {
@@ -115,7 +142,7 @@ void Sheets::initialize(Data<double>* a_U, Data<double>* a_V,
                   //     -1);
                   // (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(
                   //     IRL::Plane(IRL::Normal( 1.0, 1.0, 1.0),  1),
-                  //     IRL::Plane(IRL::Normal(-1.0, -1.0, -1.0), -0.98),
+                  //     IRL::Plane(IRL::Normal(-1.0, -1.0, -1.0), -0.92),
                   //     1);
               }
 

@@ -141,15 +141,38 @@ void Film3D::initialize(Data<double>* a_U, Data<double>* a_V,
 }
 
 void Film3D::setVelocity(const double a_time, Data<double>* a_U,
-                                Data<double>* a_V, Data<double>* a_W) {
+                         Data<double>* a_V, Data<double>* a_W) {
   const BasicMesh& mesh = a_U->getMesh();
   double rate = 1.0;
+
+  // Define the normal vector for the compression axis.
+  // Setting this to (0, 0, 1) perfectly reproduces your original XY plane flattening.
+  // Setting this to (1, 1, 1) flattens the drop across the main 3D diagonal.
+  double nx = 1.0;
+  double ny = 1.0;
+  double nz = 1.0;
+
+  // Normalize the vector to ensure divergence remains exactly zero
+  double mag = std::sqrt(nx * nx + ny * ny + nz * nz);
+  nx /= mag;
+  ny /= mag;
+  nz /= mag;
+
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_U)(i, j, k) = rate * (mesh.xm(i) - 0.5);
-        (*a_V)(i, j, k) = rate * (mesh.ym(j) - 0.5);
-        (*a_W)(i, j, k) = -2.0 * rate * (mesh.zm(k) - (0.5+mesh.dz()/2.0));//+mesh.dz()/2.0));
+        // Distance from the drop's center
+        double dx = mesh.xm(i) - 0.5;
+        double dy = mesh.ym(j) - 0.5;
+        double dz = mesh.zm(k) - (0.5 + mesh.dz() / 2.0);
+
+        // Dot product of the position vector and the normal vector
+        double dot = dx * nx + dy * ny + dz * nz;
+
+        // Apply the generalized incompressible stretching flow
+        (*a_U)(i, j, k) = rate * (dx - 3.0 * dot * nx);
+        (*a_V)(i, j, k) = rate * (dy - 3.0 * dot * ny);
+        (*a_W)(i, j, k) = rate * (dz - 3.0 * dot * nz);
       }
     }
   }

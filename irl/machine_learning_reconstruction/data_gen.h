@@ -52,7 +52,7 @@ namespace IRL
             delete gen;
         };
 
-        void generate(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool disturb, std::string nam)
+        void generate(double rota_l, double rota_h, double rotb_l, double rotb_h, double rotc_l, double rotc_h, double coa_l, double coa_h, double cob_l, double cob_h, double ox_l, double ox_h, double oy_l, double oy_h, double oz_l, double oz_h, bool disturb, bool normalize, std::string nam)
         {
             bool flip;
             std::ofstream output;
@@ -95,7 +95,14 @@ namespace IRL
                 {
                     if (p == 0 || !disturb)
                     {
-                        output << moments[i] << ",";
+                        if (normalize || i % 7 == 0)
+                        {
+                            output << moments[i] << ",";
+                        }
+                        else if (!normalize)
+                        {
+                            output << moments[i]*moments[i - i%7] << ",";
+                        }
                     }
                     else
                     {
@@ -114,21 +121,23 @@ namespace IRL
                             if (moments[i] + c > 0.5 && !full)
                             {
                                 moments[i] = 0.5;
-                                output << 0.5 << ",";
                             }
                             else if (moments[i] + c < -0.5 && !full)
                             {
                                 moments[i] = -0.5;
-                                output << -0.5 << ",";
                             }
                             else if (!full)
                             {
-                                output << moments[i] + c << ",";
                                 moments[i] = moments[i] + c;
+                            }
+
+                            if (normalize)
+                            {
+                                output << moments[i] << ",";
                             }
                             else
                             {
-                                output << moments[i] << ",";
+                                output << moments[i]*moments[i - i%7] << ",";
                             }
                         }
                     }
@@ -219,7 +228,7 @@ namespace IRL
             coefficients.close(); 
         }; 
 
-        void generate_sheet(double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, std::string nam)
+        void generate_sheet(double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, bool normalize, std::string nam)
         {
             bool flip;
             std::ofstream output;
@@ -244,8 +253,9 @@ namespace IRL
             std::uniform_real_distribution<double> thick(t_l, t_h);
             std::uniform_real_distribution<double> ang1(0, 2*M_PI);
             std::uniform_real_distribution<double> ang2(-M_PI/2.0, M_PI/2.0);
+            std::uniform_real_distribution<double> z_dist(-1.0, 1.0);
             std::uniform_real_distribution<double> translation(-1, 1);
-            std::uniform_real_distribution<double> vec2(0.7, 1.0);
+            std::uniform_real_distribution<double> vec2(0.7, 1.0);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             std::uniform_real_distribution<double> dist_a(coa_l, coa_h);
             std::uniform_real_distribution<double> dist_b(cob_l, cob_h);
             std::uniform_int_distribution<int> dist_sign(1, 2);
@@ -266,7 +276,10 @@ namespace IRL
                 double thickness = thick(a_eng);
                 double angle1 = ang1(a_eng);
                 double angle2 = ang2(a_eng);
-                dir1 = IRL::Normal(cos(angle1)*cos(angle2),sin(angle1)*cos(angle2),sin(angle2));
+                double z = z_dist(a_eng);
+                double r = std::sqrt(1.0 - z * z);
+                //dir1 = IRL::Normal(cos(angle1)*cos(angle2),sin(angle1)*cos(angle2),sin(angle2));
+                dir1 = IRL::Normal(r * std::cos(angle1), r * std::sin(angle1), z);
                 dir1.normalize();
 
                 int max_it = 0;
@@ -278,6 +291,7 @@ namespace IRL
                         sign2 = dist_sign(a_eng);
                         sign3 = dist_sign(a_eng);
                         sign4 = dist_sign(a_eng);
+                        thickness = thick(a_eng);
                         max_it = 0;
                     }
                     else
@@ -521,7 +535,7 @@ namespace IRL
                 {
                     //std::cout << fit.getAlignedParaboloid().a() << " " << fit.getAlignedParaboloid().b() << " " << fit.getReferenceFrame()[2] << std::endl;
                     //std::cout << normal1 << std::endl << std::endl;
-                    //normal_fit = -normal_fit;
+                    normal_fit = -normal_fit;
                 }
 
                 // IRL::Pt surface_centroid(0, 0, 0);
@@ -570,7 +584,14 @@ namespace IRL
                 {
                     if (p == 0 || !disturb)
                     {
-                        output << moments[i] << ",";
+                        if (normalize || i % 7 == 0)
+                        {
+                            output << moments[i] << ",";
+                        }
+                        else if (!normalize)
+                        {
+                            output << moments[i]*moments[i - i%7] << ",";
+                        }
                     }
                     else
                     {
@@ -589,21 +610,23 @@ namespace IRL
                             if (moments[i] + c > 0.5 && !full)
                             {
                                 moments[i] = 0.5;
-                                output << 0.5 << ",";
                             }
                             else if (moments[i] + c < -0.5 && !full)
                             {
                                 moments[i] = -0.5;
-                                output << -0.5 << ",";
                             }
                             else if (!full)
                             {
-                                output << moments[i] + c << ",";
                                 moments[i] = moments[i] + c;
+                            }
+
+                            if (normalize)
+                            {
+                                output << moments[i] << ",";
                             }
                             else
                             {
-                                output << moments[i] << ",";
+                                output << moments[i]*moments[i - i%7] << ",";
                             }
                         }
                     }
@@ -840,6 +863,970 @@ namespace IRL
             coefficients1.close(); 
             coefficients2.close(); 
         }; 
+
+        void generate_sheet_both(double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, bool normalize, std::string nam)
+        {
+            bool flip;
+            std::ofstream output;
+            std::string data_name = "moments"+nam+".txt";
+            output.open(data_name, std::ios_base::app);
+            std::ofstream normals;
+            std::string normals_name = "normals"+nam+".txt";
+            normals.open(normals_name, std::ios_base::app);
+            std::ofstream coefficients1;
+            std::string name1 = "coefficients1"+nam+".txt";
+            coefficients1.open(name1, std::ios_base::app);
+            std::ofstream coefficients2;
+            std::string name2 = "coefficients2"+nam+".txt";
+            coefficients2.open(name2, std::ios_base::app);
+
+            std::random_device rd;  
+            std::mt19937_64 a_eng(rd());
+            std::uniform_int_distribution<int> dis(0, 7);
+            //std::uniform_real_distribution<double> noise(-0.025, 0.025);
+            std::normal_distribution<double> noise(0.0,0.0125);
+
+            std::uniform_real_distribution<double> thick(t_l, t_h);
+            std::uniform_real_distribution<double> ang1(0, 2*M_PI);
+            std::uniform_real_distribution<double> ang2(-M_PI/2.0, M_PI/2.0);
+            std::uniform_real_distribution<double> z_dist(-1.0, 1.0);
+            std::uniform_real_distribution<double> translation(-1, 1);
+            std::uniform_real_distribution<double> vec2(0.7, 1.0);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            std::uniform_real_distribution<double> dist_a(coa_l, coa_h);
+            std::uniform_real_distribution<double> dist_b(cob_l, cob_h);
+            std::uniform_int_distribution<int> dist_sign(1, 2);
+            for (int n = 0; n < Ndata; ++n) 
+            {
+                std::cout << n << std::endl;
+
+                bool valid_pair = false;
+                IRL::Paraboloid paraboloid1;
+                IRL::Paraboloid paraboloid2;
+                IRL::Normal dir1;
+                IRL::Normal dir2;
+
+                int sign1 = dist_sign(a_eng);
+                int sign2 = dist_sign(a_eng);
+                int sign3 = dist_sign(a_eng);
+                int sign4 = dist_sign(a_eng);
+                double thickness = thick(a_eng);
+                double angle1 = ang1(a_eng);
+                double angle2 = ang2(a_eng);
+                double z = z_dist(a_eng);
+                double r = std::sqrt(1.0 - z * z);
+                //dir1 = IRL::Normal(cos(angle1)*cos(angle2),sin(angle1)*cos(angle2),sin(angle2));
+                dir1 = IRL::Normal(r * std::cos(angle1), r * std::sin(angle1), z);
+                dir1.normalize();
+
+                int max_it = 0;
+                while (!valid_pair)
+                {
+                    if (max_it > 100)
+                    {
+                        sign1 = dist_sign(a_eng);
+                        sign2 = dist_sign(a_eng);
+                        sign3 = dist_sign(a_eng);
+                        sign4 = dist_sign(a_eng);
+                        thickness = thick(a_eng);
+                        max_it = 0;
+                    }
+                    else
+                    {
+                        ++max_it;
+                    }
+                    double o_x = translation(a_eng);
+                    double o_y = translation(a_eng);
+                    double o_z = translation(a_eng);
+                    IRL::Pt datum = IRL::Pt(o_x,o_y,o_z);
+                    IRL::Pt datum1 = datum - (thickness/2.0)*dir1;
+                    IRL::Pt datum2 = datum + (thickness/2.0)*dir1;
+
+                    double dot = vec2(a_eng);
+                    double rot = ang1(a_eng);
+                    double r = sqrt(1 - dot*dot);
+                    IRL::Normal a;
+                    if (abs(dir1[0]) >= 0.97)
+                    {
+                        a = IRL::Normal(0,1,0);
+                    }
+                    else
+                    {
+                        a = IRL::Normal(1,0,0);
+                    }
+                    IRL::Normal t1 = IRL::crossProduct(dir1,a);
+                    t1.normalize();
+                    IRL::Normal t2 = IRL::crossProduct(dir1,t1);
+                    t2.normalize();
+                    IRL::ReferenceFrame frame1 = IRL::ReferenceFrame(t1,t2,dir1);
+                    dir2 = r * cos(rot) * t1 + r * sin(rot) * t2 + dot * dir1;
+                    if (abs(dir2[0]) >= 0.97)
+                    {
+                        a = IRL::Normal(0,1,0);
+                    }
+                    else
+                    {
+                        a = IRL::Normal(1,0,0);
+                    }
+                    dir2.normalize();
+                    t1 = IRL::crossProduct(dir2,a);
+                    t1.normalize();
+                    t2 = IRL::crossProduct(dir2,t1);
+                    t2.normalize();
+                    IRL::ReferenceFrame frame2 = IRL::ReferenceFrame(t1,t2,dir2);
+
+                    double a1 = (2*sign1-3)*dist_a(a_eng);
+                    double b1 = (2*sign2-3)*dist_b(a_eng);
+                    double a2 = (2*sign3-3)*dist_a(a_eng);
+                    double b2 = (2*sign4-3)*dist_b(a_eng);
+
+                    if (a1 < 0 && b1 < 0 && a2 > 0 && b2 > 0)
+                    {
+                        datum1 = datum + (thickness/2.0)*dir1;
+                        datum2 = datum - (thickness/2.0)*dir1;
+                    }
+
+                    // datum1 = IRL::Pt(0.153338,0.303501,0.0682626);
+                    // frame1 = IRL::ReferenceFrame(IRL::Normal(-0,0.993111,0.117177),IRL::Normal(-0.998757,0.00584061,-0.0495011),IRL::Normal(-0.0498445,-0.117031,0.991877));
+                    // datum2 = IRL::Pt(0.144769,0.283383,0.238773);
+                    // frame2 = IRL::ReferenceFrame(IRL::Normal(-0,0.999144,0.0413719),IRL::Normal(-0.990775,0.00560653,-0.135399),IRL::Normal(-0.135515,-0.0409902,0.989927));
+                    paraboloid1 = IRL::Paraboloid(datum1,frame1,a1,b1);
+                    paraboloid2 = IRL::Paraboloid(datum2,frame2,a2,b2);
+
+                    const auto cube = gen->getStencil()->getCell(gen->getStencil()->get_ic(),gen->getStencil()->get_jc(),gen->getStencil()->get_kc());
+                    const auto vol1 = IRL::getVolumeMoments<IRL::Volume>(cube, paraboloid1);
+                    const auto vol2 = IRL::getVolumeMoments<IRL::Volume>(cube, paraboloid2);
+
+                    //if (!intersect_in_domain(paraboloid1, paraboloid2, -(gen->getStencil()->getNX()*gen->getStencil()->getDx())/2.0, (gen->getStencil()->getNX()*gen->getStencil()->getDx())/2.0) && (vol1 > IRL::global_constants::VF_LOW && vol1 < IRL::global_constants::VF_HIGH && vol2 > IRL::global_constants::VF_LOW  && vol2 < IRL::global_constants::VF_HIGH)) 
+                    if (!intersect_in_domain(paraboloid1, paraboloid2, -(gen->getStencil()->getNX()*gen->getStencil()->getDx())/2.0, (gen->getStencil()->getNX()*gen->getStencil()->getDx())/2.0) && (vol1 > IRL::global_constants::VF_LOW && vol1 < IRL::global_constants::VF_HIGH)) 
+                    {
+                        valid_pair = true;
+                    }
+                }
+
+                coefficients1 << paraboloid1.getDatum().x() << "," << paraboloid1.getDatum().y() << "," << paraboloid1.getDatum().z()
+                << "," << paraboloid1.getReferenceFrame()[0][0] << "," << paraboloid1.getReferenceFrame()[0][1] << "," << paraboloid1.getReferenceFrame()[0][2]
+                << "," << paraboloid1.getReferenceFrame()[1][0] << "," << paraboloid1.getReferenceFrame()[1][1] << "," << paraboloid1.getReferenceFrame()[1][2]
+                << "," << paraboloid1.getReferenceFrame()[2][0] << "," << paraboloid1.getReferenceFrame()[2][1] << "," << paraboloid1.getReferenceFrame()[2][2]
+                << "," << paraboloid1.getAlignedParaboloid().a() << "," << paraboloid1.getAlignedParaboloid().b() << "," << thickness << "\n";
+                coefficients2 << paraboloid2.getDatum().x() << "," << paraboloid2.getDatum().y() << "," << paraboloid2.getDatum().z()
+                << "," << paraboloid2.getReferenceFrame()[0][0] << "," << paraboloid2.getReferenceFrame()[0][1] << "," << paraboloid2.getReferenceFrame()[0][2]
+                << "," << paraboloid2.getReferenceFrame()[1][0] << "," << paraboloid2.getReferenceFrame()[1][1] << "," << paraboloid2.getReferenceFrame()[1][2]
+                << "," << paraboloid2.getReferenceFrame()[2][0] << "," << paraboloid2.getReferenceFrame()[2][1] << "," << paraboloid2.getReferenceFrame()[2][2]
+                << "," << paraboloid2.getAlignedParaboloid().a() << "," << paraboloid2.getAlignedParaboloid().b() << "," << thickness << "\n";
+                
+                auto moments1 = gen->get_moments(paraboloid1, 1, false, flip);
+                auto moments2 = gen->get_moments(paraboloid2, 1, false, flip);
+                std::vector<double> moments;
+                std::vector<IRL::Pt> points;
+                moments.resize(moments1.size());
+                
+                int direction = 0;
+                int direction2 = 0;
+
+                double total_v1 = 0.0;
+                double total_v2 = 0.0;
+
+                for (int i = 0; i < NX; ++i) 
+                {
+                    for (int j = 0; j < NY; ++j) 
+                    {
+                        for (int k = 0; k < NZ; ++k) 
+                        {
+                            total_v1 += moments1[get_idx(i, j, k, 0)];
+                            total_v2 += moments2[get_idx(i, j, k, 0)];
+                        }
+                    }
+                }
+
+                if (total_v1 >= total_v2)
+                {
+                    for (int i = 0; i < NX; ++i)
+                    {
+                        for (int j = 0; j < NY; ++j)
+                        {
+                            for (int k = 0; k < NZ; ++k)
+                            {
+                                if (moments1[get_idx(i, j, k, 0)] > IRL::global_constants::VF_HIGH && moments2[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW && moments2[get_idx(i, j, k, 0)] < IRL::global_constants::VF_HIGH)
+                                {
+                                    moments[get_idx(i, j, k, 0)] = 1 - moments2[get_idx(i, j, k, 0)];
+                                    moments[get_idx(i, j, k, 1)] = moments2[get_idx(i, j, k, 4)];
+                                    moments[get_idx(i, j, k, 2)] = moments2[get_idx(i, j, k, 5)];
+                                    moments[get_idx(i, j, k, 3)] = moments2[get_idx(i, j, k, 6)];
+                                    moments[get_idx(i, j, k, 4)] = moments2[get_idx(i, j, k, 1)];
+                                    moments[get_idx(i, j, k, 5)] = moments2[get_idx(i, j, k, 2)];
+                                    moments[get_idx(i, j, k, 6)] = moments2[get_idx(i, j, k, 3)];
+                                }
+                                else
+                                {
+                                    moments[get_idx(i, j, k, 0)] = moments1[get_idx(i, j, k, 0)] - moments2[get_idx(i, j, k, 0)];
+                                    for (int m = 1; m < 4; ++m)
+                                    {
+                                        if (moments[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW)
+                                        {
+                                            moments[get_idx(i, j, k, m)] = (moments1[get_idx(i, j, k, 0)]*moments1[get_idx(i, j, k, m)] - moments2[get_idx(i, j, k, 0)]*moments2[get_idx(i, j, k, m)])/moments[get_idx(i, j, k, 0)];
+                                        }
+                                        else
+                                        {
+                                            moments[get_idx(i, j, k, m)] = 0;
+                                        }
+                                    }
+                                    for (int m = 4; m < 7; ++m)
+                                    {
+                                        if (1-moments[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW)
+                                        {
+                                            moments[get_idx(i, j, k, m)] = ((1-moments1[get_idx(i, j, k, 0)])*moments1[get_idx(i, j, k, m)] - (1-moments2[get_idx(i, j, k, 0)])*moments2[get_idx(i, j, k, m)])/(1-moments[get_idx(i, j, k, 0)]);
+                                        }
+                                        else
+                                        {
+                                            moments[get_idx(i, j, k, m)] = 0;
+                                        }
+                                    }
+                                }
+                                if (moments[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW) 
+                                {
+                                    points.push_back(IRL::Pt(moments[get_idx(i, j, k, 1)],moments[get_idx(i, j, k, 2)],moments[get_idx(i, j, k, 3)])+IRL::Pt(gen->getStencil()->get_xm(i),gen->getStencil()->get_ym(j),gen->getStencil()->get_zm(k)));
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < NX; ++i)
+                    {
+                        for (int j = 0; j < NY; ++j)
+                        {
+                            for (int k = 0; k < NZ; ++k)
+                            {
+                                if (moments2[get_idx(i, j, k, 0)] > IRL::global_constants::VF_HIGH && moments1[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW && moments1[get_idx(i, j, k, 0)] < IRL::global_constants::VF_HIGH)
+                                {
+                                    moments[get_idx(i, j, k, 0)] = 1 - moments1[get_idx(i, j, k, 0)];
+                                    moments[get_idx(i, j, k, 1)] = moments1[get_idx(i, j, k, 4)];
+                                    moments[get_idx(i, j, k, 2)] = moments1[get_idx(i, j, k, 5)];
+                                    moments[get_idx(i, j, k, 3)] = moments1[get_idx(i, j, k, 6)];
+                                    moments[get_idx(i, j, k, 4)] = moments1[get_idx(i, j, k, 1)];
+                                    moments[get_idx(i, j, k, 5)] = moments1[get_idx(i, j, k, 2)];
+                                    moments[get_idx(i, j, k, 6)] = moments1[get_idx(i, j, k, 3)];
+                                }
+                                else
+                                {
+                                    moments[get_idx(i, j, k, 0)] = moments2[get_idx(i, j, k, 0)] - moments1[get_idx(i, j, k, 0)];
+                                    for (int m = 1; m < 4; ++m)
+                                    {
+                                        if (moments[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW)
+                                        {
+                                            moments[get_idx(i, j, k, m)] = (moments2[get_idx(i, j, k, 0)]*moments2[get_idx(i, j, k, m)] - moments1[get_idx(i, j, k, 0)]*moments1[get_idx(i, j, k, m)])/moments[get_idx(i, j, k, 0)];
+                                        }
+                                        else
+                                        {
+                                            moments[get_idx(i, j, k, m)] = 0;
+                                        }
+                                    }
+                                    for (int m = 4; m < 7; ++m)
+                                    {
+                                        if (1-moments[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW)
+                                        {
+                                            moments[get_idx(i, j, k, m)] = ((1-moments2[get_idx(i, j, k, 0)])*moments2[get_idx(i, j, k, m)] - (1-moments1[get_idx(i, j, k, 0)])*moments1[get_idx(i, j, k, m)])/(1-moments[get_idx(i, j, k, 0)]);
+                                        }
+                                        else
+                                        {
+                                            moments[get_idx(i, j, k, m)] = 0;
+                                        }
+                                    }
+                                }
+                                if (moments[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW) 
+                                {
+                                    points.push_back(IRL::Pt(moments[get_idx(i, j, k, 1)],moments[get_idx(i, j, k, 2)],moments[get_idx(i, j, k, 3)])+IRL::Pt(gen->getStencil()->get_xm(i),gen->getStencil()->get_ym(j),gen->getStencil()->get_zm(k)));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                //points = smoothPoints(points,0.75);
+
+                    // for (const auto& element : points) {
+                    //     std::cout << element << std::endl;
+                    // }
+
+                IRL::Paraboloid fit = fitConstrainedParaboloidFromPoints(points);//fitParaboloidFromPoints(points);
+                //std::cout << fit.getAlignedParaboloid().a() << " " << fit.getAlignedParaboloid().b() << " " << fit.getReferenceFrame()[2] << std::endl;
+
+                auto cell = gen->getStencil()->getDomain();
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cell, paraboloid1);
+                auto surface = surface_and_moments.getSurface();
+                auto normal1 = surface.getAverageNormalNonAligned();
+
+                surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cell, paraboloid2);
+                surface = surface_and_moments.getSurface();
+                auto normal2 = surface.getAverageNormalNonAligned();
+
+                surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cell, fit);
+                surface = surface_and_moments.getSurface();
+                auto normal_fit = fit.getReferenceFrame()[2];//surface.getAverageNormalNonAligned();
+
+                //std::cout << normal1 << std::endl << std::endl;
+                IRL::Pt center1 = get_global_centroid(moments);
+                if (IRL::dotProduct(center1,normal_fit) < 0)
+                {
+                    //std::cout << fit.getAlignedParaboloid().a() << " " << fit.getAlignedParaboloid().b() << " " << fit.getReferenceFrame()[2] << std::endl;
+                    //std::cout << normal1 << std::endl << std::endl;
+                    normal_fit = -normal_fit;
+                }
+
+                // IRL::Pt surface_centroid(0, 0, 0);
+                // for (const auto& pt : points) {
+                //     surface_centroid[0] += pt[0];
+                //     surface_centroid[1] += pt[1];
+                //     surface_centroid[2] += pt[2];
+                // }
+                // surface_centroid[0] /= points.size();
+                // surface_centroid[1] /= points.size();
+                // surface_centroid[2] /= points.size();
+
+                // // Force the normal to always point "outward" relative to the cell center
+                // std::cout << normal1 << " " << normal_fit << " " << surface_centroid << std::endl;
+                // if (IRL::dotProduct(normal_fit, surface_centroid) < 0) {
+                //     normal_fit = -normal_fit;
+                // }
+                // std::cout << normal1 << " " << normal_fit << std::endl << std::endl;
+
+
+                const double eps = 1e-10;
+
+                // if (normal_fit[0] < -eps) {
+                //     normal_fit = -normal_fit;
+                // } else if (std::abs(normal_fit[0]) <= eps) {
+                //     if (normal_fit[1] < -eps) {
+                //         normal_fit = -normal_fit;
+                //     } else if (std::abs(normal_fit[1]) <= eps && normal_fit[2] < -eps) {
+                //         normal_fit = -normal_fit;
+                //     }
+                // }
+
+                auto moments_fit = gen->get_moments(fit, 1, true, flip);
+
+                IRL::Pt center = IRL::Pt(normal_fit[0],normal_fit[1],normal_fit[2]);
+                reflectMoments(moments, direction, direction2, center);
+                //IRL::Pt center = get_global_centroid(moments_fit);
+                //reflectMoments(moments, direction, direction2, center);
+                //reflectMoments(moments_fit, direction, direction2, center);
+                //moments = moments_fit;
+
+                int p = dis(a_eng);
+                bool full = false;
+
+                for (int i = 0; i < moments.size(); ++i)
+                {
+                    if (p == 0 || !disturb)
+                    {
+                        if (normalize || i % 7 == 0)
+                        {
+                            output << moments[i] << ",";
+                        }
+                        else if (!normalize)
+                        {
+                            output << moments[i]*moments[i - i%7] << ",";
+                        }
+                    }
+                    else
+                    {
+                        if (i % 7 == 0)
+                        {
+                            full = false;
+                            output << moments[i] << ",";
+                            if (moments[i] > IRL::global_constants::VF_HIGH || moments[i] < IRL::global_constants::VF_LOW)
+                            {
+                                full = true;
+                            }
+                        }
+                        else
+                        {
+                            double c = noise(a_eng);
+                            if (moments[i] + c > 0.5 && !full)
+                            {
+                                moments[i] = 0.5;
+                            }
+                            else if (moments[i] + c < -0.5 && !full)
+                            {
+                                moments[i] = -0.5;
+                            }
+                            else if (!full)
+                            {
+                                moments[i] = moments[i] + c;
+                            }
+
+                            if (normalize)
+                            {
+                                output << moments[i] << ",";
+                            }
+                            else
+                            {
+                                output << moments[i]*moments[i - i%7] << ",";
+                            }
+                        }
+                    }
+                }
+
+                double tmp;
+                switch (direction)
+                {
+                    case 1:
+                        normal1[0] = -normal1[0];
+
+                        normal2[0] = -normal2[0];
+
+                        normal_fit[0] = -normal_fit[0];
+                    break;
+                    case 2:
+                        normal1[1] = -normal1[1];
+
+                        normal2[1] = -normal2[1];
+
+                        normal_fit[1] = -normal_fit[1];
+                    break;
+                    case 3:
+                        normal1[2] = -normal1[2];
+
+                        normal2[2] = -normal2[2];
+
+                        normal_fit[2] = -normal_fit[2];
+                    break;
+                    case 4:
+                        normal1[0] = -normal1[0];
+                        normal1[1] = -normal1[1];
+
+                        normal2[0] = -normal2[0];
+                        normal2[1] = -normal2[1];
+
+                        normal_fit[0] = -normal_fit[0];
+                        normal_fit[1] = -normal_fit[1];
+                    break;
+                    case 5:
+                        normal1[0] = -normal1[0];
+                        normal1[2] = -normal1[2];
+
+                        normal2[0] = -normal2[0];
+                        normal2[2] = -normal2[2];
+
+                        normal_fit[0] = -normal_fit[0];
+                        normal_fit[2] = -normal_fit[2];
+                    break;
+                    case 6:
+                        normal1[1] = -normal1[1];
+                        normal1[2] = -normal1[2];
+
+                        normal2[1] = -normal2[1];
+                        normal2[2] = -normal2[2];
+
+                        normal_fit[1] = -normal_fit[1];
+                        normal_fit[2] = -normal_fit[2];
+                    break;
+                    case 7:
+                        normal1[0] = -normal1[0];
+                        normal1[1] = -normal1[1];
+                        normal1[2] = -normal1[2];
+
+                        normal2[0] = -normal2[0];
+                        normal2[1] = -normal2[1];
+                        normal2[2] = -normal2[2];  
+
+                        normal_fit[0] = -normal_fit[0];
+                        normal_fit[1] = -normal_fit[1];
+                        normal_fit[2] = -normal_fit[2];                     
+                    break;
+                }
+                switch (direction2)
+                {
+                    case 1:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[1]; 
+                        normal1[1]=tmp;
+
+                        tmp=normal2[0]; 
+                        normal2[0]=normal2[1]; 
+                        normal2[1]=tmp;    
+
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[1]; 
+                        normal_fit[1]=tmp;                       
+                    break;
+                    case 2:
+                        tmp=normal1[1]; 
+                        normal1[1]=normal1[2]; 
+                        normal1[2]=tmp;
+
+                        tmp=normal2[1]; 
+                        normal2[1]=normal2[2]; 
+                        normal2[2]=tmp;    
+
+                        tmp=normal_fit[1]; 
+                        normal_fit[1]=normal_fit[2]; 
+                        normal_fit[2]=tmp;                        
+                    break;
+                    case 3:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[2]; 
+                        normal1[2]=tmp;
+
+                        tmp=normal2[0]; 
+                        normal2[0]=normal2[2]; 
+                        normal2[2]=tmp;     
+
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[2]; 
+                        normal_fit[2]=tmp;                     
+                    break;
+                    case 4:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[1]; 
+                        normal1[1]=tmp;
+                        tmp=normal1[1]; 
+                        normal1[1]=normal1[2]; 
+                        normal1[2]=tmp;
+
+                        tmp=normal2[0]; 
+                        normal2[0]=normal2[1]; 
+                        normal2[1]=tmp;
+                        tmp=normal2[1]; 
+                        normal2[1]=normal2[2]; 
+                        normal2[2]=tmp;     
+
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[1]; 
+                        normal_fit[1]=tmp;
+                        tmp=normal_fit[1]; 
+                        normal_fit[1]=normal_fit[2]; 
+                        normal_fit[2]=tmp;                                            
+                    break;
+                    case 5:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[1]; 
+                        normal1[1]=tmp;
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[2]; 
+                        normal1[2]=tmp;
+
+                        tmp=normal2[0]; 
+                        normal2[0]=normal2[1]; 
+                        normal2[1]=tmp;
+                        tmp=normal2[0]; 
+                        normal2[0]=normal2[2]; 
+                        normal2[2]=tmp;     
+
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[1]; 
+                        normal_fit[1]=tmp;
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[2]; 
+                        normal_fit[2]=tmp;                    
+                    break;
+                }
+
+                normal_fit.normalize();
+                // if (!flip)
+                // {
+                //     normal_fit = -normal_fit;
+                // }
+                output << normal_fit[0] << ",";
+                output << normal_fit[1] << ",";
+                output << normal_fit[2] << ",";
+                output << "\n";
+
+                // std::cout << normal1 << std::endl;
+                // std::cout << normal2 << std::endl;
+                // std::cout << normal_fit << std::endl;
+
+                normal1.normalize();
+                normal2.normalize();
+                // std::cout << normal1 << " " << normal2 << " " << normal_fit << std::endl;
+
+                bool flip_normals = false;
+                if (normal1[0] < -eps) {
+                    flip_normals = true;
+                } else if (std::abs(normal1[0]) <= eps) {
+                    if (normal1[1] < -eps) {
+                        flip_normals = true;
+                    } else if (std::abs(normal1[1]) <= eps && normal1[2] < -eps) {
+                        flip_normals = true;
+                    }
+                }
+
+                if (flip_normals) {
+                    //if (normal2.calculateMagnitude() < 0.1)
+                    {
+                        //normal1 = -normal1;
+                    }
+                    //else
+                    {
+                        auto tmp = normal1;
+                        normal1 = -normal2;
+                        normal2 = -tmp;
+                    }
+                }
+
+                double theta1 = std::atan2(normal1[1], normal1[0])/(M_PI/4.0);
+                double phi1   = std::asin(std::clamp(normal1[2], -1.0, 1.0))/(M_PI/4.0);
+                //double n2x = -normal2[0], n2y = -normal2[1], n2z = -normal2[2];
+                double theta2 = std::atan2(normal2[1], normal2[0])/(M_PI/4.0);
+                double phi2   = std::asin(std::clamp(normal2[2], -1.0, 1.0))/(M_PI/4.0);
+                //normals << theta1 << "," << phi1 << "," << theta2 << "," << phi2 << "\n";
+                normals << normal1[0] << "," << normal1[1] << "," << normal1[2] << "," << -normal2[0] << "," << -normal2[1] << "," << -normal2[2] << "\n";                
+           
+           
+                // const auto bottom_corner = IRL::Pt(-1.5, -1.5, -1.5);
+                // const auto top_corner = IRL::Pt(1.5, 1.5, 1.5);
+                // const auto cube = IRL::StoredRectangularCuboid<IRL::Pt>::fromBoundingPts(bottom_corner, top_corner);
+
+                // const auto first_moments_and_surface = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cube, paraboloid1);
+                // const auto first_moments_and_surface2 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cube, paraboloid2);
+                // const auto first_moments_and_surface3 = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>, IRL::HalfEdgeCutting>(cube, fit);
+                // const double length_scale = 0.01;
+                // IRL::TriangulatedSurfaceOutput triangulated_surface = first_moments_and_surface.getSurface().triangulate(length_scale);
+                // IRL::TriangulatedSurfaceOutput triangulated_surface2 = first_moments_and_surface2.getSurface().triangulate(length_scale);
+                // IRL::TriangulatedSurfaceOutput triangulated_surface3 = first_moments_and_surface3.getSurface().triangulate(length_scale);
+                // std::string name3 = "p1_"+std::to_string(n);
+                // std::string name4 = "p2_"+std::to_string(n);
+                // std::string name5 = "pf_"+std::to_string(n);
+                // triangulated_surface.write(name3);
+                // triangulated_surface2.write(name4);  
+                // triangulated_surface3.write(name5);  
+           
+           
+            }  
+            output.close();  
+            normals.close(); 
+            coefficients1.close(); 
+            coefficients2.close(); 
+        }; 
+
+        void generate_sheet_plic(double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, bool normalize, std::string nam)
+        {
+            bool flip;
+            std::ofstream output;
+            std::string data_name = "moments"+nam+".txt";
+            output.open(data_name, std::ios_base::app);
+            std::ofstream normals;
+            std::string normals_name = "normals"+nam+".txt";
+            normals.open(normals_name, std::ios_base::app);
+            std::ofstream coefficients1;
+            std::string name1 = "coefficients1"+nam+".txt";
+            coefficients1.open(name1, std::ios_base::app);
+            std::ofstream coefficients2;
+            std::string name2 = "coefficients2"+nam+".txt";
+            coefficients2.open(name2, std::ios_base::app);
+
+            std::random_device rd;  
+            std::mt19937_64 a_eng(rd());
+            std::uniform_int_distribution<int> dis(0, 7);
+            std::normal_distribution<double> noise(0.0,0.0125);
+
+            std::uniform_real_distribution<double> thick(t_l, t_h);
+            std::uniform_real_distribution<double> ang1(0, 2*M_PI);
+            std::uniform_real_distribution<double> ang2(-M_PI/2.0, M_PI/2.0);
+            std::uniform_real_distribution<double> z_dist(-1.0, 1.0);
+            std::uniform_real_distribution<double> translation(-1, 1);
+            std::uniform_real_distribution<double> vec2(0.7, 1.0);
+            std::uniform_real_distribution<double> dist_a(coa_l, coa_h);
+            std::uniform_real_distribution<double> dist_b(cob_l, cob_h);
+            std::uniform_int_distribution<int> dist_sign(1, 2);
+
+            for (int n = 0; n < Ndata; ++n) 
+            {
+                std::cout << n << std::endl;
+
+                bool valid = false;
+                IRL::Paraboloid paraboloid1;
+                IRL::Normal dir1;
+
+                int sign1 = dist_sign(a_eng);
+                int sign2 = dist_sign(a_eng);
+                double thickness = thick(a_eng);
+                double angle1 = ang1(a_eng);
+                double z = z_dist(a_eng);
+                double r = std::sqrt(1.0 - z * z);
+                dir1 = IRL::Normal(r * std::cos(angle1), r * std::sin(angle1), z);
+                dir1.normalize();
+
+                int max_it = 0;
+                while (!valid)
+                {
+                    if (max_it > 100)
+                    {
+                        sign1 = dist_sign(a_eng);
+                        sign2 = dist_sign(a_eng);
+                        max_it = 0;
+                    }
+                    else
+                    {
+                        ++max_it;
+                    }
+
+                    double o_x = translation(a_eng);
+                    double o_y = translation(a_eng);
+                    double o_z = translation(a_eng);
+                    IRL::Pt datum = IRL::Pt(o_x, o_y, o_z);
+
+                    IRL::Normal a;
+                    if (abs(dir1[0]) >= 0.97)
+                    {
+                        a = IRL::Normal(0,1,0);
+                    }
+                    else
+                    {
+                        a = IRL::Normal(1,0,0);
+                    }
+                    IRL::Normal t1 = IRL::crossProduct(dir1, a);
+                    t1.normalize();
+                    IRL::Normal t2 = IRL::crossProduct(dir1, t1);
+                    t2.normalize();
+                    IRL::ReferenceFrame frame1 = IRL::ReferenceFrame(t1, t2, dir1);
+
+                    double a1 = (2*sign1-3)*dist_a(a_eng);
+                    double b1 = (2*sign2-3)*dist_b(a_eng);
+
+                    paraboloid1 = IRL::Paraboloid(datum, frame1, a1, b1);
+
+                    const auto cube = gen->getStencil()->getCell(gen->getStencil()->get_ic(),gen->getStencil()->get_jc(),gen->getStencil()->get_kc());
+                    const auto vol1 = IRL::getVolumeMoments<IRL::Volume>(cube, paraboloid1);
+
+                    if (vol1 > IRL::global_constants::VF_LOW && vol1 < IRL::global_constants::VF_HIGH)
+                    {
+                        valid = true;
+                    }
+                }
+
+                coefficients1 << paraboloid1.getDatum().x() << "," << paraboloid1.getDatum().y() << "," << paraboloid1.getDatum().z()
+                << "," << paraboloid1.getReferenceFrame()[0][0] << "," << paraboloid1.getReferenceFrame()[0][1] << "," << paraboloid1.getReferenceFrame()[0][2]
+                << "," << paraboloid1.getReferenceFrame()[1][0] << "," << paraboloid1.getReferenceFrame()[1][1] << "," << paraboloid1.getReferenceFrame()[1][2]
+                << "," << paraboloid1.getReferenceFrame()[2][0] << "," << paraboloid1.getReferenceFrame()[2][1] << "," << paraboloid1.getReferenceFrame()[2][2]
+                << "," << paraboloid1.getAlignedParaboloid().a() << "," << paraboloid1.getAlignedParaboloid().b() << "," << thickness << "\n";
+
+                coefficients2 << 0 << "," << 0 << "," << 0
+                << "," << 0 << "," << 0 << "," << 0
+                << "," << 0 << "," << 0 << "," << 0
+                << "," << 0 << "," << 0 << "," << 0
+                << "," << 0 << "," << 0 << "," << thickness << "\n";
+
+                auto moments1 = gen->get_moments(paraboloid1, 1, false, flip);
+                std::vector<double> moments;
+                std::vector<IRL::Pt> points;
+                moments.resize(moments1.size());
+
+                int direction = 0;
+                int direction2 = 0;
+
+                // Use moments1 directly — single paraboloid, no subtraction needed
+                for (int i = 0; i < NX; ++i)
+                {
+                    for (int j = 0; j < NY; ++j)
+                    {
+                        for (int k = 0; k < NZ; ++k)
+                        {
+                            for (int m = 0; m < 7; ++m)
+                            {
+                                moments[get_idx(i, j, k, m)] = moments1[get_idx(i, j, k, m)];
+                            }
+                            if (moments[get_idx(i, j, k, 0)] > IRL::global_constants::VF_LOW)
+                            {
+                                points.push_back(IRL::Pt(moments[get_idx(i, j, k, 1)],moments[get_idx(i, j, k, 2)],moments[get_idx(i, j, k, 3)])+IRL::Pt(gen->getStencil()->get_xm(i),gen->getStencil()->get_ym(j),gen->getStencil()->get_zm(k)));
+                            }
+                        }
+                    }
+                }
+
+                IRL::Paraboloid fit = fitConstrainedParaboloidFromPoints(points);
+
+                auto cell = gen->getStencil()->getCell(gen->getStencil()->get_ic(),gen->getStencil()->get_jc(),gen->getStencil()->get_kc());
+                auto surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cell, paraboloid1);
+                auto surface = surface_and_moments.getSurface();
+                auto normal1 = surface.getAverageNormalNonAligned();
+
+                surface_and_moments = IRL::getVolumeMoments<IRL::AddSurfaceOutput<IRL::VolumeMoments, IRL::ParaboloidParametrizedSurfaceOutput>>(cell, fit);
+                surface = surface_and_moments.getSurface();
+                auto normal_fit = fit.getReferenceFrame()[2];
+
+                IRL::Pt center1 = get_global_centroid(moments);
+                if (IRL::dotProduct(center1, normal_fit) < 0)
+                {
+                    normal_fit = -normal_fit;
+                }
+
+                const double eps = 1e-10;
+
+                auto moments_fit = gen->get_moments(fit, 1, true, flip);
+
+                IRL::Pt center = IRL::Pt(normal_fit[0], normal_fit[1], normal_fit[2]);
+                reflectMoments(moments, direction, direction2, center);
+
+                int p = dis(a_eng);
+                bool full = false;
+
+                for (int i = 0; i < moments.size(); ++i)
+                {
+                    if (p == 0 || !disturb)
+                    {
+                        if (normalize || i % 7 == 0)
+                        {
+                            output << moments[i] << ",";
+                        }
+                        else if (!normalize)
+                        {
+                            output << moments[i]*moments[i - i%7] << ",";
+                        }
+                    }
+                    else
+                    {
+                        if (i % 7 == 0)
+                        {
+                            full = false;
+                            output << moments[i] << ",";
+                            if (moments[i] > IRL::global_constants::VF_HIGH || moments[i] < IRL::global_constants::VF_LOW)
+                            {
+                                full = true;
+                            }
+                        }
+                        else
+                        {
+                            double c = noise(a_eng);
+                            if (moments[i] + c > 0.5 && !full)
+                            {
+                                moments[i] = 0.5;
+                            }
+                            else if (moments[i] + c < -0.5 && !full)
+                            {
+                                moments[i] = -0.5;
+                            }
+                            else if (!full)
+                            {
+                                moments[i] = moments[i] + c;
+                            }
+
+                            if (normalize)
+                            {
+                                output << moments[i] << ",";
+                            }
+                            else
+                            {
+                                output << moments[i]*moments[i - i%7] << ",";
+                            }
+                        }
+                    }
+                }
+
+                double tmp;
+                switch (direction)
+                {
+                    case 1:
+                        normal1[0] = -normal1[0];
+                        normal_fit[0] = -normal_fit[0];
+                    break;
+                    case 2:
+                        normal1[1] = -normal1[1];
+                        normal_fit[1] = -normal_fit[1];
+                    break;
+                    case 3:
+                        normal1[2] = -normal1[2];
+                        normal_fit[2] = -normal_fit[2];
+                    break;
+                    case 4:
+                        normal1[0] = -normal1[0];
+                        normal1[1] = -normal1[1];
+                        normal_fit[0] = -normal_fit[0];
+                        normal_fit[1] = -normal_fit[1];
+                    break;
+                    case 5:
+                        normal1[0] = -normal1[0];
+                        normal1[2] = -normal1[2];
+                        normal_fit[0] = -normal_fit[0];
+                        normal_fit[2] = -normal_fit[2];
+                    break;
+                    case 6:
+                        normal1[1] = -normal1[1];
+                        normal1[2] = -normal1[2];
+                        normal_fit[1] = -normal_fit[1];
+                        normal_fit[2] = -normal_fit[2];
+                    break;
+                    case 7:
+                        normal1[0] = -normal1[0];
+                        normal1[1] = -normal1[1];
+                        normal1[2] = -normal1[2];
+                        normal_fit[0] = -normal_fit[0];
+                        normal_fit[1] = -normal_fit[1];
+                        normal_fit[2] = -normal_fit[2];
+                    break;
+                }
+                switch (direction2)
+                {
+                    case 1:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[1]; 
+                        normal1[1]=tmp;
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[1]; 
+                        normal_fit[1]=tmp;
+                    break;
+                    case 2:
+                        tmp=normal1[1]; 
+                        normal1[1]=normal1[2]; 
+                        normal1[2]=tmp;
+                        tmp=normal_fit[1]; 
+                        normal_fit[1]=normal_fit[2]; 
+                        normal_fit[2]=tmp;
+                    break;
+                    case 3:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[2]; 
+                        normal1[2]=tmp;
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[2]; 
+                        normal_fit[2]=tmp;
+                    break;
+                    case 4:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[1]; 
+                        normal1[1]=tmp;
+                        tmp=normal1[1]; 
+                        normal1[1]=normal1[2]; 
+                        normal1[2]=tmp;
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[1]; 
+                        normal_fit[1]=tmp;
+                        tmp=normal_fit[1]; 
+                        normal_fit[1]=normal_fit[2]; 
+                        normal_fit[2]=tmp;
+                    break;
+                    case 5:
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[1]; 
+                        normal1[1]=tmp;
+                        tmp=normal1[0]; 
+                        normal1[0]=normal1[2]; 
+                        normal1[2]=tmp;
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[1]; 
+                        normal_fit[1]=tmp;
+                        tmp=normal_fit[0]; 
+                        normal_fit[0]=normal_fit[2]; 
+                        normal_fit[2]=tmp;
+                    break;
+                }
+
+                normal_fit.normalize();
+                output << normal_fit[0] << ",";
+                output << normal_fit[1] << ",";
+                output << normal_fit[2] << ",";
+                output << "\n";
+
+                normal1.normalize();
+
+                // Write normal1 twice in place of normal1 + normal2 to preserve file format
+                normals << -normal1[0] << "," << -normal1[1] << "," << -normal1[2] << "," << 0 << "," << 0 << "," << 0 << "\n";
+            }  
+            output.close();  
+            normals.close(); 
+            coefficients1.close(); 
+        };
 
         struct Interval 
         {
@@ -1600,9 +2587,9 @@ namespace IRL
             //IRL::Pt center = get_global_centroid(moments);
             double temp;
 
-            if (std::abs(center[0]) <= IRL::global_constants::VF_LOW) center[0] = 0;
-            if (std::abs(center[1]) <= IRL::global_constants::VF_LOW) center[1] = 0;
-            if (std::abs(center[2]) <= IRL::global_constants::VF_LOW) center[2] = 0;
+            if (std::abs(center[0]) <= 1e-8) center[0] = 0;
+            if (std::abs(center[1]) <= 1e-8) center[1] = 0;
+            if (std::abs(center[2]) <= 1e-8) center[2] = 0;
 
             if (center[0] < 0 && center[1] >= 0 && center[2] >= 0) 
             {
@@ -1657,15 +2644,15 @@ namespace IRL
                 center[2] = -center[2];
             }
 
-            if (std::abs(center[0] - center[1]) <= IRL::global_constants::VF_LOW && (center[0] - center[2]) > IRL::global_constants::VF_LOW) 
+            if (std::abs(center[0] - center[1]) <= 1e-8 && (center[0] - center[2]) > 1e-8) 
             {
                 dir2 = 0;
             } 
-            else if (std::abs(center[1] - center[2]) <= IRL::global_constants::VF_LOW && (center[0] - center[1]) > IRL::global_constants::VF_LOW) 
+            else if (std::abs(center[1] - center[2]) <= 1e-8 && (center[0] - center[1]) > 1e-8) 
             {
                 dir2 = 0;
             } 
-            else if (std::abs(center[0] - center[1]) <= IRL::global_constants::VF_LOW && (center[2] - center[0]) > IRL::global_constants::VF_LOW) 
+            else if (std::abs(center[0] - center[1]) <= 1e-8 && (center[2] - center[0]) > 1e-8) 
             {
                 dir2 = 3;
                 this->reflectMomentsXZ(moments);
@@ -1673,7 +2660,7 @@ namespace IRL
                 center[0] = center[2];
                 center[2] = temp;
             } 
-            else if (std::abs(center[0] - center[2]) <= IRL::global_constants::VF_LOW && (center[1] - center[0]) > IRL::global_constants::VF_LOW) 
+            else if (std::abs(center[0] - center[2]) <= 1e-8 && (center[1] - center[0]) > 1e-8) 
             {
                 dir2 = 1;
                 this->reflectMomentsXY(moments);
@@ -1681,7 +2668,7 @@ namespace IRL
                 center[0] = center[1];
                 center[1] = temp;
             } 
-            else if (std::abs(center[0] - center[2]) <= IRL::global_constants::VF_LOW && (center[0] - center[1]) > IRL::global_constants::VF_LOW) 
+            else if (std::abs(center[0] - center[2]) <= 1e-8 && (center[0] - center[1]) > 1e-8) 
             {
                 dir2 = 2;
                 this->reflectMomentsYZ(moments);
@@ -1689,7 +2676,7 @@ namespace IRL
                 center[1] = center[2];
                 center[2] = temp;
             } 
-            else if (std::abs(center[1] - center[2]) <= IRL::global_constants::VF_LOW && (center[1] - center[0]) > IRL::global_constants::VF_LOW) 
+            else if (std::abs(center[1] - center[2]) <= 1e-8 && (center[1] - center[0]) > 1e-8) 
             {
                 dir2 = 3;
                 this->reflectMomentsXZ(moments);

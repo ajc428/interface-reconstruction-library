@@ -41,7 +41,7 @@ namespace IRL
             }
             switch (type)
             {
-                case 1:
+                case 2:
                     x = torch::sigmoid(lo(x));
                 break;
                 default:

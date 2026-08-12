@@ -14,6 +14,8 @@ IRLAddExample_cpp(
     "vof_advection.h"
     "plicnet.h"
     "r2pnet.h"
+    "r2pnet_solve.h"
+    "ml_classifier.h"
   SRCS
     "main.cpp"
     "circle_rotation_2d.cpp"

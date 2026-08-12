@@ -26,6 +26,8 @@
 #include "examples/new_advector/vof_advection.h"
 #include "examples/new_advector/plicnet.h"
 #include "examples/new_advector/r2pnet.h"
+#include "examples/new_advector/r2pnet_solve.h"
+#include "examples/new_advector/ml_classifier.h"
 
 void getReconstruction(
     const std::string& a_reconstruction_method,
@@ -36,6 +38,8 @@ void getReconstruction(
     const Data<double>& a_W, Data<IRL::PlanarSeparator>* a_interface) {
   recon_method = Data<int>(&a_liquid_volume_fraction.getMesh());
   num_planes = Data<int>(&a_liquid_volume_fraction.getMesh());
+  feature_class = Data<int>(&a_liquid_volume_fraction.getMesh());
+  branch = Data<int>(&a_liquid_volume_fraction.getMesh());
   if (a_reconstruction_method == "ELVIRA2D") {
     ELVIRA2D::getReconstruction(a_liquid_volume_fraction, a_dt, a_U, a_V, a_W,
                                 a_interface);
@@ -1425,8 +1429,68 @@ const Data<double>& a_liquid_volume_fraction,
         double n_pos = norm_pos(i, j, k);
         double n_neg = norm_neg(i, j, k);
 
+        double vol = 0;
+        for (int ii=i-1; ii<i+2; ++ii)
+          for (int jj=j-1; jj<j+2; ++jj)
+          for (int kk=k-1; kk<k+2; ++kk) {
+            vol = vol + a_liquid_volume_fraction(ii, jj, kk);
+          }
+
+        bool flip = (vol >= 0.5*27.0);
+
+
+        // --- ML interface-type classification -----------------------------
+        // Class ids (Fortran convention, from get_class):
+        //   0 no classification, 1 well-resolved, 2 ligament, 3 droplet,
+        //   4 sheet/film, 5 ligament end, 6 sheet end
+        int interface_class = 0;
+
+        // The classifier needs a 5^3 stencil, so it is only defined two cells
+        // in from the domain edge; elsewhere we fall back to PLICNET.
+        const bool stencil_available =
+            (i - 2 >= mesh.imino() && i + 2 <= mesh.imaxo() &&
+             j - 2 >= mesh.jmino() && j + 2 <= mesh.jmaxo() &&
+             k - 2 >= mesh.kmino() && k + 2 <= mesh.kmaxo());
+
+        if (stencil_available) {
+          ml_classifier::Stencil stencil;
+          const IRL::Pt cell_center(mesh.xm(i), mesh.ym(j), mesh.zm(k));
+
+          for (int ii = 0; ii < 5; ++ii) {
+            for (int jj = 0; jj < 5; ++jj) {
+              for (int kk = 0; kk < 5; ++kk) {
+                const int gi = i + ii - 2;
+                const int gj = j + jj - 2;
+                const int gk = k + kk - 2;
+
+                double vf = a_liquid_volume_fraction(gi, gj, gk);
+                if (flip) vf = 1 - vf;
+                stencil.f(ii, jj, kk) = vf;
+
+                // Liquid centroid, made relative to the *centre* cell, scaled
+                // by the cell size, then weighted by the volume fraction.
+                IRL::Pt bary = a_liquid_centroid(gi, gj, gk);
+                if (flip) bary = a_gas_centroid(gi, gj, gk);
+                bary -= cell_center;
+                bary[0] /= mesh.dx();
+                bary[1] /= mesh.dy();
+                bary[2] /= mesh.dz();
+                bary *= vf;
+
+                stencil.b(ii, jj, kk, 0) = bary[0];
+                stencil.b(ii, jj, kk, 1) = bary[1];
+                stencil.b(ii, jj, kk, 2) = bary[2];
+              }
+            }
+          }
+          interface_class = ml_classifier::get_class(stencil);
+        }
+
+        // Sheet/film gets the two-plane R2P treatment; everything else PLIC.
+        const bool use_r2p = (interface_class == 4 || interface_class == 6);
+
         // Hybrid condition (from Fortran: norm_pos-norm_neg >= 0.5 OR ...)
-        if ((n_pos - n_neg) >= 0.5 || (((n_pos - n_neg) < 0.5) && ((n_pos + n_neg) < 0.75))) {//
+        if(!use_r2p){//if ((n_pos - n_neg) >= 0.5 || (((n_pos - n_neg) < 0.5) && ((n_pos + n_neg) < 0.75))) {//
           // --- PLICNET Logic ---
           recon_method(i,j,k) = 0;
           num_planes(i, j, k) = 1;
@@ -1643,60 +1707,68 @@ const Data<double>& a_liquid_volume_fraction,
 
 void R2PDistanceSolver(double VF_target, IRL::Pt bary_target, IRL::PlanarSeparator &a_interface, IRL::RectangularCuboid cell)
 {
-  IRL::Normal n = a_interface[0].normal()-a_interface[1].normal();
+  IRL::Pt cell_centroid = cell.calculateCentroid();
+  int sign = a_interface.isNotFlipped() ? 1 : -1;
+
+  if (sign == -1)
+  {
+    bary_target = (cell_centroid - bary_target*VF_target);
+    bary_target[0] = bary_target[0]/(1 - VF_target);
+    bary_target[1] = bary_target[1]/(1 - VF_target);
+    bary_target[2] = bary_target[2]/(1 - VF_target);
+  }
+
+  IRL::Normal n = a_interface[0].normal() - a_interface[1].normal();
+  if (n.calculateMagnitude() < 1.0e-12)
+  {
+    n = a_interface[0].normal();
+  }
   n.normalize();
-  double init_dist = IRL::dotProduct(bary_target,n);
+
+  double t = IRL::dotProduct(bary_target, n) - IRL::dotProduct(cell_centroid, n);
+  double dist1 = IRL::dotProduct(cell_centroid, a_interface[0].normal()) + t;
+  double dist2 = IRL::dotProduct(cell_centroid, a_interface[1].normal()) - t;
+
   double side = (cell.calculateSideLength(0)+cell.calculateSideLength(1)+cell.calculateSideLength(2))/3.0;
   double tol = 1e-14;
   IRL::Pt bary;
 
-  // int max_outer_iter = 15;
-  // double best_init_dist = init_dist;
-  // double min_3d_error = std::numeric_limits<double>::max();
-  // IRL::PlanarSeparator best_interface = a_interface; 
-  // double relaxation = 0.8;
-
-
-  // for (int m = 0; m < max_outer_iter; ++m)
-  // {
-    int max_iter = 100;
-    int max_bound_iter = 100;
+  {
+    int max_iter = 200;
     int iter = 0;
     double VF_cut = 0.0;
     double error = 1.0;
 
+    auto setInterval = [&](double shift)
+    {
+      a_interface[0] = IRL::Plane(a_interface[0].normal(), dist1 + sign*shift);
+      a_interface[1] = IRL::Plane(a_interface[1].normal(), dist2 + sign*shift);
+      auto m = IRL::getNormalizedVolumeMoments<IRL::VolumeMoments>(cell, a_interface);
+      bary = m.volume() > 1.0e-14*cell.calculateVolume() ? m.centroid() : cell_centroid;
+      return m.volume() / cell.calculateVolume();
+    };
+
+    double VF_zero = setInterval(0.0);
     double interval_min = 0.0;
-    double interval_max = side/8.0;
+    double interval_max = sign*VF_zero > sign*VF_target ? -0.25*side : 0.25*side;
+    double VF_bound = setInterval(interval_max);
 
-    int sign = a_interface.isNotFlipped() ? 1 : -1;
-
-    a_interface[0] = IRL::Plane(a_interface[0].normal(),init_dist + sign*interval_max);
-    a_interface[1] = IRL::Plane(a_interface[1].normal(),-init_dist + sign*interval_max);
-    auto moments = IRL::getNormalizedVolumeMoments<IRL::VolumeMoments>(cell, a_interface);
-    double vfrac_max = moments.volume()/cell.calculateVolume();
-
-    while (iter < max_bound_iter && sign*vfrac_max < sign*VF_target) 
+    while (iter < max_iter && (VF_zero - VF_target)*(VF_bound - VF_target) > 0.0)
     {
+      interval_min = interval_max;
       interval_max *= 2.0;
-      a_interface[0] = IRL::Plane(a_interface[0].normal(),init_dist + sign*interval_max);
-      a_interface[1] = IRL::Plane(a_interface[1].normal(),-init_dist + sign*interval_max);
-      vfrac_max = IRL::getNormalizedVolumeMoments<IRL::Volume>(cell, a_interface)/cell.calculateVolume();
-      iter++;
+      VF_bound = setInterval(interval_max);
+      ++iter;
+      if (std::abs(interval_max) > 20.0*side) break;
     }
-
-    if (iter >= max_iter)
+    if (interval_max < interval_min)
     {
-      std::cout << "R2PDistanceSolver Phase 1: Max iterations reached without bracketing target VF." << std::endl;
-      //throw std::runtime_error("R2PDistanceSolver Phase 1: Max iterations reached without bracketing target VF.");
+      std::swap(interval_min, interval_max);
     }
 
-    std::array<double, 3> bounding_values{{interval_min, 0.5 * (interval_min + interval_max), interval_max}};
+    std::array<double, 3> bounding_values{{interval_min, 0.5*(interval_min + interval_max), interval_max}};
 
-    a_interface[0] = IRL::Plane(a_interface[0].normal(),init_dist + sign*bounding_values[1]);
-    a_interface[1] = IRL::Plane(a_interface[1].normal(),-init_dist + sign*bounding_values[1]);
-    moments = IRL::getNormalizedVolumeMoments<IRL::VolumeMoments>(cell, a_interface);
-    VF_cut = moments.volume() / cell.calculateVolume();
-    bary = moments.centroid();
+    VF_cut = setInterval(bounding_values[1]);
     error = std::abs(VF_cut - VF_target);
 
     iter = 0;
@@ -1710,50 +1782,18 @@ void R2PDistanceSolver(double VF_target, IRL::Pt bary_target, IRL::PlanarSeparat
       {
         bounding_values[2] = bounding_values[1];
       }
-      bounding_values[1] = 0.5 * (bounding_values[0] + bounding_values[2]);
-      a_interface[0] = IRL::Plane(a_interface[0].normal(),init_dist + sign*bounding_values[1]);
-      a_interface[1] = IRL::Plane(a_interface[1].normal(),-init_dist + sign*bounding_values[1]);
-      moments = IRL::getNormalizedVolumeMoments<IRL::VolumeMoments>(cell, a_interface);
-      VF_cut = moments.volume() / cell.calculateVolume();
-      bary = moments.centroid();
+      bounding_values[1] = 0.5*(bounding_values[0] + bounding_values[2]);
+      VF_cut = setInterval(bounding_values[1]);
       error = std::abs(VF_cut - VF_target);
       ++iter;
     }
+    IRL::cleanReconstruction(cell, VF_target, &a_interface);
 
     if (iter >= max_iter)
     {
-      std::cout << "R2PDistanceSolver Phase 2: Max iterations reached without converging to tolerance." << std::endl;
-      std::cout << VF_cut << " " << VF_target << std::endl;
-      //throw std::runtime_error("R2PDistanceSolver Phase 2: Max iterations reached without converging to tolerance.");
+      std::cout << "R2PDistanceSolver: bisection stalled, VF = " << VF_cut << " target " << VF_target << std::endl;
     }
-    //std::cout << VF_cut << " " << VF_target << " " << bary << " " << bary_target << std::endl;
-
-    // double current_3d_error = IRL::squaredDistanceBetweenPts(bary,bary_target);
-    // if (current_3d_error < min_3d_error) 
-    // {
-    //   min_3d_error = current_3d_error;
-    //   best_init_dist = init_dist;
-    //   best_interface = a_interface;
-    // }
-    // else 
-    // {
-    //   relaxation *= 0.5; 
-    // }
-    //   std::cout << m << " " << bary << " " << bary_target << " " << min_3d_error << " " << relaxation << std::endl;
-    // if (min_3d_error < 1e-4*side) break;
-    // if (relaxation < 1e-1*side) break;
-
-    // double current_bary_proj = IRL::dotProduct(bary, n);
-    // double target_bary_proj = IRL::dotProduct(bary_target, n);
-    // double bary_error_1d = target_bary_proj - current_bary_proj;
-
-    // if (bary_error_1d < 1e-4*side) break;
-
-    // init_dist = best_init_dist + (bary_error_1d * relaxation);
-    // std::cout << current_bary_proj << " " << target_bary_proj << " " << bary_error_1d << " " << init_dist << " " << best_init_dist << std::endl;
-  // }
-  // a_interface = best_interface;
-  // std::cout << std::endl << std::endl << std::endl;
+  }
 }
 
 IRL::Normal PCA_Normal(const std::vector<IRL::Pt>& points) 
@@ -1988,17 +2028,149 @@ const Data<double>& a_liquid_volume_fraction,
               IRL::Plane(IRL::Normal(0.0, 0.0, 0.0), distance));
           continue;
         }
-
+        branch(i,j,k) = 0;
         double n_pos = norm_pos(i, j, k);
         double n_neg = norm_neg(i, j, k);
 
+        double vol = 0;
+        for (int ii=i-1; ii<i+2; ++ii)
+          for (int jj=j-1; jj<j+2; ++jj)
+          for (int kk=k-1; kk<k+2; ++kk) {
+            vol = vol + a_liquid_volume_fraction(ii, jj, kk);
+          }
+
+        bool flip = (vol >= 0.5*27.0);
+
+        auto plicnet_normal = [&](void) -> IRL::Normal {
+          double moments_p[189] = {0};
+          double m000 = 0, m100 = 0, m010 = 0, m001 = 0;
+          double center_p[3] = {0};
+          int dir1 = 0, dir2 = 0;
+          double n[3] = {0};
+          double temp = 0;
+          const bool flip_plic = (a_liquid_volume_fraction(i, j, k) >= 0.5);
+
+          for (int ii = i - 1; ii < i + 2; ++ii)
+          for (int jj = j - 1; jj < j + 2; ++jj)
+          for (int kk = k - 1; kk < k + 2; ++kk) {
+            const int idx = 7 * ((ii + 1 - i) * 9 + (jj + 1 - j) * 3 + (kk + 1 - k));
+            if (flip_plic) {
+              moments_p[idx  ] = 1.0 - a_liquid_volume_fraction(ii, jj, kk);
+              moments_p[idx+1] = (a_gas_centroid(ii,jj,kk)[0]    - mesh.xm(ii)) / mesh.dx();
+              moments_p[idx+2] = (a_gas_centroid(ii,jj,kk)[1]    - mesh.ym(jj)) / mesh.dy();
+              moments_p[idx+3] = (a_gas_centroid(ii,jj,kk)[2]    - mesh.zm(kk)) / mesh.dz();
+              moments_p[idx+4] = (a_liquid_centroid(ii,jj,kk)[0] - mesh.xm(ii)) / mesh.dx();
+              moments_p[idx+5] = (a_liquid_centroid(ii,jj,kk)[1] - mesh.ym(jj)) / mesh.dy();
+              moments_p[idx+6] = (a_liquid_centroid(ii,jj,kk)[2] - mesh.zm(kk)) / mesh.dz();
+            } else {
+              moments_p[idx  ] = a_liquid_volume_fraction(ii, jj, kk);
+              moments_p[idx+1] = (a_liquid_centroid(ii,jj,kk)[0] - mesh.xm(ii)) / mesh.dx();
+              moments_p[idx+2] = (a_liquid_centroid(ii,jj,kk)[1] - mesh.ym(jj)) / mesh.dy();
+              moments_p[idx+3] = (a_liquid_centroid(ii,jj,kk)[2] - mesh.zm(kk)) / mesh.dz();
+              moments_p[idx+4] = (a_gas_centroid(ii,jj,kk)[0]    - mesh.xm(ii)) / mesh.dx();
+              moments_p[idx+5] = (a_gas_centroid(ii,jj,kk)[1]    - mesh.ym(jj)) / mesh.dy();
+              moments_p[idx+6] = (a_gas_centroid(ii,jj,kk)[2]    - mesh.zm(kk)) / mesh.dz();
+            }
+            m000 += moments_p[idx];
+            m100 += (moments_p[idx+1] + (ii - i)) * moments_p[idx];
+            m010 += (moments_p[idx+2] + (jj - j)) * moments_p[idx];
+            m001 += (moments_p[idx+3] + (kk - k)) * moments_p[idx];
+          }
+
+          center_p[0] = m100 / m000;
+          center_p[1] = m010 / m000;
+          center_p[2] = m001 / m000;
+
+          plicnet::reflect_moments(moments_p, center_p, &dir1, &dir2);
+          plicnet::get_normal(moments_p, n);
+          IRL::Normal normal = IRL::Normal(n[0], n[1], n[2]);
+
+          switch (dir2) {
+            case 1: temp=normal[0]; normal[0]=normal[1]; normal[1]=temp; break;
+            case 2: temp=normal[1]; normal[1]=normal[2]; normal[2]=temp; break;
+            case 3: temp=normal[0]; normal[0]=normal[2]; normal[2]=temp; break;
+            case 4: temp=normal[1]; normal[1]=normal[2]; normal[2]=temp;
+                    temp=normal[0]; normal[0]=normal[1]; normal[1]=temp; break;
+            case 5: temp=normal[0]; normal[0]=normal[2]; normal[2]=temp;
+                    temp=normal[0]; normal[0]=normal[1]; normal[1]=temp; break;
+          }
+          switch (dir1) {
+            case 1: normal[0]=-normal[0]; break;
+            case 2: normal[1]=-normal[1]; break;
+            case 3: normal[2]=-normal[2]; break;
+            case 4: normal[0]=-normal[0]; normal[1]=-normal[1]; break;
+            case 5: normal[0]=-normal[0]; normal[2]=-normal[2]; break;
+            case 6: normal[1]=-normal[1]; normal[2]=-normal[2]; break;
+            case 7: normal[0]=-normal[0]; normal[1]=-normal[1]; normal[2]=-normal[2]; break;
+          }
+          if (!flip_plic) { normal[0]=-normal[0]; normal[1]=-normal[1]; normal[2]=-normal[2]; }
+
+          normal[0] *= mesh.dx();
+          normal[1] *= mesh.dy();
+          normal[2] *= mesh.dz();
+          normal.normalize();
+          return normal;
+        };
+
+
+        // --- ML interface-type classification -----------------------------
+        // Class ids (Fortran convention, from get_class):
+        //   0 no classification, 1 well-resolved, 2 ligament, 3 droplet,
+        //   4 sheet/film, 5 ligament end, 6 sheet end
+        int interface_class = 0;
+
+        // The classifier needs a 5^3 stencil, so it is only defined two cells
+        // in from the domain edge; elsewhere we fall back to PLICNET.
+        const bool stencil_available =
+            (i - 2 >= mesh.imino() && i + 2 <= mesh.imaxo() &&
+             j - 2 >= mesh.jmino() && j + 2 <= mesh.jmaxo() &&
+             k - 2 >= mesh.kmino() && k + 2 <= mesh.kmaxo());
+
+        if (stencil_available) {
+          ml_classifier::Stencil stencil;
+          const IRL::Pt cell_center(mesh.xm(i), mesh.ym(j), mesh.zm(k));
+
+          for (int ii = 0; ii < 5; ++ii) {
+            for (int jj = 0; jj < 5; ++jj) {
+              for (int kk = 0; kk < 5; ++kk) {
+                const int gi = i + ii - 2;
+                const int gj = j + jj - 2;
+                const int gk = k + kk - 2;
+
+                double vf = a_liquid_volume_fraction(gi, gj, gk);
+                if (flip) vf = 1 - vf;
+                stencil.f(ii, jj, kk) = vf;
+
+                // Liquid centroid, made relative to the *centre* cell, scaled
+                // by the cell size, then weighted by the volume fraction.
+                IRL::Pt bary = a_liquid_centroid(gi, gj, gk);
+                if (flip) bary = a_gas_centroid(gi, gj, gk);
+                bary -= cell_center;
+                bary[0] /= mesh.dx();
+                bary[1] /= mesh.dy();
+                bary[2] /= mesh.dz();
+                bary *= vf;
+
+                stencil.b(ii, jj, kk, 0) = bary[0];
+                stencil.b(ii, jj, kk, 1) = bary[1];
+                stencil.b(ii, jj, kk, 2) = bary[2];
+              }
+            }
+          }
+          interface_class = ml_classifier::get_class(stencil);
+        }
+
+        feature_class(i,j,k) = interface_class;
+        // Sheet/film gets the two-plane R2P treatment; everything else PLIC.
+        const bool use_r2p = (interface_class == 4 || interface_class == 6);
+
         // Hybrid condition (from Fortran: norm_pos-norm_neg >= 0.5 OR ...)
-        if(false){//if ((n_pos - n_neg) >= 0.5 || (((n_pos - n_neg) < 0.5) && ((n_pos + n_neg) < 0.75))) {//
+        if(!use_r2p){//if ((n_pos - n_neg) >= 0.5 || (((n_pos - n_neg) < 0.5) && ((n_pos + n_neg) < 0.75))) {//if(false){//
           // --- PLICNET Logic ---
           recon_method(i,j,k) = 0;
           num_planes(i, j, k) = 1;
           double moments[189] = {0};
-          bool flip = false;
+          bool flip_plic = false;
           double m000 = 0, m100 = 0, m010 = 0, m001 = 0;
           double center[3] = {0};
           int direction = 0, direction2 = 0;
@@ -2006,9 +2178,9 @@ const Data<double>& a_liquid_volume_fraction,
           IRL::Normal normal;
           double temp = 0;
 
-          if (a_liquid_volume_fraction(i, j, k) >= 0.5) flip = true;
+          if (a_liquid_volume_fraction(i, j, k) >= 0.5) flip_plic = true;
           
-          if (flip) {
+          if (flip_plic) {
             for (int ii = i - 1; ii < i + 2; ++ii) {
               for (int jj = j - 1; jj < j + 2; ++jj) {
                 for (int kk = k - 1; kk < k + 2; ++kk) {
@@ -2057,7 +2229,7 @@ const Data<double>& a_liquid_volume_fraction,
           plicnet::reflect_moments(moments, center, &direction, &direction2);
           plicnet::get_normal(moments, n);
           normal = IRL::Normal(n[0], n[1], n[2]);
-
+//std::cout << "i " << i << " j " << j << " k " << k << " " << normal << std::endl << std::endl;
           switch (direction2) {
             case 1: temp=normal[0]; normal[0]=normal[1]; normal[1]=temp; break;
             case 2: temp=normal[1]; normal[1]=normal[2]; normal[2]=temp; break;
@@ -2076,7 +2248,7 @@ const Data<double>& a_liquid_volume_fraction,
             case 7: normal[0] = -normal[0]; normal[1] = -normal[1]; normal[2] = -normal[2]; break;
           }
 
-          if (!flip) {
+          if (!flip_plic) {
             normal[0] = -normal[0];
             normal[1] = -normal[1];
             normal[2] = -normal[2];
@@ -2098,20 +2270,11 @@ const Data<double>& a_liquid_volume_fraction,
         } 
         else 
         {
-          // IRL::R2PNeighborhood<IRL::RectangularCuboid> neighborhood;
-          // neighborhood.resize(27);
-          // neighborhood.setCenterOfStencil(13);
-          // IRL::RectangularCuboid stencil_cells[27];
-          // IRL::SeparatedMoments<IRL::VolumeMoments> stencil_moments[27];
-
-          double vol = 0;
-          for (int ii=i-1; ii<i+2; ++ii)
-            for (int jj=j-1; jj<j+2; ++jj)
-            for (int kk=k-1; kk<k+2; ++kk) {
-              vol = vol + a_liquid_volume_fraction(ii, jj, kk);
-            }
-
-          bool flip = (vol >= 0.5*27.0);
+          IRL::R2PNeighborhood<IRL::RectangularCuboid> neighborhood;
+          neighborhood.resize(27);
+          neighborhood.setCenterOfStencil(13);
+          IRL::RectangularCuboid stencil_cells[27];
+          IRL::SeparatedMoments<IRL::VolumeMoments> stencil_moments[27];
 
           recon_method(i, j, k) = 1;
           std::vector<IRL::Pt> points;
@@ -2119,20 +2282,20 @@ const Data<double>& a_liquid_volume_fraction,
           for (int ii = i - 1; ii < i + 2; ++ii) {
             for (int jj = j - 1; jj < j + 2; ++jj) {
               for (int kk = k - 1; kk < k + 2; ++kk) {
-                // const int ind = (ii - i + 1) * 9 + (jj - j + 1) * 3 + (kk - k + 1);
-                // stencil_cells[ind] = IRL::RectangularCuboid::fromBoundingPts(
-                //     IRL::Pt(mesh.x(ii), mesh.y(jj), mesh.z(kk)),
-                //     IRL::Pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1)));
-                // double vol = stencil_cells[ind].calculateVolume();
-                // stencil_moments[ind] = IRL::SeparatedMoments<IRL::VolumeMoments>(
-                //     IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk) * vol,
-                //                         a_liquid_centroid(ii, jj, kk)),
-                //     IRL::VolumeMoments(
-                //         (1.0 - a_liquid_volume_fraction(ii, jj, kk)) * vol,
-                //         a_gas_centroid(ii, jj, kk)));
-                // neighborhood.setMember(static_cast<IRL::UnsignedIndex_t>(ind),
-                //                         &stencil_cells[ind],
-                //                         &stencil_moments[ind]);
+                const int ind = (ii - i + 1) * 9 + (jj - j + 1) * 3 + (kk - k + 1);
+                stencil_cells[ind] = IRL::RectangularCuboid::fromBoundingPts(
+                    IRL::Pt(mesh.x(ii), mesh.y(jj), mesh.z(kk)),
+                    IRL::Pt(mesh.x(ii + 1), mesh.y(jj + 1), mesh.z(kk + 1)));
+                double vol = stencil_cells[ind].calculateVolume();
+                stencil_moments[ind] = IRL::SeparatedMoments<IRL::VolumeMoments>(
+                    IRL::VolumeMoments(a_liquid_volume_fraction(ii, jj, kk) * vol,
+                                        a_liquid_centroid(ii, jj, kk)),
+                    IRL::VolumeMoments(
+                        (1.0 - a_liquid_volume_fraction(ii, jj, kk)) * vol,
+                        a_gas_centroid(ii, jj, kk)));
+                neighborhood.setMember(static_cast<IRL::UnsignedIndex_t>(ind),
+                                        &stencil_cells[ind],
+                                        &stencil_moments[ind]);
 
 
                 if (!flip)
@@ -2154,33 +2317,34 @@ const Data<double>& a_liquid_volume_fraction,
           }
 
           //if (i == mesh.imin() || j == mesh.jmin() || k == mesh.kmin() || i == mesh.imax() || j == mesh.jmax() || k == mesh.kmax())
-          // {
-          //   if (listed_moments(i, j, k).size() == 0) {
-          //     // No advected interface, use MOF3D
-          //     auto cell = IRL::RectangularCuboid::fromBoundingPts(
-          //         IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
-          //         IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-          //     double vol = cell.calculateVolume();
-          //     IRL::SeparatedMoments<IRL::VolumeMoments> svm(
-          //         IRL::VolumeMoments(a_liquid_volume_fraction(i, j, k) * vol,
-          //                           a_liquid_centroid(i, j, k)),
-          //         IRL::VolumeMoments((1.0 - a_liquid_volume_fraction(i, j, k)) * vol,
-          //                           a_gas_centroid(i, j, k)));
-          //     (*a_interface)(i, j, k) = IRL::reconstructionWithMOF3D(cell, svm);
-          //     neighborhood.setSurfaceArea(getReconstructionSurfaceArea(cell, (*a_interface)(i, j, k)));
-          //   } else {
-          //     // Use AdvectedNormals
-          //     (*a_interface)(i, j, k) = IRL::reconstructionWithAdvectedNormals(listed_moments(i, j, k), neighborhood);
-          //     double area_sum = 0.0;
-          //     for (const auto& moment : listed_moments(i, j, k)) {
-          //       area_sum += moment.volumeMoments().volume();
-          //     }
-          //     neighborhood.setSurfaceArea(area_sum);
-          //   }
+          {
+            if (listed_moments(i, j, k).size() == 0) {
+              // No advected interface, use MOF3D
+              auto cell = IRL::RectangularCuboid::fromBoundingPts(
+                  IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+                  IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+              double vol = cell.calculateVolume();
+              IRL::SeparatedMoments<IRL::VolumeMoments> svm(
+                  IRL::VolumeMoments(a_liquid_volume_fraction(i, j, k) * vol,
+                                    a_liquid_centroid(i, j, k)),
+                  IRL::VolumeMoments((1.0 - a_liquid_volume_fraction(i, j, k)) * vol,
+                                    a_gas_centroid(i, j, k)));
+              (*a_interface)(i, j, k) = IRL::reconstructionWithMOF3D(cell, svm);
+              neighborhood.setSurfaceArea(getReconstructionSurfaceArea(cell, (*a_interface)(i, j, k)));
+            } else {
+              // Use AdvectedNormals
+              (*a_interface)(i, j, k) = IRL::reconstructionWithAdvectedNormals(listed_moments(i, j, k), neighborhood);
+              double area_sum = 0.0;
+              for (const auto& moment : listed_moments(i, j, k)) {
+                area_sum += moment.volumeMoments().volume();
+              }
+              neighborhood.setSurfaceArea(area_sum);
+            }
 
-          //   (*a_interface)(i, j, k) = reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
-          // }
-          //if (!(i == mesh.imin() || j == mesh.jmin() || k == mesh.kmin() || i == mesh.imax() || j == mesh.jmax() || k == mesh.kmax()))
+            (*a_interface)(i, j, k) = reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
+            //std::cout << (*a_interface)(i, j, k) << std::endl;
+          }
+          if (!(i == mesh.imin() || j == mesh.jmin() || k == mesh.kmin() || i == mesh.imax() || j == mesh.jmax() || k == mesh.kmax()))
           {
             double moments[189] = {0};
             double m000=0, m100=0, m010=0, m001=0;
@@ -2225,7 +2389,7 @@ const Data<double>& a_liquid_volume_fraction,
             //if (flip) dir = -dir;
             IRL::Pt bary = IRL::Pt(m100/m000,m010/m000,m001/m000);
             double dot = IRL::dotProduct(dir,bary);
-            //if (dot < 0) dir = -dir;
+            if (dot < 0) dir = -dir;
             // const double eps = 1e-10;
 
             // if (dir[0] < -eps) {
@@ -2260,10 +2424,10 @@ const Data<double>& a_liquid_volume_fraction,
               case 1: temp=center[0]; center[0]=center[1]; center[1]=temp; break;
               case 2: temp=center[1]; center[1]=center[2]; center[2]=temp; break;
               case 3: temp=center[0]; center[0]=center[2]; center[2]=temp; break;
-              case 4: temp=center[1]; center[1]=center[2]; center[2]=temp;
-                      temp=center[0]; center[0]=center[1]; center[1]=temp; break;
-              case 5: temp=center[0]; center[0]=center[2]; center[2]=temp;
-                      temp=center[0]; center[0]=center[1]; center[1]=temp; break;
+              case 4: temp=center[0]; center[0]=center[1]; center[1]=temp;
+                      temp=center[1]; center[1]=center[2]; center[2]=temp; break;
+              case 5: temp=center[0]; center[0]=center[1]; center[1]=temp;
+                      temp=center[0]; center[0]=center[2]; center[2]=temp; break;
             }
 
             // if (center[0] < 0)
@@ -2287,6 +2451,7 @@ const Data<double>& a_liquid_volume_fraction,
             {
               //normal1=-normal1;
             }
+            //std::cout << "i " << i << " j " << j << " k " << k << " " << normal1 << " " << normal2 << std::endl << std::endl;
 
             switch (direction2) {
               case 1: temp=normal1[0]; normal1[0]=normal1[1]; normal1[1]=temp; break;
@@ -2327,17 +2492,29 @@ const Data<double>& a_liquid_volume_fraction,
             }
 
             bool one_plane = false;
-            //std::cout << normal1 << " " << normal2 << std::endl << std::endl;
+
             //std::cout << "mag " << normal2.calculateMagnitude() << std::endl;
-            if (normal2.calculateMagnitude() < 0.5 || normal1.calculateMagnitude() < 0.5)
+            // normal1[0]=-0.577350269189626;
+            // normal1[1]=-0.577350269189626;
+            // normal1[2]=-0.577350269189626;
+            //normal2=-normal1;
+            if (normal2.calculateMagnitude() < 0.85 || normal1.calculateMagnitude() < 0.85)
             {
               one_plane = true;
             }
-            //std::cout << "standard " << (*a_interface)(i, j, k) << std::endl;
+            // bool te = false;
+            // if ((*a_interface)(i, j, k).getNumberOfPlanes() == 1)
+            // {
+            //   te = true;
+            //   std::cout << "standard " << (*a_interface)(i, j, k) << std::endl;
+            //   std::cout << normal1 << " " << normal2 << std::endl;
+            // }
 
 
             if (!one_plane)
             {
+              (*a_interface)(i, j, k).setNumberOfPlanes(2);
+              branch(i,j,k) = 2;
               normal1[0] *= mesh.dx();
               normal1[1] *= mesh.dy();
               normal1[2] *= mesh.dz();
@@ -2351,45 +2528,222 @@ const Data<double>& a_liquid_volume_fraction,
               if (flip) flip_i = -1;
               if (!flip) normal1=-normal1;
               if (!flip) normal2=-normal2;
+              // normal1=IRL::Normal(1,1,1);
+              // normal2=IRL::Normal(-1,-1,-1);
+              // normal1.normalize();
+              // normal2.normalize();
               // if (IRL::dotProduct(normal1,(*a_interface)(i, j, k)[0].normal()) < 0)
               // {
               //   normal1=-normal1;
               //   normal2=-normal2;
               // }
               IRL::Pt bary = a_liquid_centroid(i, j, k);
-              if (flip) bary = a_gas_centroid(i, j, k);
+              IRL::Pt bary1 = a_gas_centroid(i, j, k);
+
               const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
               (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(IRL::Plane(normal1,0),IRL::Plane(normal2,0),flip_i);
-              R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
+              //std::cout << "n0 " << normal1 << " n1 " << normal2 << " flip " << flip_i << " VF_target " << a_liquid_volume_fraction(i, j, k) << " bary_target " << bary << " cell vertices " << cube << std::endl;
+              //R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
+              //R2PDistanceSolver2(a_liquid_volume_fraction(i, j, k),bary,bary1,(*a_interface)(i, j, k),cube);
+              R2PDistanceSolver2(neighborhood,(*a_interface)(i, j, k));
+              //std::cout << "returned planes " << (*a_interface)(i, j, k) << std::endl;
+              // if ((*a_interface)(i, j, k)[1].normal().calculateMagnitude() < IRL::global_constants::VF_LOW)
+              // {
+              //   one_plane = true;
+              // }
             }
-            else
+            // if (!one_plane)
+            // {
+            //   (*a_interface)(i, j, k).setNumberOfPlanes(2);
+              
+            //   // Scale and normalize NN normals based on mesh
+            //   normal1[0] *= mesh.dx();
+            //   normal1[1] *= mesh.dy();
+            //   normal1[2] *= mesh.dz();
+            //   normal1.normalize();
+              
+            //   normal2[0] *= mesh.dx();
+            //   normal2[1] *= mesh.dy();
+            //   normal2[2] *= mesh.dz();
+            //   normal2.normalize();
+
+            //   int flip_i = 1;
+            //   if (flip) flip_i = -1;
+            //   if (!flip) normal1=-normal1;
+            //   if (!flip) normal2=-normal2;
+
+            //   const double target_vf = a_liquid_volume_fraction(i, j, k);
+            //   const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(
+            //       IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), 
+            //       IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+
+            //   // Because the NN doesn't inherently partition centroids, 
+            //   // we utilize the standard liquid/gas centroids of the center cell.
+            //   IRL::Pt pt1 = a_liquid_centroid(i, j, k);
+            //   IRL::Pt pt2 = a_gas_centroid(i, j, k);
+
+            //   IRL::PlanarSeparator best_separator;
+            //   double min_err = DBL_MAX;
+
+            //   // Helper lambda to mimic `constructSeparatorAttempt` and `checkIfBest`
+            //   auto test_permutation = [&](const IRL::Normal& n0, const IRL::Pt& p0,
+            //                               const IRL::Normal& n1, const IRL::Pt& p1,
+            //                               double flip_cut) {
+            //       // 1. Construct Separator Attempt
+            //       IRL::PlanarSeparator attempt = IRL::PlanarSeparator::fromTwoPlanes(
+            //           IRL::Plane(n0, n0 * p0),
+            //           IRL::Plane(n1, n1 * p1), 
+            //           flip_cut);
+
+            //       // 2. Find volume conserving distance
+            //       IRL::Pt bary = a_liquid_centroid(i, j, k);
+            //       if (flip_cut==-1) bary = a_gas_centroid(i, j, k);
+            //       R2PDistanceSolver(target_vf,bary,attempt,cube);
+
+            //       // 3. Accumulate Error in Centroids across the Neighborhood
+            //       double err = 0.0;
+            //       for (const auto& cell_grouped_moments : neighborhood) {
+            //           auto svm = cell_grouped_moments.calculateNormalizedVolumeMoments(attempt);
+            //           double cell_volume = cell_grouped_moments.getStoredMoments()[0].volume() +
+            //                                cell_grouped_moments.getStoredMoments()[1].volume();
+            //           double cell_VF = svm[0].volume() / cell_volume;
+
+            //           // Fix bounding volume fractions
+            //           if (cell_VF < IRL::global_constants::VF_LOW) {
+            //               svm[0].centroid() = neighborhood.getCenterCellStoredMoments()[0].centroid();
+            //           }
+            //           if (cell_VF > IRL::global_constants::VF_HIGH) {
+            //               svm[1].centroid() = neighborhood.getCenterCellStoredMoments()[1].centroid();
+            //           }
+
+            //           // Accumulate Liquid & Gas errors
+            //           if (cell_grouped_moments.getStoredMoments()[0].volume() / cell_volume > IRL::global_constants::VF_LOW) {
+            //               err += IRL::magnitude(cell_grouped_moments.getStoredMoments()[0].centroid() - svm[0].centroid());
+            //           }
+            //           if (cell_grouped_moments.getStoredMoments()[1].volume() / cell_volume > IRL::global_constants::VF_LOW) {
+            //               err += IRL::magnitude(cell_grouped_moments.getStoredMoments()[1].centroid() - svm[1].centroid());
+            //           }
+            //       }
+
+            //       // 4. Update the best configuration if this attempt has lower error
+            //       if (err < min_err) {
+            //           min_err = err;
+            //           best_separator = attempt;
+            //       }
+            //   };
+
+            //   // Test all four permutations of normals, centroids, and flip direction
+            //   test_permutation(normal1, pt1, normal2, pt2, 1.0);
+            //   test_permutation(normal1, pt1, normal2, pt2, -1.0);
+            //   test_permutation(normal1, pt2, normal2, pt1, 1.0);
+            //   test_permutation(normal1, pt2, normal2, pt1, -1.0);
+            //   (*a_interface)(i, j, k) = best_separator;
+            //   // IRL::Pt bary = a_liquid_centroid(i, j, k);
+            //   // if (flip) bary = a_gas_centroid(i, j, k);
+            //   // const IRL::RectangularCuboid& cube1 = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+            //   // (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(IRL::Plane(normal1,0),IRL::Plane(normal2,0),flip_i);
+
+            //   // R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
+            // }
+            // if (one_plane)
+            // {
+            //   branch(i,j,k) = 1;
+            //   (*a_interface)(i, j, k).setNumberOfPlanes(1);
+            //   if (normal2.calculateMagnitude() < normal1.calculateMagnitude())
+            //   {
+            //     normal1[0] *= mesh.dx();
+            //     normal1[1] *= mesh.dy();
+            //     normal1[2] *= mesh.dz();
+            //     normal1.normalize();
+            //     const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+            //     if (!flip) normal1=-normal1;
+            //     if (IRL::dotProduct(normal1,(a_liquid_centroid(i,j,k)-cube.calculateCentroid())) > 0)
+            //     {
+            //       normal1=-normal1;
+            //     }
+            //     double distance = IRL::findDistanceOnePlane(cube, a_liquid_volume_fraction(i, j, k), normal1);
+            //     (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(normal1,distance));
+            //   }
+            //   else
+            //   {
+            //     normal2[0] *= mesh.dx();
+            //     normal2[1] *= mesh.dy();
+            //     normal2[2] *= mesh.dz();
+            //     normal2.normalize();
+            //     const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+            //     if (!flip) normal2=-normal2;
+            //     if (IRL::dotProduct(normal2,(a_liquid_centroid(i,j,k)-cube.calculateCentroid())) > 0)
+            //     {
+            //       normal2=-normal2;
+            //     }
+            //     double distance = IRL::findDistanceOnePlane(cube, a_liquid_volume_fraction(i, j, k), normal2);
+            //     (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(normal2,distance));
+            //   }
+            // }
+            if (one_plane)
             {
-              if (normal2.calculateMagnitude() < 0.5)
-              {
-                normal1[0] *= mesh.dx();
-                normal1[1] *= mesh.dy();
-                normal1[2] *= mesh.dz();
-                normal1.normalize();
-                const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-                if (!flip) normal1=-normal1;
-                double distance = IRL::findDistanceOnePlane(cube, a_liquid_volume_fraction(i, j, k), normal1);
-                (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(normal1,distance));
-              }
-              else
-              {
-                normal2[0] *= mesh.dx();
-                normal2[1] *= mesh.dy();
-                normal2[2] *= mesh.dz();
-                normal2.normalize();
-                const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
-                if (!flip) normal2=-normal2;
-                double distance = IRL::findDistanceOnePlane(cube, a_liquid_volume_fraction(i, j, k), normal2);
-                (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(normal2,distance));
+              const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(
+                  IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+                  IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+              const double target_vf   = a_liquid_volume_fraction(i, j, k);
+              const IRL::Pt  target_liq = a_liquid_centroid(i, j, k);
+              const IRL::Pt  target_gas = a_gas_centroid(i, j, k);
+              const IRL::Pt  cell_ctr   = cube.calculateCentroid();
+
+              // Build a volume-conserving separator from a raw normal and score it by
+              // how well it reproduces the cell's liquid/gas centroids.
+              auto build_and_score = [&](IRL::Normal nrm, IRL::PlanarSeparator* out) -> double {
+                if (nrm.calculateMagnitude() < 0.5) return DBL_MAX;
+                nrm.normalize();
+                const double d = IRL::findDistanceOnePlane(cube, target_vf, nrm);
+                *out = IRL::PlanarSeparator::fromOnePlane(IRL::Plane(nrm, d));
+
+                auto svm = IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>>(cube, *out);
+                const double cell_vol = cube.calculateVolume();
+                const double vf_out   = svm[0].volume() / cell_vol;
+                // Reject anything that failed to hit the target volume fraction.
+                if (std::abs(vf_out - target_vf) > 1.0e-6) return DBL_MAX;
+
+                double err = 0.0;
+                if (target_vf > IRL::global_constants::VF_LOW)
+                  err += IRL::magnitude(target_liq - svm[0].centroid());
+                if (target_vf < IRL::global_constants::VF_HIGH)
+                  err += IRL::magnitude(target_gas - svm[1].centroid());
+                return err;
+              };
+
+              // --- Candidate 1: the surviving NN normal (existing behaviour) ---
+              IRL::Normal nn_normal = (normal2.calculateMagnitude() < normal1.calculateMagnitude())
+                                          ? normal1 : normal2;
+              nn_normal[0] *= mesh.dx();
+              nn_normal[1] *= mesh.dy();
+              nn_normal[2] *= mesh.dz();
+              if (nn_normal.calculateMagnitude() > 0.0) nn_normal.normalize();
+              if (!flip) nn_normal = -nn_normal;
+              if (IRL::dotProduct(nn_normal, (target_liq - cell_ctr)) > 0) nn_normal = -nn_normal;
+
+              IRL::PlanarSeparator sep_nn;
+              const double err_nn = build_and_score(nn_normal, &sep_nn);
+
+              // --- Candidate 2: PLICNet ---
+              IRL::PlanarSeparator sep_plic;
+              const double err_plic = build_and_score(plicnet_normal(), &sep_plic);
+
+              // --- Pick the better one ---
+              if (err_plic < err_nn) {             
+                branch(i,j,k) = 1;
+                (*a_interface)(i, j, k) = sep_plic;
+                recon_method(i, j, k) = 0;   // fell back to PLICNet
+              } else {branch(i,j,k) = 3;
+                (*a_interface)(i, j, k) = sep_nn;
+                recon_method(i, j, k) = 1;
               }
             }
-            //std::cout << "ML " << (*a_interface)(i, j, k) << std::endl << std::endl << std::endl << std::endl;
+            //if(te) std::cout << "ML " << (*a_interface)(i, j, k) << std::endl << std::endl << std::endl << std::endl;
           }
-          //(*a_interface)(i, j, k) = reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
+          //std::cout << (*a_interface)(i, j, k) << std::endl << std::endl << std::endl << std::endl;
+          // (*a_interface)(i, j, k) = reconstructionWithR2P3D(neighborhood, (*a_interface)(i, j, k));
+          // std::cout << (*a_interface)(i, j, k) << std::endl << std::endl << std::endl;
           
           if ((*a_interface)(i, j, k).getNumberOfPlanes() == 1)
           {
