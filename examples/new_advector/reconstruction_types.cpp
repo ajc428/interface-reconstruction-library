@@ -28,6 +28,7 @@
 #include "examples/new_advector/r2pnet.h"
 #include "examples/new_advector/r2pnet_solve.h"
 #include "examples/new_advector/ml_classifier.h"
+#include "examples/new_advector/r2p_paraboloid_pass.h"
 
 void getReconstruction(
     const std::string& a_reconstruction_method,
@@ -1796,8 +1797,20 @@ void R2PDistanceSolver(double VF_target, IRL::Pt bary_target, IRL::PlanarSeparat
   }
 }
 
-IRL::Normal PCA_Normal(const std::vector<IRL::Pt>& points) 
+// shape_out, when non-null, receives three scale-invariant descriptors built
+// from the covariance eigenvalues this routine already computes (l0 >= l1 >= l2):
+//   [0] linearity  = (l0-l1)/l0   cloud is a line   (ligament / edge-on)
+//   [1] planarity  = (l1-l2)/l0   cloud is a sheet  (well-defined film)
+//   [2] sphericity =  l2/l0       cloud is isotropic (orientation is noise)
+// The eigenvector says where the surface points; these say how well determined
+// that direction is. They must be computed here rather than separately, so the
+// values match the training pipeline bit for bit -- data_gen.h's computePCA
+// derives them from the same unnormalized covariance, and the ratios are
+// unaffected by that normalization.
+IRL::Normal PCA_Normal(const std::vector<IRL::Pt>& points, double* shape_out = nullptr) 
 {
+    if (shape_out) { shape_out[0] = 0.0; shape_out[1] = 0.0; shape_out[2] = 1.0; }
+
     using MatrixX = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
     using VectorX = Eigen::Matrix<double, Eigen::Dynamic, 1>;
     using Vector3 = Eigen::Vector<double, 3>;
@@ -1825,6 +1838,21 @@ IRL::Normal PCA_Normal(const std::vector<IRL::Pt>& points)
     Eigen::SelfAdjointEigenSolver<Matrix33> eigensolver(covariance);
     // The eigenvector with the smallest eigenvalue is the normal to the plane
     Vector3 local_z = eigensolver.eigenvectors().col(0).normalized();
+
+    if (shape_out)
+    {
+        // Eigen returns eigenvalues in increasing order.
+        const Vector3 ev = eigensolver.eigenvalues();
+        const double l2 = std::max(0.0, ev(0));   // smallest
+        const double l1 = std::max(0.0, ev(1));
+        const double l0 = std::max(0.0, ev(2));   // largest
+        if (l0 > 1.0e-30)
+        {
+            shape_out[0] = (l0 - l1) / l0;
+            shape_out[1] = (l1 - l2) / l0;
+            shape_out[2] = l2 / l0;
+        }
+    }
     
     // We want the normal to generally point towards the positive global hemisphere to maintain consistency
     //if (local_z.sum() < 0.0) local_z *= -1.0;
@@ -2385,7 +2413,8 @@ const Data<double>& a_liquid_volume_fraction,
               }
             }
 
-            IRL::Normal dir = PCA_Normal(points);
+            double pca_shape[3] = {0.0, 0.0, 1.0};
+            IRL::Normal dir = PCA_Normal(points, pca_shape);
             //if (flip) dir = -dir;
             IRL::Pt bary = IRL::Pt(m100/m000,m010/m000,m001/m000);
             double dot = IRL::dotProduct(dir,bary);
@@ -2435,11 +2464,21 @@ const Data<double>& a_liquid_volume_fraction,
             //   center[0]=-center[0]; center[1]=-center[1]; center[2]=-center[2];
             // }
 
+            // 195 inputs: 189 moments + 3 PCA direction + 3 PCA shape
+            // descriptors. The descriptors are scalar functions of the
+            // covariance eigenvalues, so unlike the direction they are
+            // invariant under the reflections and axis permutations
+            // reflect_moments applies -- they are copied straight through with
+            // no accompanying transform, exactly as the generator writes them.
+            //double input[195] = {0};
             double input[192] = {0};
             std::copy(moments, moments + 189, input);
             input[189] = center[0];
             input[190] = center[1];
             input[191] = center[2];
+            // input[192] = pca_shape[0];
+            // input[193] = pca_shape[1];
+            // input[194] = pca_shape[2];
 
 
             double n[6] = {0,0,0,0,0,0};
@@ -2528,30 +2567,55 @@ const Data<double>& a_liquid_volume_fraction,
               if (flip) flip_i = -1;
               if (!flip) normal1=-normal1;
               if (!flip) normal2=-normal2;
-              // normal1=IRL::Normal(1,1,1);
-              // normal2=IRL::Normal(-1,-1,-1);
-              // normal1.normalize();
-              // normal2.normalize();
-              // if (IRL::dotProduct(normal1,(*a_interface)(i, j, k)[0].normal()) < 0)
-              // {
-              //   normal1=-normal1;
-              //   normal2=-normal2;
-              // }
               IRL::Pt bary = a_liquid_centroid(i, j, k);
               IRL::Pt bary1 = a_gas_centroid(i, j, k);
 
               const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
               (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(IRL::Plane(normal1,0),IRL::Plane(normal2,0),flip_i);
-              //std::cout << "n0 " << normal1 << " n1 " << normal2 << " flip " << flip_i << " VF_target " << a_liquid_volume_fraction(i, j, k) << " bary_target " << bary << " cell vertices " << cube << std::endl;
-              //R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
-              //R2PDistanceSolver2(a_liquid_volume_fraction(i, j, k),bary,bary1,(*a_interface)(i, j, k),cube);
-              R2PDistanceSolver2(neighborhood,(*a_interface)(i, j, k));
-              //std::cout << "returned planes " << (*a_interface)(i, j, k) << std::endl;
-              // if ((*a_interface)(i, j, k)[1].normal().calculateMagnitude() < IRL::global_constants::VF_LOW)
-              // {
-              //   one_plane = true;
-              // }
+              R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
+              //R2PDistanceSolver2(neighborhood,(*a_interface)(i, j, k));
             }
+            // if (!one_plane)
+            // {
+            //   (*a_interface)(i, j, k).setNumberOfPlanes(2);
+            //   branch(i,j,k) = 2;
+            //   normal1[0] *= mesh.dx();
+            //   normal1[1] *= mesh.dy();
+            //   normal1[2] *= mesh.dz();
+            //   normal1.normalize();
+            //   normal2[0] *= mesh.dx();
+            //   normal2[1] *= mesh.dy();
+            //   normal2[2] *= mesh.dz();
+            //   normal2.normalize();
+
+            //   int flip_i = 1;
+            //   if (flip) flip_i = -1;
+            //   if (!flip) normal1=-normal1;
+            //   if (!flip) normal2=-normal2;
+            //   // normal1=IRL::Normal(1,1,1);
+            //   // normal2=IRL::Normal(-1,-1,-1);
+            //   // normal1.normalize();
+            //   // normal2.normalize();
+            //   // if (IRL::dotProduct(normal1,(*a_interface)(i, j, k)[0].normal()) < 0)
+            //   // {
+            //   //   normal1=-normal1;
+            //   //   normal2=-normal2;
+            //   // }
+            //   IRL::Pt bary = a_liquid_centroid(i, j, k);
+            //   IRL::Pt bary1 = a_gas_centroid(i, j, k);
+
+            //   const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
+            //   (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(IRL::Plane(normal1,0),IRL::Plane(normal2,0),flip_i);
+            //   //std::cout << "n0 " << normal1 << " n1 " << normal2 << " flip " << flip_i << " VF_target " << a_liquid_volume_fraction(i, j, k) << " bary_target " << bary << " cell vertices " << cube << std::endl;
+            //   //R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
+            //   //R2PDistanceSolver2(a_liquid_volume_fraction(i, j, k),bary,bary1,(*a_interface)(i, j, k),cube);
+            //   R2PDistanceSolver2(neighborhood,(*a_interface)(i, j, k));
+            //   //std::cout << "returned planes " << (*a_interface)(i, j, k) << std::endl;
+            //   // if ((*a_interface)(i, j, k)[1].normal().calculateMagnitude() < IRL::global_constants::VF_LOW)
+            //   // {
+            //   //   one_plane = true;
+            //   // }
+            // }
             // if (!one_plane)
             // {
             //   (*a_interface)(i, j, k).setNumberOfPlanes(2);
@@ -2762,6 +2826,14 @@ const Data<double>& a_liquid_volume_fraction,
     }
   }
   a_interface->updateBorder();
+  correctInterfacePlaneBorders(a_interface);
+
+  // --- pass 2: paraboloid refinement ---
+  r2ppass::Options parab_opt;
+  const r2ppass::Stats parab_stats =
+      r2ppass::run(a_liquid_volume_fraction, a_liquid_centroid, a_interface,
+                   &branch, parab_opt);
+
   correctInterfacePlaneBorders(a_interface);
 }
 

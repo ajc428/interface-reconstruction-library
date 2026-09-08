@@ -79,10 +79,10 @@ namespace IRL
 
         IRL::Paraboloid p;
 
-        // alpha = random_coeffsa(a_eng);
-        // beta = random_coeffsb(a_eng);
-        alpha = distribution1(generator);
-        beta = distribution2(generator);
+        alpha = random_coeffsa(a_eng);
+        beta = random_coeffsb(a_eng);
+        // alpha = distribution1(generator);
+        // beta = distribution2(generator);
         do
         {
             frame = IRL::ReferenceFrame(IRL::Normal(1.0, 0.0, 0.0), IRL::Normal(0.0, 1.0, 0.0), IRL::Normal(0.0, 0.0, 1.0));

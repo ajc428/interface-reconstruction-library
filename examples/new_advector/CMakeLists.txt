@@ -16,6 +16,12 @@ IRLAddExample_cpp(
     "r2pnet.h"
     "r2pnet_solve.h"
     "ml_classifier.h"
+    "r2p_refine.h"
+    "r2p_paraboloid_pass.h"
+    "r2p_coupled_fit.h"
+    "r2p_refine_coupled.h"
+    "r2p_plane_select.h"
+    "plicnet_normal.h"
   SRCS
     "main.cpp"
     "circle_rotation_2d.cpp"

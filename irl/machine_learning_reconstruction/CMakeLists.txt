@@ -8,6 +8,10 @@ target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/mom
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_set.h)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_set.cpp)
 target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/data_gen.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/plic_refine.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/plic_geometry.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/plic_gen5x5.h)
+target_sources(irl PRIVATE ${IRL_SOURCE_DIR}/machine_learning_reconstruction/plic_paraboloid.h)
 
 find_package(Torch REQUIRED)
 include_directories(SYSTEM ${TORCH_INCLUDE_DIRS})

@@ -1,10 +1,120 @@
 #include "mpi.h"
 #include <math.h>
 #include <iostream>
+#include <fstream>
 #include "irl/machine_learning_reconstruction/trainer.h"
 #include "irl/machine_learning_reconstruction/data_gen.h"
+#include "irl/machine_learning_reconstruction/plic_gen5x5.h"
 
 using namespace std;
+
+void run_refinement_ladder(IRL::trainer& t, int samples_per_rung)
+{
+    IRL::moments_gen gen5(5, 5, 5, 1, 1, 1, -2.5, -2.5, -2.5);
+    IRL::data_gen dg3(0, 3, 3, 3, 1, 1, 1, -1.5, -1.5, -1.5);
+    plicfit::Options opt;
+
+    plicgen5x5::Predict predict = [&t](const torch::Tensor& window) {
+        return t.predict_normal(window);
+    };
+
+    const std::vector<std::pair<std::string, double>> ladder = {
+        {"2",            2.0},
+        {"1",            1.0},
+        {"05",           0.5},
+        {"025",          0.25},
+        {"0125",         0.125},
+        {"00625",        0.0625},
+        {"003125",       0.03125},
+        {"0015625",      0.015625},
+        {"00078125",     0.0078125},
+        {"000390625",    0.00390625},
+        {"0001953125",   0.001953125},
+        {"00009765625",  0.0009765625},
+        {"flat",         0.0}};
+
+    std::cout << "\n  rung          gated       resid_before  resid_after"
+              << "   ang_raw   ang_fit\n";
+    std::cout << "  ---------------------------------------------------"
+              << "--------------------\n";
+
+    // Per-rung MSE loss, same definition as the MATLAB script: for each
+    // sample, mean squared error over the three components of
+    // (predict - expect), then averaged over samples. Collected in ladder
+    // order (curved -> flat) and printed reversed (flat -> curved) at the end.
+    std::vector<double> rung_loss(ladder.size(), 0.0);
+
+    for (std::size_t idx = 0; idx < ladder.size(); ++idx)
+    {
+        const auto& rung = ladder[idx];
+        plicgen5x5::GenRange range;
+        range.coa = rung.second;
+        range.cob = rung.second;
+
+        std::ofstream results_ex("result_" + rung.first + "_ex.txt");
+        std::ofstream results_pr("result_" + rung.first + "_pr.txt");
+
+        int n_valid = 0, n_gated = 0;
+        double sum_before = 0.0, sum_after = 0.0;
+        double sum_ang_raw = 0.0, sum_ang_fit = 0.0, sum_flat = 0.0;
+        double sum_sq0 = 0.0, sum_sq1 = 0.0, sum_sq2 = 0.0;
+
+        for (int i = 0; i < samples_per_rung; ++i)
+        {
+            const auto r = plicgen5x5::runSample(gen5, dg3, range, predict, opt);
+            if (!r.valid) continue;
+            ++n_valid;
+            if (r.gated_in) { ++n_gated; sum_flat += r.flatness; }
+            sum_before  += r.residual_before;
+            sum_after   += r.residual_after;
+            sum_ang_raw += r.angle_raw_deg;
+            sum_ang_fit += r.angle_fit_deg;
+
+            IRL::Normal truth = r.normal_truth;
+            if (truth * r.normal_fit < 0.0) truth = -truth;
+
+            const double d0 = r.normal_fit[0] - truth[0];
+            const double d1 = r.normal_fit[1] - truth[1];
+            const double d2 = r.normal_fit[2] - truth[2];
+            sum_sq0 += d0 * d0;
+            sum_sq1 += d1 * d1;
+            sum_sq2 += d2 * d2;
+
+            results_ex << truth[0] << " " << truth[1] << " " << truth[2] << "\n";
+            results_pr << r.normal_fit[0] << " " << r.normal_fit[1] << " "
+                       << r.normal_fit[2] << "\n";
+        }
+
+        results_ex.close();
+        results_pr.close();
+
+        if (n_valid == 0) { std::cout << "  " << rung.first
+                                      << "  (no valid samples)\n"; continue; }
+
+        const double inv = 1.0 / static_cast<double>(n_valid);
+        printf("  %-12s  %4d/%-4d   %11.6f  %11.6f  %8.4f  %8.4f\n",
+               rung.first.c_str(), n_gated, n_valid,
+               sum_before * inv, sum_after * inv,
+               sum_ang_raw * inv, sum_ang_fit * inv);
+        std::cout.flush();
+
+        // mean of the three per-component MSEs, matching mean(loss) in MATLAB
+        const double loss0 = sum_sq0 * inv;
+        const double loss1 = sum_sq1 * inv;
+        const double loss2 = sum_sq2 * inv;
+        rung_loss[idx] = (loss0 + loss1 + loss2) / 3.0;
+    }
+    std::cout << std::endl;
+
+    // Flat -> most curved, comma separated.
+    std::cout << "MSE loss, flat to curved:\n";
+    for (std::size_t idx = ladder.size(); idx-- > 0; )
+    {
+        printf("%.12f", rung_loss[idx]);
+        if (idx != 0) std::cout << ",";
+    }
+    std::cout << std::endl;
+}
 
 void create_surface(string name, double x, double y, double z, double alpha, double beta, double gamma, double a, double b)
 {
@@ -45,6 +155,11 @@ void data_generate_sheet_both(int num, double coa_l, double coa_h, double cob_l,
     gen.generate_sheet_both(coa_l, coa_h, cob_l, cob_h, t_l, t_h, disturb, normalize, name);
 }
 
+void data_generate_sheet_edge(int num, double coa_l, double coa_h, double cob_l, double cob_h, double t_l, double t_h, bool disturb, bool normalize, std::string name)
+{
+    IRL::data_gen gen(num,3,3,3,1,1,1,-1.5,-1.5,-1.5);
+    gen.generate_sheet_edge(coa_l, coa_h, cob_l, cob_h, t_l, t_h, disturb, normalize, name);
+}
 
 /***********************
 trainer(epochs, data size, learning rate, OPTION)
@@ -79,11 +194,11 @@ int main(int argc, char* argv[])
 
     if (select == 1)
     {
-        int num;
-        double alpha;
-        double beta;
-        double alpha1;
-        double beta1;
+        int num = 0;
+        double alpha = 0.0;
+        double beta = 0.0;
+        double alpha1 = 0.0;
+        double beta1 = 0.0;
         if (rank == 0)
         {
             std::cout << "Enter number of data to generate: " << std::endl;
@@ -98,13 +213,25 @@ int main(int argc, char* argv[])
             std::cin >> beta1;
         }
         MPI_Bcast(&num, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        // The curvature bounds must be broadcast too. Only rank 0 runs the
+        // std::cin block above, so without these every other rank passes
+        // uninitialized doubles as coa_l/coa_h/cob_l/cob_h -- garbage (or NaN)
+        // curvature ranges, which desynchronizes the ranks' data and can hang
+        // the generator's rejection loop outright.
+        MPI_Bcast(&alpha,  1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&alpha1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&beta,   1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&beta1,  1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         
-        // data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.001,3,true,true,"_test");
-        // data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.001,3,true,true,"_val");
-        // data_generate_sheet(num*0.7,alpha,alpha1,beta,beta1,0.001,3,true,true,"");
-        data_generate(num*0.15,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"_test");
-        data_generate(num*0.15,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"_val");
-        data_generate(num*0.7,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"");
+        // data_generate_sheet_edge(num*0.15,alpha,alpha1,beta,beta1,0.001,0.5,true,true,"_test");
+        // data_generate_sheet_edge(num*0.15,alpha,alpha1,beta,beta1,0.001,0.5,true,true,"_val");
+        // data_generate_sheet_edge(num*0.7,alpha,alpha1,beta,beta1,0.001,0.5,true,true,"");
+        data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.005,3,true,true,"_test");
+        data_generate_sheet(num*0.15,alpha,alpha1,beta,beta1,0.005,3,true,true,"_val");
+        data_generate_sheet(num*0.7,alpha,alpha1,beta,beta1,0.005,3,true,true,"");
+        // data_generate(num*0.15,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"_test");
+        // data_generate(num*0.15,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"_val");
+        // data_generate(num*0.7,0,2*M_PI,-M_PI/2,M_PI/2.0,0,2*M_PI,alpha,alpha1,beta,beta1,-0.5,0.5,-0.5,0.5,-0.5,0.5,true,true,"");
         
         // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,2,2,2,2,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_2");
         // data_generate(num,0,2*M_PI,0,2*M_PI,0,2*M_PI,1,1,1,1,-0.5,0.5,-0.5,0.5,-0.5,0.5,false,true,"_1");
@@ -180,9 +307,25 @@ int main(int argc, char* argv[])
             MPI_Bcast(&num, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
             auto t = IRL::trainer(1,num,1,0);
-            t.load_test_data("moments.txt", "normals.txt");
+            // t.load_test_data("moments.txt", "normals.txt");
+            // t.load_model("model.pt");
+            // t.test_model("result_ex.txt","result_pr.txt");
+
+
+
+
             t.load_model("model.pt");
-            t.test_model("result_ex.txt","result_pr.txt");
+            run_refinement_ladder(t, num);
+
+
+
+
+
+
+
+
+
+
             // t.load_model("model.pt");
             // t.load_test_data("moments_2.txt", "normals_2.txt");
             // t.test_model("result_2_ex.txt","result_2_pr.txt");

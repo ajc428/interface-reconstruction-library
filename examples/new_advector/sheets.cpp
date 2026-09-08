@@ -117,8 +117,8 @@ void Sheets::initialize(Data<double>* a_U, Data<double>* a_V,
               cell_proj_max += (nz > 0) ? (nz * cell_z_hi) : (nz * cell_z_lo);
 
 
-              bool cell_fully_outside_film = (cell_x_hi <= x_left  || cell_x_lo >= x_right);
-              //bool cell_fully_outside_film = (cell_proj_max <= sheet_d_low || cell_proj_min >= sheet_d_high);
+              //bool cell_fully_outside_film = (cell_x_hi <= x_left  || cell_x_lo >= x_right);
+              bool cell_fully_outside_film = (cell_proj_max <= sheet_d_low || cell_proj_min >= sheet_d_high);
 
               if (cell_fully_outside_film) 
               {
@@ -132,18 +132,18 @@ void Sheets::initialize(Data<double>* a_U, Data<double>* a_V,
               } 
               else 
               {
-                  (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(
-                      IRL::Plane(IRL::Normal( 1.0, 0.0, 0.0),  x_right),
-                      IRL::Plane(IRL::Normal(-1.0, -0.0, -0.0), -x_left),
-                      1);
+                  // (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(
+                  //     IRL::Plane(IRL::Normal( 1.0, 0.0, 0.0),  x_right),
+                  //     IRL::Plane(IRL::Normal(-1.0, -0.0, -0.0), -x_left),
+                  //     1);
                   // (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(
                   //     IRL::Plane(IRL::Normal( 1.0, 0.0, 0.0),  x_left),
                   //     IRL::Plane(IRL::Normal(-1.0, 0.0, 0.0), -x_right),
                   //     -1);
-                  // (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(
-                  //     IRL::Plane(IRL::Normal( 1.0, 1.0, 1.0),  1),
-                  //     IRL::Plane(IRL::Normal(-1.0, -1.0, -1.0), -0.92),
-                  //     1);
+                  (*a_separators)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(
+                      IRL::Plane(IRL::Normal( 1.0, 1.0, 1.0),  1),
+                      IRL::Plane(IRL::Normal(-1.0, -1.0, -1.0), -0.92),
+                      1);
               }
 
               //(*a_separators)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(
@@ -163,7 +163,7 @@ void Sheets::setVelocity(const double a_time, Data<double>* a_U,
   for (int i = mesh.imino(); i <= mesh.imaxo(); ++i) {
     for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j) {
       for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
-        (*a_U)(i, j, k) = 0.1;
+        (*a_U)(i, j, k) = 0.0;
         (*a_V)(i, j, k) = 0;
         (*a_W)(i, j, k) = 0;
       }
