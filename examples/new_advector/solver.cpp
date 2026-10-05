@@ -399,6 +399,13 @@ void writeOutInterface(const int a_iteration,
   std::string data_plane_idx;
   std::string data_class;
   std::string data_branch;
+  std::string data_snapped;
+  std::string data_tip;
+  std::string data_edge;
+  std::string data_edge_topo;
+  std::string data_guard;
+  std::string data_one_plane;
+  std::string data_unpinch;
 
   for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
     for (int j = mesh.jmin(); j <= mesh.jmax(); ++j) {
@@ -450,6 +457,13 @@ void writeOutInterface(const int a_iteration,
           data_num_planes += std::to_string(num) + "\n";
           data_class += std::to_string(ml_class) + "\n";
           data_branch += std::to_string(branch) + "\n";
+          data_snapped += std::to_string(snapped(i, j, k)) + "\n";
+          data_tip += std::to_string(tip_sensor(i, j, k)) + "\n";
+          data_edge += std::to_string(edge_sensor(i, j, k)) + "\n";
+          data_edge_topo += std::to_string(edge_topo(i, j, k)) + "\n";
+          data_guard += std::to_string(film_guard(i, j, k)) + "\n";
+          data_one_plane += std::to_string(one_plane_reason(i, j, k)) + "\n";
+          data_unpinch += std::to_string(unpinch(i, j, k)) + "\n";
 
           n_vert  += static_cast<std::size_t>(n_verts);
           ++n_polys;
@@ -524,6 +538,41 @@ void writeOutInterface(const int a_iteration,
   fprintf(viz_file,
           "<DataArray type=\"Int32\" Name=\"branch\" format=\"ascii\">\n");
   fprintf(viz_file, "%s", data_branch.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"snapped\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_snapped.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Float64\" Name=\"tip\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_tip.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Float64\" Name=\"edge\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_edge.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Float64\" Name=\"edge_topo\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_edge_topo.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"guard\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_guard.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Int32\" Name=\"one_plane\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_one_plane.c_str());
+  fprintf(viz_file, "</DataArray>\n");
+
+  fprintf(viz_file,
+          "<DataArray type=\"Float64\" Name=\"unpinch\" format=\"ascii\">\n");
+  fprintf(viz_file, "%s", data_unpinch.c_str());
   fprintf(viz_file, "</DataArray>\n");
 
 

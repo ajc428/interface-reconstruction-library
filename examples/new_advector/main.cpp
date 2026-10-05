@@ -94,7 +94,9 @@ static int startSimulation(const std::string& a_simulation_type,
           a_reconstruction_method == "MOF3D" ||
           a_reconstruction_method == "R2P3D" ||
           a_reconstruction_method == "R2P3D_Hybrid" ||
-          a_reconstruction_method == "R2P3D_Net")) {
+          a_reconstruction_method == "R2P3D_Net" ||
+          a_reconstruction_method == "R2P3D_NetFast" ||
+          a_reconstruction_method == "R2P3D_HybridFast")) {
       std::cout << "A 3D reconstruction must be specified" << std::endl;
       std::exit(-1);
     }
@@ -108,7 +110,9 @@ static int startSimulation(const std::string& a_simulation_type,
           a_reconstruction_method == "MOF3D" ||
           a_reconstruction_method == "R2P3D" ||
           a_reconstruction_method == "R2P3D_Hybrid" ||
-          a_reconstruction_method == "R2P3D_Net")) {
+          a_reconstruction_method == "R2P3D_Net" ||
+          a_reconstruction_method == "R2P3D_NetFast" ||
+          a_reconstruction_method == "R2P3D_HybridFast")) {
       std::cout << "A 3D reconstruction must be specified" << std::endl;
       std::exit(-1);
     }
@@ -122,7 +126,9 @@ static int startSimulation(const std::string& a_simulation_type,
           a_reconstruction_method == "MOF3D" ||
           a_reconstruction_method == "R2P3D" ||
           a_reconstruction_method == "R2P3D_Hybrid" ||
-          a_reconstruction_method == "R2P3D_Net")) {
+          a_reconstruction_method == "R2P3D_Net" ||
+          a_reconstruction_method == "R2P3D_NetFast" ||
+          a_reconstruction_method == "R2P3D_HybridFast")) {
       std::cout << "A 3D reconstruction must be specified" << std::endl;
       std::exit(-1);
     }

@@ -235,6 +235,16 @@ bool c_SeparatorVariant_isFlipped(const c_SeparatorVariant* a_self) {
   }
 }
 
+void c_SeparatorVariant_setFlip(c_SeparatorVariant* a_self, const bool* a_flipped) {
+  assert(a_self != nullptr);
+  assert(a_self->obj_ptr != nullptr);
+  a_self->obj_ptr->setToPlanarSeparator();
+  if (IRL::PlanarSeparator* separator =
+          std::get_if<IRL::PlanarSeparator>(a_self->obj_ptr)) {
+    separator->setFlip(*a_flipped ? -1.0 : 1.0);
+  }
+}
+
 void c_SeparatorVariant_printToScreen(const c_SeparatorVariant* a_self) {
   assert(a_self != nullptr);
   assert(a_self->obj_ptr != nullptr);

@@ -77,6 +77,9 @@ double c_SeparatorVariant_getSurfaceArea(c_SeparatorVariant* a_self, c_RectCub* 
 
 bool c_SeparatorVariant_isFlipped(const c_SeparatorVariant* a_self);
 
+// Makes the variant a PlanarSeparator (as setNumberOfPlanes/setPlane do) and sets its flip.
+void c_SeparatorVariant_setFlip(c_SeparatorVariant* a_self, const bool* a_flipped);
+
 void c_SeparatorVariant_printToScreen(const c_SeparatorVariant* a_self);
 
 void c_SeparatorVariant_shift(c_SeparatorVariant* a_self,

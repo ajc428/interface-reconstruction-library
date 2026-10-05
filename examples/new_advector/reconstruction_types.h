@@ -21,6 +21,21 @@ inline Data<int> recon_method;
 inline Data<int> num_planes;
 inline Data<int> feature_class;
 inline Data<int> branch;
+inline Data<int> snapped;   // slab planes (r2p_snap.h): 1 = thin-film snap, 2 = guard slab (the network wanted
+                            // one plane where the thin-film guard holds), 3 = PCA slab (very thin film)
+inline Data<double> unpinch;       // pinch prevention: rotation l toward the mean normal, 0 = none (r2p_nopinch.h)
+inline Data<double> edge_sensor;   // film-edge sensor: distinct empty probe cells, -1 = not computed (r2p_edge_sensor.h)
+inline Data<double> edge_topo;     // topological edge sensor: 1 edge, 0 not, 2 thick film, -1 not computed
+                                   // (r2p_edge_topology.h)
+inline Data<int> film_guard;       // thin-film guard (r2p_edge_topology.h): 1 sent to R2P-Net against the classifier,
+                                   // 2 holds, the classifier already chose R2P-Net; pass 2 then keeps two planes
+inline Data<int> one_plane_reason; // why an interface cell ended with one plane: 0 two planes (or not reconstructed),
+                                   // 1 PLICNet by the classifier, 2 PLICNet without a classifier stencil (domain edge),
+                                   // 3 the network predicted one plane, 4 pass-1 Newton clean-up dropped a plane,
+                                   // 5 pinch prevention's re-solve dropped one, 6 pass-2 plane-count selection,
+                                   // 7 pass-2 Newton clean-up dropped one
+inline int r2p_dump_step = 0;     // time step written to the R2P_PLIC_DUMP file; set by the solver loop
+inline Data<double> tip_sensor;   // film-tip sensor value: spread of the film centroids, cell^2 (r2p_tip_sensor.h)
 
 void getReconstruction(
     const std::string& a_reconstruction_method,

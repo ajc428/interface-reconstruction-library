@@ -8,6 +8,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #include "examples/new_advector/reconstruction_types.h"
+#include "examples/new_advector/r2p_newton_distance.h"
 
 #include <string.h>
 #include "irl/geometry/general/pt.h"
@@ -29,6 +30,16 @@
 #include "examples/new_advector/r2pnet_solve.h"
 #include "examples/new_advector/ml_classifier.h"
 #include "examples/new_advector/r2p_paraboloid_pass.h"
+#include "examples/new_advector/r2p_fast.h"
+#include "examples/new_advector/r2p_snap.h"
+#include "examples/new_advector/r2p_tip_sensor.h"
+#include "examples/new_advector/r2p_edge_sensor.h"
+#include "examples/new_advector/r2p_edge_topology.h"
+#include "examples/new_advector/r2p_nopinch.h"
+
+// Diagnostic dump of the cells that ended with one plane (defined below).
+static void dumpOnePlaneCells(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid,
+                              const Data<IRL::Pt>& a_gas_centroid, const Data<IRL::PlanarSeparator>& a_interface);
 
 void getReconstruction(
     const std::string& a_reconstruction_method,
@@ -41,6 +52,24 @@ void getReconstruction(
   num_planes = Data<int>(&a_liquid_volume_fraction.getMesh());
   feature_class = Data<int>(&a_liquid_volume_fraction.getMesh());
   branch = Data<int>(&a_liquid_volume_fraction.getMesh());
+  snapped = Data<int>(&a_liquid_volume_fraction.getMesh());
+  film_guard = Data<int>(&a_liquid_volume_fraction.getMesh());
+  one_plane_reason = Data<int>(&a_liquid_volume_fraction.getMesh());
+  tip_sensor = Data<double>(&a_liquid_volume_fraction.getMesh());
+  edge_sensor = Data<double>(&a_liquid_volume_fraction.getMesh());
+  edge_topo = Data<double>(&a_liquid_volume_fraction.getMesh());
+  unpinch = Data<double>(&a_liquid_volume_fraction.getMesh());
+  {
+    const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+    for (int i = mesh.imino(); i <= mesh.imaxo(); ++i)
+      for (int j = mesh.jmino(); j <= mesh.jmaxo(); ++j)
+        for (int k = mesh.kmino(); k <= mesh.kmaxo(); ++k) {
+          snapped(i, j, k) = tip_sensor(i, j, k) = 0;
+          film_guard(i, j, k) = one_plane_reason(i, j, k) = 0;
+          edge_sensor(i, j, k) = edge_topo(i, j, k) = -1.0;
+          unpinch(i, j, k) = 0.0;
+        }
+  }
   if (a_reconstruction_method == "ELVIRA2D") {
     ELVIRA2D::getReconstruction(a_liquid_volume_fraction, a_dt, a_U, a_V, a_W,
                                 a_interface);
@@ -91,6 +120,14 @@ void getReconstruction(
     R2P3D_Net::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
                              a_gas_centroid, a_localized_separator_link, a_dt,
                              a_U, a_V, a_W, a_interface);
+  } else if (a_reconstruction_method == "R2P3D_NetFast") {
+    R2P3D_NetFast::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
+                                     a_gas_centroid, a_localized_separator_link, a_dt,
+                                     a_U, a_V, a_W, a_interface);
+  } else if (a_reconstruction_method == "R2P3D_HybridFast") {
+    R2P3D_HybridFast::getReconstruction(a_liquid_volume_fraction, a_liquid_centroid,
+                                        a_gas_centroid, a_localized_separator_link, a_dt,
+                                        a_U, a_V, a_W, a_interface);
   } else {
     std::cout << "Unknown reconstruction method of : "
               << a_reconstruction_method << '\n';
@@ -98,6 +135,9 @@ void getReconstruction(
                  "AdvectedNormals, R2P2D, ELVIRA3D, LVIRA3D, MOF3D, AdvectedNormals3D, R2P3D, R2P3D_Hybrid, R2P_Net. \n";
     std::exit(-1);
   }
+  if (a_reconstruction_method == "R2P3D_Net" || a_reconstruction_method == "R2P3D_NetFast" ||
+      a_reconstruction_method == "R2P3D_HybridFast")
+    dumpOnePlaneCells(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, *a_interface);
 }
 
 void ELVIRA2D::getReconstruction(const Data<double>& a_liquid_volume_fraction,
@@ -1862,6 +1902,50 @@ IRL::Normal PCA_Normal(const std::vector<IRL::Pt>& points, double* shape_out = n
     return n;
 }
 
+// Sphericity (smallest / largest covariance eigenvalue) of the centroids of
+// the 3^3 cells around (i,j,k) that hold some of one phase. Returns -1 with
+// fewer than 3 points.
+static double phaseSphericity(const Data<double>& a_liquid_volume_fraction,
+                              const Data<IRL::Pt>& a_centroid, const bool a_gas,
+                              const int i, const int j, const int k) {
+  std::vector<Eigen::Vector3d> pts;
+  for (int ii = i - 1; ii < i + 2; ++ii)
+    for (int jj = j - 1; jj < j + 2; ++jj)
+      for (int kk = k - 1; kk < k + 2; ++kk) {
+        const double vf = a_liquid_volume_fraction(ii, jj, kk);
+        if ((a_gas ? 1.0 - vf : vf) <= IRL::global_constants::VF_LOW) continue;
+        const IRL::Pt& p = a_centroid(ii, jj, kk);
+        pts.emplace_back(p[0], p[1], p[2]);
+      }
+  if (pts.size() < 3) return -1.0;
+  Eigen::Vector3d c = Eigen::Vector3d::Zero();
+  for (const auto& p : pts) c += p;
+  c /= static_cast<double>(pts.size());
+  Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
+  for (const auto& p : pts) cov += (p - c) * (p - c).transpose();
+  const Eigen::Vector3d ev = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>(cov).eigenvalues();
+  return ev(2) > 1.0e-30 ? std::max(0.0, ev(0)) / ev(2) : -1.0;
+}
+
+// Phase 0 for the classifier and R2P-Net (true = gas). The network was
+// trained with phase 0 = the film, the phase between the two interfaces. A
+// film's centroids form a flat layer while the surrounding phase fills the
+// stencil on both sides, so the film is the flatter cloud. (The VF-sum rule,
+// phase 0 = minority phase, is wrong for films thicker than ~1.2 cells.)
+static bool r2pFlip(const Data<double>& a_liquid_volume_fraction,
+                    const Data<IRL::Pt>& a_liquid_centroid,
+                    const Data<IRL::Pt>& a_gas_centroid, const int i,
+                    const int j, const int k) {
+  double vol = 0.0;
+  for (int ii = i - 1; ii < i + 2; ++ii)
+    for (int jj = j - 1; jj < j + 2; ++jj)
+      for (int kk = k - 1; kk < k + 2; ++kk) vol += a_liquid_volume_fraction(ii, jj, kk);
+  const double s_liq = phaseSphericity(a_liquid_volume_fraction, a_liquid_centroid, false, i, j, k);
+  const double s_gas = phaseSphericity(a_liquid_volume_fraction, a_gas_centroid, true, i, j, k);
+  if (s_liq < 0.0 || s_gas < 0.0) return vol >= 0.5 * 27.0;   // too few points: old rule
+  return s_gas < s_liq;
+}
+
 void R2P3D_Net::getReconstruction(
 const Data<double>& a_liquid_volume_fraction,
     const Data<IRL::Pt>& a_liquid_centroid, const Data<IRL::Pt>& a_gas_centroid,
@@ -2067,7 +2151,9 @@ const Data<double>& a_liquid_volume_fraction,
             vol = vol + a_liquid_volume_fraction(ii, jj, kk);
           }
 
-        bool flip = (vol >= 0.5*27.0);
+        //bool flip = (vol >= 0.5*27.0);
+        bool flip = r2pFlip(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, i, j, k);
+        tip_sensor(i, j, k) = r2ptip::isTip(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, i, j, k, flip);
 
         auto plicnet_normal = [&](void) -> IRL::Normal {
           double moments_p[189] = {0};
@@ -2190,7 +2276,19 @@ const Data<double>& a_liquid_volume_fraction,
 
         feature_class(i,j,k) = interface_class;
         // Sheet/film gets the two-plane R2P treatment; everything else PLIC.
-        const bool use_r2p = (interface_class == 4 || interface_class == 6);
+        bool use_r2p = (interface_class == 4 || interface_class == 6);
+        // Thin-film guard: the other phase on both sides of the film, apart,
+        // means the film continues here and needs two planes, whatever the
+        // classifier says (r2p_edge_topology.h)
+        if (r2pedgetopo::filmSeparates(a_liquid_volume_fraction, flip, i, j, k)) {
+          film_guard(i, j, k) = use_r2p ? 2 : 1;
+          use_r2p = true;
+        }
+        // Very thin film: R2P-Net, which makes it a PCA slab (r2p_snap.h veryThinStencil)
+        if (!use_r2p && r2psnap::veryThinStencil(mesh, a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid,
+                                                 i, j, k, flip))
+          use_r2p = true;
+        if (!use_r2p) one_plane_reason(i, j, k) = stencil_available ? 1 : 2;
 
         // Hybrid condition (from Fortran: norm_pos-norm_neg >= 0.5 OR ...)
         if(!use_r2p){//if ((n_pos - n_neg) >= 0.5 || (((n_pos - n_neg) < 0.5) && ((n_pos + n_neg) < 0.75))) {//if(false){//
@@ -2530,6 +2628,16 @@ const Data<double>& a_liquid_volume_fraction,
               case 7: normal2[0]=-normal2[0]; normal2[1]=-normal2[1]; normal2[2]=-normal2[2]; break;
             }
 
+            // Very thin film: a slab along the PCA direction instead of the
+            // network's normals (r2p_snap.h pcaSlab)
+            if (points.size() >= 6 && r2psnap::pcaSlab(mesh, a_liquid_volume_fraction, a_liquid_centroid,
+                                                       a_gas_centroid, i, j, k, flip, dir, normal1, normal2))
+              snapped(i, j, k) = 3;
+
+            edge_sensor(i, j, k) = r2pedge::edgeCount(a_liquid_volume_fraction, flip, i, j, k,
+                                                      r2pedge::meanNormal(normal1, normal2, mesh));
+            edge_topo(i, j, k) = r2pedgetopo::gasWraps(a_liquid_volume_fraction, flip, i, j, k,
+                                                       r2pedge::meanNormal(normal1, normal2, mesh));
             bool one_plane = false;
 
             //std::cout << "mag " << normal2.calculateMagnitude() << std::endl;
@@ -2540,6 +2648,13 @@ const Data<double>& a_liquid_volume_fraction,
             if (normal2.calculateMagnitude() < 0.85 || normal1.calculateMagnitude() < 0.85)
             {
               one_plane = true;
+            }
+            // Where the thin-film guard holds the film runs through the cell:
+            // a parallel slab instead of one plane (r2p_snap.h guardSlab)
+            if (one_plane && film_guard(i, j, k) != 0 && r2psnap::guardSlab(normal1, normal2))
+            {
+              one_plane = false;
+              snapped(i, j, k) = 2;
             }
             // bool te = false;
             // if ((*a_interface)(i, j, k).getNumberOfPlanes() == 1)
@@ -2562,6 +2677,14 @@ const Data<double>& a_liquid_volume_fraction,
               normal2[1] *= mesh.dy();
               normal2[2] *= mesh.dz();
               normal2.normalize();
+              // Thin film with a noise-level opening: parallel planes (r2p_snap.h)
+              if (r2psnap::snapThinFilm(
+                      IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
+                                                              IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1))),
+                      flip ? 1.0 - a_liquid_volume_fraction(i, j, k) : a_liquid_volume_fraction(i, j, k),
+                      flip ? a_gas_centroid(i, j, k) : a_liquid_centroid(i, j, k), interface_class, normal1,
+                      normal2))
+                snapped(i, j, k) = 1;
 
               int flip_i = 1;
               if (flip) flip_i = -1;
@@ -2572,7 +2695,12 @@ const Data<double>& a_liquid_volume_fraction,
 
               const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)), IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
               (*a_interface)(i, j, k) = IRL::PlanarSeparator::fromTwoPlanes(IRL::Plane(normal1,0),IRL::Plane(normal2,0),flip_i);
-              R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
+              r2pnewton::R2PNewtonDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,bary1,(*a_interface)(i, j, k),cube);
+              if ((*a_interface)(i, j, k).getNumberOfPlanes() != 2) one_plane_reason(i, j, k) = 4;
+              // Unless the film ends here, the planes may not pinch it off (r2p_nopinch.h)
+              r2pnopinch::applyAt(mesh, i, j, k, a_liquid_volume_fraction(i, j, k), bary, bary1, &(*a_interface)(i, j, k));
+              if (one_plane_reason(i, j, k) == 0 && (*a_interface)(i, j, k).getNumberOfPlanes() != 2) one_plane_reason(i, j, k) = 5;
+              //R2PDistanceSolver(a_liquid_volume_fraction(i, j, k),bary,(*a_interface)(i, j, k),cube);
               //R2PDistanceSolver2(neighborhood,(*a_interface)(i, j, k));
             }
             // if (!one_plane)
@@ -2746,6 +2874,7 @@ const Data<double>& a_liquid_volume_fraction,
             // }
             if (one_plane)
             {
+              one_plane_reason(i, j, k) = 3;
               const IRL::RectangularCuboid& cube = IRL::RectangularCuboid::fromBoundingPts(
                   IRL::Pt(mesh.x(i), mesh.y(j), mesh.z(k)),
                   IRL::Pt(mesh.x(i + 1), mesh.y(j + 1), mesh.z(k + 1)));
@@ -2831,8 +2960,8 @@ const Data<double>& a_liquid_volume_fraction,
   // --- pass 2: paraboloid refinement ---
   r2ppass::Options parab_opt;
   const r2ppass::Stats parab_stats =
-      r2ppass::run(a_liquid_volume_fraction, a_liquid_centroid, a_interface,
-                   &branch, parab_opt);
+      r2ppass::run(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid,
+                   a_interface, &branch, parab_opt);
 
   correctInterfacePlaneBorders(a_interface);
 }
@@ -2906,4 +3035,46 @@ void correctInterfacePlaneBorders(Data<IRL::PlanarSeparator>* a_interface) {
       }
     }
   }
+}
+
+// Diagnostic dump, on when R2P_PLIC_DUMP names a file (appended to);
+// R2P_PLIC_DUMP_EVERY=n writes every n-th reconstruction (default 1). For every
+// interface cell that ended the reconstruction with one plane, two lines:
+//   cell <call> <step> <i> <j> <k> <one_plane_reason> <class> <guard> <film_is_gas T/F> <liquid VF>
+// (step: r2p_dump_step, the solver's time step number)
+//   the liquid VF of its 5^3 block, offsets -2..2, i fastest, then j, then k
+// Same format as NGA2's r2p_plic_cells_<rank>.txt (vfs_class.f90).
+static void dumpOnePlaneCells(const Data<double>& a_liquid_volume_fraction, const Data<IRL::Pt>& a_liquid_centroid,
+                              const Data<IRL::Pt>& a_gas_centroid, const Data<IRL::PlanarSeparator>& a_interface) {
+  static const char* file = std::getenv("R2P_PLIC_DUMP");
+  if (file == nullptr || *file == '\0') return;
+  static const int every = [] {
+    const char* s = std::getenv("R2P_PLIC_DUMP_EVERY");
+    return (s != nullptr && *s != '\0') ? std::max(1, std::atoi(s)) : 1;
+  }();
+  static int ncall = 0;
+  ++ncall;
+  if ((ncall - 1) % every != 0) return;
+  FILE* out = std::fopen(file, "a");
+  if (out == nullptr) return;
+  const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
+  for (int k = mesh.kmin(); k <= mesh.kmax(); ++k)
+    for (int j = mesh.jmin(); j <= mesh.jmax(); ++j)
+      for (int i = mesh.imin(); i <= mesh.imax(); ++i) {
+        const double v = a_liquid_volume_fraction(i, j, k);
+        if (v < IRL::global_constants::VF_LOW || v > IRL::global_constants::VF_HIGH) continue;
+        if (a_interface(i, j, k).getNumberOfPlanes() != 1) continue;
+        if (i - 2 < mesh.imino() || i + 2 > mesh.imaxo() || j - 2 < mesh.jmino() || j + 2 > mesh.jmaxo() ||
+            k - 2 < mesh.kmino() || k + 2 > mesh.kmaxo())
+          continue;
+        std::fprintf(out, "cell %d %d %d %d %d %d %d %d %c %.16e\n", ncall, r2p_dump_step, i, j, k,
+                     one_plane_reason(i, j, k),
+                     feature_class(i, j, k), film_guard(i, j, k),
+                     r2pFlip(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, i, j, k) ? 'T' : 'F', v);
+        for (int kk = k - 2; kk <= k + 2; ++kk)
+          for (int jj = j - 2; jj <= j + 2; ++jj)
+            for (int ii = i - 2; ii <= i + 2; ++ii) std::fprintf(out, " %10.3e", a_liquid_volume_fraction(ii, jj, kk));
+        std::fputc('\n', out);
+      }
+  std::fclose(out);
 }

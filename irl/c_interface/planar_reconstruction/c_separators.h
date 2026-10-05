@@ -50,6 +50,10 @@ void c_PlanarSep_getPlane(c_PlanarSep* a_self, const int* a_index,
 
 bool c_PlanarSep_isFlipped(const c_PlanarSep* a_self);
 
+/// \brief Sets whether the separator is flipped (true: the liquid is the
+/// union of the planes' below-sides rather than their intersection).
+void c_PlanarSep_setFlip(c_PlanarSep* a_self, const bool* a_flipped);
+
 void c_PlanarSep_printToScreen(const c_PlanarSep* a_self);
 
 }  // end extern C

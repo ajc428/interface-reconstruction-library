@@ -22,6 +22,14 @@ IRLAddExample_cpp(
     "r2p_refine_coupled.h"
     "r2p_plane_select.h"
     "plicnet_normal.h"
+    "r2p_newton_distance.h"
+    "r2p_fast.h"
+    "r2p_fast_parab.h"
+    "r2p_snap.h"
+    "r2p_tip_sensor.h"
+    "r2p_edge_sensor.h"
+    "r2p_edge_topology.h"
+    "r2p_nopinch.h"
   SRCS
     "main.cpp"
     "circle_rotation_2d.cpp"
@@ -33,9 +41,36 @@ IRLAddExample_cpp(
     "deformation_3d.cpp"
     "film_3d.cpp"
     "sheets.cpp"
+    "r2p_fast.cpp"
   OUTPUT_DIR
     "${IRL_EXAMPLES_OUTPUT_DIR}/new_advector"
   COLLECTION
     "examples_new_advector"
 )
 
+
+# Timing and equivalence harness for R2P3D_Net(Fast) / R2P3D_Hybrid(Fast).
+IRLAddExample_cpp(
+  TARGET_NAME
+    r2p_timing
+  HDRS
+    "r2p_fast.h"
+    "r2p_fast_parab.h"
+  SRCS
+    "r2p_timing.cpp"
+    "circle_rotation_2d.cpp"
+    "basic_mesh.cpp"
+    "vof_advection.cpp"
+    "solver.cpp"
+    "reconstruction_types.cpp"
+    "deformation_2d.cpp"
+    "deformation_3d.cpp"
+    "film_3d.cpp"
+    "sheets.cpp"
+    "r2p_fast.cpp"
+  OUTPUT_DIR
+    "${IRL_EXAMPLES_OUTPUT_DIR}/new_advector"
+  COLLECTION
+    "examples_new_advector"
+)
+target_compile_definitions(r2p_timing PRIVATE R2PFAST_PROFILE)

@@ -1,0 +1,16 @@
+IRLAddExample_cpp(
+  TARGET_NAME
+    r2p_advector
+  HDRS
+    "grid.h"
+    "r2p_net.h"
+    "networks/ml_classifier.h"
+    "networks/plicnet.h"
+    "networks/r2pnet.h"
+  SRCS
+    "main.cpp"
+  OUTPUT_DIR
+    "${IRL_EXAMPLES_OUTPUT_DIR}/r2p_advector"
+  COLLECTION
+    "examples_r2p_advector"
+)

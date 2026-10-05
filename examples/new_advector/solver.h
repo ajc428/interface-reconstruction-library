@@ -158,6 +158,7 @@ int runSimulation(const std::string& a_advection_method,
               &liquid_centroid, &gas_centroid);
     auto advect_end = std::chrono::system_clock::now();
     advect_VOF_time = advect_end - start;
+    r2p_dump_step = iteration + 1;   // the time step in the diagnostics output
     getReconstruction(a_reconstruction_method, liquid_volume_fraction,
                       liquid_centroid, gas_centroid, link_localized_separators,
                       time_step_to_use, velU, velV, velW, &interface);

@@ -1,0 +1,16 @@
+IRLAddExample_cpp(
+  TARGET_NAME
+    r2pnet_bench
+  HDRS
+    "geometry.h"
+    "scenes.h"
+    "methods.h"
+    "metrics.h"
+  SRCS
+    "main.cpp"
+    "../new_advector/basic_mesh.cpp"
+  OUTPUT_DIR
+    "${IRL_EXAMPLES_OUTPUT_DIR}/r2pnet_bench"
+  COLLECTION
+    "examples_r2pnet_bench"
+)

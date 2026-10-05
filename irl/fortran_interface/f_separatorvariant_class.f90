@@ -77,6 +77,9 @@ module f_SeparatorVariant_class
   interface isFlipped
     module procedure SeparatorVariant_class_isFlipped
   end interface
+  interface setFlip
+    module procedure SeparatorVariant_class_setFlip
+  end interface
   interface printToScreen
     module procedure SeparatorVariant_class_printToScreen
   end interface
@@ -229,6 +232,14 @@ module f_SeparatorVariant_class
       logical(C_BOOL) :: a_flipped
     end function F_SeparatorVariant_isFlipped
 
+    subroutine F_SeparatorVariant_setFlip(this, a_flipped) &
+      bind(C, name="c_SeparatorVariant_setFlip")
+      import
+      implicit none
+      type(c_SeparatorVariant) :: this
+      logical(C_BOOL), intent(in) :: a_flipped
+    end subroutine F_SeparatorVariant_setFlip
+
     subroutine F_SeparatorVariant_printToScreen(this) &
       bind(C, name="c_SeparatorVariant_printToScreen")
       import
@@ -375,6 +386,17 @@ module f_SeparatorVariant_class
       a_flipped = F_SeparatorVariant_isFlipped(this%c_object)
       return
     end function SeparatorVariant_class_isFlipped
+
+    !> Makes the variant a planar separator (as setNumberOfPlanes/setPlane do)
+    !> and sets whether it is flipped.
+    subroutine SeparatorVariant_class_setFlip(this, a_flipped)
+      implicit none
+      type(SeparatorVariant_type), intent(in) :: this
+      logical, intent(in) :: a_flipped
+      logical(C_BOOL) :: flag
+      flag = a_flipped
+      call F_SeparatorVariant_setFlip(this%c_object, flag)
+    end subroutine SeparatorVariant_class_setFlip
 
     subroutine SeparatorVariant_class_printToScreen(this)
       implicit none

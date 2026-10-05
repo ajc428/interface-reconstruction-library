@@ -32,7 +32,8 @@ void Illinois<OptimizingClass>::solve(double a_bracket_0, double a_bracket_1) {
 
   int side = 0;
   double error_middle = DBL_MAX;
-  while (otype_m->errorTooHigh(error_middle)) {
+  int count = 0;
+  while (otype_m->errorTooHigh(error_middle) && count < 100) {++count;
     double middle =
         (error_bracket_0 * a_bracket_1 - error_bracket_1 * a_bracket_0) /
         (error_bracket_0 - error_bracket_1);

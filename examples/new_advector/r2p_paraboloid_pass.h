@@ -352,38 +352,27 @@
 
 #include "examples/new_advector/basic_mesh.h"
 #include "examples/new_advector/data.h"
+#include "examples/new_advector/r2p_newton_distance.h"
+#include "examples/new_advector/r2p_snap.h"
+#include "examples/new_advector/r2p_nopinch.h"
 
 // ===========================================================================
-// Paraboloid refinement for R2P reconstructions.
-// ===========================================================================
+// Paraboloid refinement for R2P reconstructions (pass 2 of R2P3D_Net).
 //
-// Pass 1 (R2P3D_Net) fills a_interface with ML normals at volume-conserving
-// distances. This is pass 2: it sweeps the field and, for each two-plane
-// cell, fits a paraboloid to the neighborhood's reconstructed interface
-// polygons and replaces the normals.
+// For each two-plane cell: collect the 3^3 stencil's interface polygons, sort
+// them into the film's two faces by orientation, fit both faces jointly (one
+// frame, shared curvature, separate offsets -- fitting them independently lets
+// the wedge angle drift), replace the normals, re-solve the distances, and
+// choose between one and two planes.
 //
-// The stencil samples TWO surfaces (the faces of a sheet or film), so the
-// polygons are first sorted into two groups by orientation, then fit jointly:
-// one frame, shared shape coefficients, separate offsets. Fitting them
-// independently lets the wedge angle drift and opens spurious planes in flat
-// regions; sharing the quadratic block prevents that.
-//
-// Volume conservation is not this file's job. R2PDistanceSolver holds the
-// fitted normals fixed and bisects a single common shift -- unlike
-// R2PDistanceSolver2, whose LM search would immediately rotate away from the
-// fit.
-//
-// Structure, top to bottom:
-//   r2pgeom  - polygon extraction and clipping from a PlanarSeparator
-//   r2psort  - sorting stencil polygons into two surface groups
-//   r2pcouple- the coupled two-surface paraboloid fit
-//   r2ppass  - the field sweep, distance solve, and plane-count selection
+//   r2pgeom    polygon extraction from a PlanarSeparator
+//   r2psort    sorting polygons into the two faces
+//   r2pcouple  the coupled two-face paraboloid fit
+//   r2ppass    the field sweep
 // ===========================================================================
 
-// ---------------------------------------------------------------------------
-// R2PDistanceSolver is defined in reconstruction_types.cpp with no header
-// declaration. It takes the cell BY VALUE, matching that definition.
-// ---------------------------------------------------------------------------
+// Legacy distance solve, defined in reconstruction_types.cpp (kept for the
+// commented-out comparison call in runImpl).
 void R2PDistanceSolver(double VF_target, IRL::Pt bary_target,
                        IRL::PlanarSeparator& a_interface,
                        IRL::RectangularCuboid cell);
@@ -487,14 +476,11 @@ inline std::vector<IRL::Pt> clipToHalfSpace(const std::vector<IRL::Pt>& in,
   return out;
 }
 
-// One plane of one cell's separator as a SurfacePolygon.
-//
-// planeBoxPolygon cuts against the BOX only, which is exact for single-plane
-// PLIC but returns the untruncated plane for an R2P wedge -- overstating area
-// and centroid offset on exactly the cells where the wedge is tightest. So
-// the box polygon is then clipped against every other plane in the
-// separator. The clip half-space is the same regardless of flip state:
-// flipping renames the phases but does not move the geometry.
+// One plane of one cell's separator as a SurfacePolygon: the box polygon,
+// clipped to the part that actually bounds the phases. Unflipped, the liquid
+// is the intersection of the planes' below-sides, so plane p's interface lies
+// below every other plane; flipped, the liquid is their union, so it lies
+// ABOVE every other plane.
 inline std::optional<plicparab::SurfacePolygon> polygonFor(
     const IRL::Pt& lo, const IRL::Pt& hi, const IRL::PlanarSeparator& sep,
     const IRL::UnsignedIndex_t p) {
@@ -502,10 +488,11 @@ inline std::optional<plicparab::SurfacePolygon> polygonFor(
       plicgeom::planeBoxPolygon(lo, hi, sep[p].normal(), sep[p].distance());
   if (!info) return std::nullopt;
 
+  const double side = sep.isFlipped() ? -1.0 : 1.0;
   std::vector<IRL::Pt> verts = info->vertices;
   for (IRL::UnsignedIndex_t q = 0; q < sep.getNumberOfPlanes(); ++q) {
     if (q == p) continue;
-    verts = clipToHalfSpace(verts, sep[q].normal(), sep[q].distance());
+    verts = clipToHalfSpace(verts, side * sep[q].normal(), side * sep[q].distance());
     if (verts.size() < 3) return std::nullopt;
   }
 
@@ -555,33 +542,15 @@ namespace r2psort {
 // ===========================================================================
 
 struct Options {
-  double max_rotation = 0.35;
-  // Cap in radians on departure from the incoming R2PNet normal. A fit
-  // exceeding it is clamped, not rejected.
-
-  double min_group_area_fraction = 0.10;
-  // If either group holds less than this share of total polygon area the
-  // split is not credible; keep the network normals.
-
-  double min_split_dot = 0.0;
-  // A plane must beat this dot product against its assigned group normal to
-  // be admitted. 0.0 admits anything on the correct side of perpendicular.
+  double max_rotation = 0.35;             // rad; fits beyond this are clamped
+  double min_group_area_fraction = 0.10;  // smaller group share: keep network normals
+  double min_split_dot = 0.0;             // min dot with the assigned group normal
 };
 
-// Assignment is by dot product against the two reference normals, mirroring
-// the same-facing / opposite-facing partition that Zonghao's colinearity
-// metric computes in R2P3D_Net. For the classes routed to R2P -- sheet (4)
-// and sheet end (6) -- the two normals are near-antiparallel, so this is well
-// conditioned.
-//
-// Position deliberately plays no part: the two faces of a film are under a
-// cell apart, at or below the resolution of the data, while their normals
-// differ by nearly 180 degrees.
-//
-// A cell holding two planes has them assigned JOINTLY -- of the two possible
-// pairings, the one with the greater total dot product wins. Assigning
-// independently lets both planes of one neighbor land in the same group,
-// which double-counts one surface and starves the other.
+// Assigns each polygon to the face whose network normal it best matches.
+// Orientation only: the faces are under a cell apart but nearly antiparallel.
+// A cell's two planes are assigned jointly (best total dot product), so both
+// cannot land on the same face.
 inline void sortPlanes(std::vector<r2pgeom::Tagged>& tagged,
                        const std::vector<std::size_t>& cell_begin,
                        const IRL::Normal& n0, const IRL::Normal& n1,
@@ -638,10 +607,8 @@ inline bool groupAreaFractions(const std::vector<r2pgeom::Tagged>& tagged,
   return true;
 }
 
-// One group's polygons with the CENTER-CELL polygon first: the fit takes
-// polys[0] as its reference point, so the result is the surface normal at
-// this cell's interface rather than a neighbor's. Empty if the group has no
-// center polygon.
+// One group's polygons, centre-cell polygon first (the fit's reference point).
+// Empty if the group has no centre polygon.
 inline std::vector<plicparab::SurfacePolygon> gatherGroup(
     const std::vector<r2pgeom::Tagged>& tagged, const int group) {
   std::vector<plicparab::SurfacePolygon> polys;
@@ -665,64 +632,28 @@ inline std::vector<plicparab::SurfacePolygon> gatherGroup(
 namespace r2pcouple {
 // ===========================================================================
 //
-// Coupled two-surface paraboloid fit. One frame, both surfaces as height
-// fields over the same (t,s) tangent plane:
+// Both faces as height fields over one (t,s) tangent plane:
 //
-//   group 0:  n = a0_0 + (a1+d1_0) t + (a2+d2_0) s + a3 t^2 + a4 ts + a5 s^2
-//   group 1:  n = a0_1 + (a1+d1_1) t + (a2+d2_1) s + a3 t^2 + a4 ts + a5 s^2
+//   face g:  n = a0_g + (a1+d1_g) t + (a2+d2_g) s + a3 t^2 + a4 ts + a5 s^2
 //
-// Shared a1..a5 is the common shape; separate a0_g are the two offsets, whose
-// difference is the sheet thickness. The per-group linear corrections d1_g,
-// d2_g are the splay, carrying a ridge penalty.
-//
-// Because m1/m2 enter both the shared column and the group's splay column,
-// a1 and d1_g are not separately identifiable -- only the sums a1+d1_g affect
-// the fit. The SVD returns the minimum-norm solution, which splits them
-// evenly, so splay_penalty -> 0 is not a singularity: it is simply two
-// independent linear fits sharing one quadratic block.
+// a1..a5 are shared (common shape), a0_g are the offsets (their difference is
+// the thickness), d1_g/d2_g are per-face splay with a ridge penalty. Only
+// a1+d1_g is identifiable; the SVD's minimum-norm solution splits it evenly.
 
 struct Options {
-  double h = 2.5;                 // wgauss support radius, in mesh_size units
-  double mesh_size = 1.0;         // set to the cell width by r2ppass::run
-
-  double splay_penalty = 0.015;
-  // Ridge on d1_g, d2_g relative to total row weight. Large values force the
-  // two faces parallel (a slab); near zero leaves their tilts independent.
-
-  double curvature_penalty = 1.0e-3;
-  // Mild ridge on a3, a4, a5. A nearly-collinear sample set otherwise
-  // produces wild curvature which, because those columns are SHARED,
-  // propagates into both groups' normals. Penalizing a1/a2 instead would
-  // bias the quantity being extracted.
-
+  double h = 2.5;                    // Gaussian weight radius, in mesh_size units
+  double mesh_size = 1.0;            // set to the cell width by r2ppass::run
+  double splay_penalty = 0.015;      // ridge on d*_g: large forces a parallel slab
+  double curvature_penalty = 1.0e-3; // ridge on a3..a5: tames near-collinear samples
   int min_per_group = 6;
   double max_resid = 0.25;
 
-  // FRAME SOURCE. Which direction and origin define the shared tangent
-  // plane. kGroup0 uses group 0's center polygon, which makes the estimator
-  // depend on an arbitrary labeling: swap the groups and the answer changes.
-  // The bisector options are label-symmetric and halve the maximum slope
-  // either surface must express -- tan(splay/2) rather than tan(splay).
-  //
-  //   kGroup0        - original behaviour (default)
-  //   kBisector      - unweighted: nref ~ n0 - n1
-  //   kAreaWeighted  - center-polygon areas weight the two contributions
-  //
-  // Of the two new modes kAreaWeighted is safer: when one group's center
-  // polygon is a sliver its normal is the least trustworthy input in the fit.
+  // Tangent-plane frame: group 0's centre polygon, or the label-symmetric
+  // bisector n0 - n1 (unweighted, or weighted by centre-polygon area).
   enum class FrameSource { kGroup0, kBisector, kAreaWeighted };
   FrameSource frame_source = FrameSource::kBisector;
-
-  bool bisector_origin = true;
-  // Consulted only when frame_source != kGroup0. Moves pref to the weighted
-  // midpoint of the two center centroids so a0_0 and a0_1 come out roughly
-  // antisymmetric about zero. Set false to rotate the frame but keep the
-  // origin on group 0, isolating the direction change.
-
-  double min_bisector_magnitude = 1.0e-3;
-  // |w0*n0 - w1*n1| below this means the normals are nearly PARALLEL rather
-  // than antiparallel -- the groups have collapsed onto one surface, or the
-  // sort failed. Fall back to the group-0 frame rather than normalize noise.
+  bool bisector_origin = true;           // origin at the midpoint of the centre centroids
+  double min_bisector_magnitude = 1.0e-3; // below: faces parallel, fall back to kGroup0
 };
 
 struct Result {
@@ -754,12 +685,8 @@ inline std::optional<Result> fitCoupled(
     return std::nullopt;
   }
 
-  // ONE frame for both surfaces. Group 1's polygons face roughly -nref, but
-  // they are still a single-valued height field over the same (t,s) plane,
-  // which is all the fit requires. The sign is restored at extraction.
-  //
-  // Group 0's normal points along +nref and group 1's along -nref, so the
-  // direction that splits them symmetrically is (n0 - n1), not their sum.
+  // One frame for both faces. Group 1 faces roughly -nref, so the symmetric
+  // direction is n0 - n1; the sign is restored at extraction.
   IRL::Pt pref = polys0[0].centroid;
   IRL::Normal seed_normal = polys0[0].normal;
 
@@ -801,9 +728,7 @@ inline std::optional<Result> fitCoupled(
   for (int g = 0; g < 2; ++g) {
     const std::vector<plicparab::SurfacePolygon>& polys =
         (g == 0) ? polys0 : polys1;
-    // Group 1's surface legitimately faces away from nref, so its
-    // orientation test is taken against -nref. Testing against nref (as a
-    // single-surface fit does) would discard every group-1 polygon.
+    // Group 1 faces away from nref, so its alignment is taken against -nref.
     const IRL::Normal facing = (g == 0) ? nref : -nref;
 
     for (std::size_t idx = 0; idx < polys.size(); ++idx) {
@@ -857,9 +782,7 @@ inline std::optional<Result> fitCoupled(
     b(i) = rhs[i];
   }
 
-  // Penalty rows, scaled by total row weight so their strength relative to
-  // the data is independent of stencil size. RHS stays zero: each pulls its
-  // coefficients toward zero.
+  // Penalty rows (zero RHS), scaled by the total data weight.
   const double splay_w = std::sqrt(opt.splay_penalty * weight_total);
   const double curv_w = std::sqrt(opt.curvature_penalty * weight_total);
   int prow = ndata;
@@ -877,8 +800,7 @@ inline std::optional<Result> fitCoupled(
   out.count[0] = count[0];
   out.count[1] = count[1];
 
-  // Residual over DATA rows only, so max_resid measures fit quality rather
-  // than how hard the penalties are pulling.
+  // Residual over data rows only, so max_resid measures fit quality.
   double s2 = 0.0;
   for (int i = 0; i < ndata; ++i) {
     const double res = rows[i].dot(sol) - rhs[i];
@@ -896,7 +818,7 @@ inline std::optional<Result> fitCoupled(
 
     IRL::Normal fitted = nref - ft * tref - fs * sref;
     fitted.normalize();
-    // Group 1's surface faces the other way; restore sign against the seed.
+    // Restore each face's sign against its network normal.
     const IRL::Normal& seed = (g == 0) ? seed0 : seed1;
     if (fitted * seed < 0.0) fitted = -fitted;
     out.normal[g] = fitted;
@@ -922,23 +844,14 @@ namespace r2ppass {
 struct Options {
   r2psort::Options sort;
   r2pcouple::Options fit;
-
-  double max_splay_change = 0.30;
-  // Backstop on how far the wedge angle may move, applied after
-  // max_rotation clamping. The fit's own splay_penalty is the primary
-  // control; this catches what it misses.
-
+  double max_splay_change = 0.30;  // rad; reject fits that move the wedge angle more
   bool refine_two_plane = true;
 
+  // Keep the best single plane instead when its film-centroid error is within
+  // plane_drop_bias of the two-plane error (cleanReconstruction only drops a
+  // plane that misses the cell entirely).
   bool select_plane_count = true;
   double plane_drop_bias = 1.05;
-  // PLANE-COUNT SELECTION. cleanReconstruction only drops a plane that fails
-  // to cut the cell, so a slightly-wrong normal keeps a spurious second plane
-  // alive. This compares the two-plane reconstruction against the best
-  // single-plane one on centroid error and keeps whichever is better, with a
-  // bias > 1 favouring the simpler model on ties. Model selection, not
-  // geometric cleanup -- it is what replaces the LM's ability to push a plane
-  // out of the cell.
 };
 
 struct Stats {
@@ -982,28 +895,27 @@ inline std::vector<r2pgeom::CellPlanes> buildStencil(
   return cells;
 }
 
-// Distance from a reconstruction's liquid centroid to the target. Volume
-// fraction is matched exactly by construction in every candidate, so the
-// centroid is the only discriminating moment left -- the same quantity the LM
-// was minimizing, evaluated rather than searched.
+// Distance from a reconstruction's centroid of one phase (0 = liquid, 1 = gas)
+// to the target. Every candidate matches the volume fraction, so this is the
+// discriminating moment. Callers pass the film phase: for a thin gas film the
+// liquid centroid barely moves between candidates.
 inline double centroidError(const IRL::RectangularCuboid& cell,
-                            const IRL::PlanarSeparator& sep,
+                            const IRL::PlanarSeparator& sep, const int phase,
                             const IRL::Pt& target_centroid) {
   const IRL::SeparatedMoments<IRL::VolumeMoments> moments =
       IRL::getNormalizedVolumeMoments<IRL::SeparatedMoments<IRL::VolumeMoments>,
                                       IRL::ReconstructionDefaultCuttingMethod>(
           cell, sep);
-  const IRL::Pt c = moments[0].centroid();
+  const IRL::Pt c = moments[phase].centroid();
   const double dx = c[0] - target_centroid[0];
   const double dy = c[1] - target_centroid[1];
   const double dz = c[2] - target_centroid[2];
   return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-// Sorts the stencil, fits both surfaces jointly, and writes the refined
-// normals back. cells[0] must be the center. normal1/normal2 must already be
-// mesh-scaled, normalized and flip-applied on entry, and are left unchanged
-// unless this returns true.
+// Sorts the stencil, fits both faces, and writes the refined normals back.
+// cells[0] must be the centre. The normals are left unchanged unless this
+// returns true.
 inline bool refineNormals(const std::vector<r2pgeom::CellPlanes>& cells,
                           IRL::Normal& normal1, IRL::Normal& normal2,
                           const Options& opt, Stats* stats) {
@@ -1037,8 +949,6 @@ inline bool refineNormals(const std::vector<r2pgeom::CellPlanes>& cells,
       r2psort::gatherGroup(tagged, 0);
   const std::vector<plicparab::SurfacePolygon> polys1 =
       r2psort::gatherGroup(tagged, 1);
-  // gatherGroup returns empty when a group has no center-cell polygon, which
-  // would leave the fit without a reference point for its frame.
   if (polys0.empty() || polys1.empty()) {
     ++stats->fit_rejected;
     return false;
@@ -1058,9 +968,7 @@ inline bool refineNormals(const std::vector<r2pgeom::CellPlanes>& cells,
   limited[1] = r2pgeom::limitedRotation(network1, fit->normal[1],
                                         opt.sort.max_rotation, &rotation[1]);
 
-  // Splay backstop, measured after clamping since that is the normal actually
-  // applied. Both angles are the wedge opening: zero when the two faces are
-  // exactly antiparallel (a slab).
+  // Wedge opening before and after (zero for an exact slab).
   const double before = -(network0 * network1);
   const double after = -(limited[0] * limited[1]);
   const double splay_before = std::acos(std::max(-1.0, std::min(1.0, before)));
@@ -1075,24 +983,19 @@ inline bool refineNormals(const std::vector<r2pgeom::CellPlanes>& cells,
   return true;
 }
 
-// Sweeps the field. a_liquid_centroid goes straight to R2PDistanceSolver,
-// which converts it internally when the separator is flipped -- always hand
-// it the LIQUID centroid regardless of flip state.
-//
-// a_branch is templated because `branch` may be Data<int> or Data<double>;
-// pass nullptr to skip the diagnostic.
+// Sweeps the field. a_branch (Data<int> or Data<double>, or nullptr) receives
+// a diagnostic tag.
 template <class BranchDataType>
 inline Stats runImpl(const Data<double>& a_liquid_volume_fraction,
                      const Data<IRL::Pt>& a_liquid_centroid,
+                     const Data<IRL::Pt>& a_gas_centroid,
                      Data<IRL::PlanarSeparator>* a_interface,
                      BranchDataType* a_branch, const Options& options) {
   const BasicMesh& mesh = a_liquid_volume_fraction.getMesh();
   Stats stats;
   if (!options.refine_two_plane) return stats;
 
-  // Snapshot BEFORE any refinement so neighbor data is uniform and the result
-  // does not depend on sweep order. Data is copyable (solver.h relies on this
-  // for the L1 diagnostic).
+  // Fit against a snapshot so the result does not depend on sweep order.
   const Data<IRL::PlanarSeparator> snapshot = *a_interface;
 
   Options opt = options;
@@ -1122,14 +1025,15 @@ inline Stats runImpl(const Data<double>& a_liquid_volume_fraction,
         const std::vector<r2pgeom::CellPlanes> cells = buildStencil(
             mesh, a_liquid_volume_fraction, snapshot, i, j, k);
 
-        // On any rejection the pass-1 reconstruction is left untouched.
+        // On any rejection the pass-1 reconstruction is left untouched. A
+        // snapped thin film stays a slab: the fit may rotate it, not open it.
+        const bool slab = r2psnap::isSlab(sep);
         if (!refineNormals(cells, normal1, normal2, opt, &stats)) continue;
+        if (slab) r2psnap::keepSlab(normal1, normal2);
         ++stats.refined;
 
-        // Rebuild with the fitted normals, preserving pass 1's flip state,
-        // then translate to conserve volume. Distances start at zero because
-        // R2PDistanceSolver derives its own initial pair from the bisector
-        // projection of the target centroid.
+        // Rebuild with the fitted normals and pass 1's flip state, then
+        // re-solve both distances (the solver sets its own initial guess).
         const double flip_i = sep.isNotFlipped() ? 1.0 : -1.0;
         const IRL::RectangularCuboid cube =
             IRL::RectangularCuboid::fromBoundingPts(
@@ -1138,24 +1042,33 @@ inline Stats runImpl(const Data<double>& a_liquid_volume_fraction,
 
         sep = IRL::PlanarSeparator::fromTwoPlanes(
             IRL::Plane(normal1, 0.0), IRL::Plane(normal2, 0.0), flip_i);
-        R2PDistanceSolver(vf, a_liquid_centroid(i, j, k), sep, cube);
+        one_plane_reason(i, j, k) = 0;
+        r2pnewton::R2PNewtonDistanceSolver(vf, a_liquid_centroid(i, j, k),
+                                           a_gas_centroid(i, j, k), sep, cube);
+        if (sep.getNumberOfPlanes() != 2) one_plane_reason(i, j, k) = 7;
+        r2pnopinch::applyAt(mesh, i, j, k, vf, a_liquid_centroid(i, j, k), a_gas_centroid(i, j, k), &sep);
+        if (one_plane_reason(i, j, k) == 0 && sep.getNumberOfPlanes() != 2) one_plane_reason(i, j, k) = 5;
+        //R2PDistanceSolver(vf, a_liquid_centroid(i, j, k), sep, cube);
 
-        // Is one plane actually better here?
-        if (options.select_plane_count && sep.getNumberOfPlanes() == 2) {
-          const double err_two =
-              centroidError(cube, sep, a_liquid_centroid(i, j, k));
+        // Is one plane actually better here? Never in a thin film the guard
+        // holds for (r2p_edge_topology.h): it continues through the cell; nor
+        // in a very thin film's PCA slab (r2p_snap.h pcaSlab).
+        if (options.select_plane_count && sep.getNumberOfPlanes() == 2 && film_guard(i, j, k) == 0 &&
+            snapped(i, j, k) != 3) {
+          // Every candidate is scored on the film phase (gas when flipped).
+          const int film = flip_i < 0.0 ? 1 : 0;
+          const IRL::Pt& film_centroid =
+              film == 1 ? a_gas_centroid(i, j, k) : a_liquid_centroid(i, j, k);
+          const double err_two = centroidError(cube, sep, film, film_centroid);
 
-          // Both fitted normals are tried: once the second plane is nearly
-          // out of the cell, the dominant surface is not always the
-          // larger-area group.
+          // Try both fitted normals as the single plane.
           double err_one = -1.0;
           IRL::PlanarSeparator best_one;
           for (int g = 0; g < 2; ++g) {
             IRL::PlanarSeparator cand = IRL::PlanarSeparator::fromOnePlane(
                 IRL::Plane((g == 0) ? normal1 : normal2, 0.0));
             IRL::setDistanceToMatchVolumeFraction(cube, vf, &cand);
-            const double e =
-                centroidError(cube, cand, a_liquid_centroid(i, j, k));
+            const double e = centroidError(cube, cand, film, film_centroid);
             if (err_one < 0.0 || e < err_one) {
               err_one = e;
               best_one = cand;
@@ -1164,6 +1077,7 @@ inline Stats runImpl(const Data<double>& a_liquid_volume_fraction,
 
           if (err_one >= 0.0 && err_one <= options.plane_drop_bias * err_two) {
             sep = best_one;
+            one_plane_reason(i, j, k) = 6;
             ++stats.collapsed_to_one;
           }
         }
@@ -1180,18 +1094,20 @@ inline Stats runImpl(const Data<double>& a_liquid_volume_fraction,
 template <class BranchDataType>
 inline Stats run(const Data<double>& a_liquid_volume_fraction,
                  const Data<IRL::Pt>& a_liquid_centroid,
+                 const Data<IRL::Pt>& a_gas_centroid,
                  Data<IRL::PlanarSeparator>* a_interface,
                  BranchDataType* a_branch,
                  const Options& options = Options()) {
-  return runImpl(a_liquid_volume_fraction, a_liquid_centroid, a_interface,
+  return runImpl(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid, a_interface,
                  a_branch, options);
 }
 
 inline Stats run(const Data<double>& a_liquid_volume_fraction,
                  const Data<IRL::Pt>& a_liquid_centroid,
+                 const Data<IRL::Pt>& a_gas_centroid,
                  Data<IRL::PlanarSeparator>* a_interface,
                  const Options& options = Options()) {
-  return runImpl<Data<int>>(a_liquid_volume_fraction, a_liquid_centroid,
+  return runImpl<Data<int>>(a_liquid_volume_fraction, a_liquid_centroid, a_gas_centroid,
                             a_interface, nullptr, options);
 }
 
